@@ -1,0 +1,129 @@
+import { useEffect, useState } from 'react';
+import { Phone, AlertTriangle, TrendingUp, Users, Calendar } from 'lucide-react';
+import { api } from '../lib/api';
+import { Card } from '../components/ui/Card';
+import { OutcomeBadge } from '../components/ui/Badge';
+import { formatDistanceToNow } from 'date-fns';
+
+interface Stats {
+  callsToday: number;
+  emergenciesToday: number;
+  bookedToday: number;
+  leadsThisWeek: number;
+  totalContacts: number;
+}
+
+interface RecentCall {
+  id: string;
+  callerNumber: string;
+  outcome: string;
+  summary: string;
+  createdAt: string;
+}
+
+export function OverviewPage() {
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [recentCalls, setRecentCalls] = useState<RecentCall[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      api.get<Stats>('/dashboard/stats'),
+      api.get<RecentCall[]>('/dashboard/recent-calls'),
+    ]).then(([s, c]) => {
+      setStats(s);
+      setRecentCalls(c);
+    }).catch(console.error).finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
+  return (
+    <div className="space-y-6 animate-slide-up">
+      <div>
+        <h1 className="text-2xl font-bold text-white">Overview</h1>
+        <p className="text-gray-500 text-sm mt-1">Today's activity at a glance</p>
+      </div>
+
+      {/* Stats grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard icon={Phone} label="Calls today" value={stats?.callsToday ?? 0} color="blue" />
+        <StatCard icon={Calendar} label="Jobs booked today" value={stats?.bookedToday ?? 0} color="green" />
+        <StatCard icon={TrendingUp} label="Leads this week" value={stats?.leadsThisWeek ?? 0} color="purple" />
+        <StatCard icon={Users} label="Total contacts" value={stats?.totalContacts ?? 0} color="gray" />
+      </div>
+
+      {stats?.emergenciesToday ? (
+        <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3">
+          <AlertTriangle size={18} className="text-red-400 flex-shrink-0" />
+          <p className="text-sm text-red-300">
+            <strong>{stats.emergenciesToday} emergency call{stats.emergenciesToday > 1 ? 's' : ''}</strong> today — make sure you've followed up!
+          </p>
+        </div>
+      ) : null}
+
+      {/* Recent calls */}
+      <div>
+        <h2 className="text-lg font-semibold text-white mb-3">Recent calls</h2>
+        {recentCalls.length === 0 ? (
+          <Card>
+            <div className="text-center py-8 text-gray-500">
+              <Phone size={32} className="mx-auto mb-3 opacity-40" />
+              <p className="text-sm">No calls yet — once callers ring in, they'll appear here.</p>
+            </div>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {recentCalls.map(call => (
+              <Card key={call.id} hover className="animate-fade-in">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-medium text-white text-sm">{formatPhone(call.callerNumber)}</span>
+                      <OutcomeBadge outcome={call.outcome} />
+                    </div>
+                    <p className="text-xs text-gray-400 line-clamp-2">{call.summary || 'No summary available'}</p>
+                  </div>
+                  <span className="text-xs text-gray-600 flex-shrink-0">
+                    {formatDistanceToNow(new Date(call.createdAt), { addSuffix: true })}
+                  </span>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ icon: Icon, label, value, color }: { icon: typeof Phone; label: string; value: number; color: string }) {
+  const colors: Record<string, string> = {
+    blue: 'bg-blue-500/20 text-blue-400',
+    green: 'bg-green-500/20 text-green-400',
+    purple: 'bg-purple-500/20 text-purple-400',
+    gray: 'bg-gray-500/20 text-gray-400',
+  };
+  return (
+    <Card>
+      <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-3 ${colors[color]}`}>
+        <Icon size={18} />
+      </div>
+      <div className="text-2xl font-bold text-white">{value}</div>
+      <div className="text-xs text-gray-500 mt-0.5">{label}</div>
+    </Card>
+  );
+}
+
+function formatPhone(num: string): string {
+  if (!num) return 'Unknown';
+  const clean = num.replace(/\D/g, '');
+  if (clean.startsWith('61') && clean.length === 11) {
+    return `0${clean.slice(2, 5)} ${clean.slice(5, 8)} ${clean.slice(8)}`;
+  }
+  return num;
+}
