@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Phone, AlertTriangle, TrendingUp, Users, Calendar } from 'lucide-react';
+import { Phone, AlertTriangle, TrendingUp, Users, Calendar, BarChart2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { Card } from '../components/ui/Card';
 import { OutcomeBadge } from '../components/ui/Badge';
+import { SkeletonCard, SkeletonRow } from '../components/ui/Skeleton';
 import { formatDistanceToNow } from 'date-fns';
 
 interface Stats {
@@ -37,8 +38,17 @@ export function OverviewPage() {
   }, []);
 
   if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+    <div className="space-y-6 animate-fade-in">
+      <div className="space-y-1">
+        <div className="h-7 w-32 skeleton rounded-lg" />
+        <div className="h-4 w-48 skeleton rounded-md" />
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
+      </div>
+      <div className="space-y-2">
+        {[...Array(3)].map((_, i) => <SkeletonRow key={i} />)}
+      </div>
     </div>
   );
 
@@ -50,9 +60,9 @@ export function OverviewPage() {
       </div>
 
       {/* Stats grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard icon={Phone} label="Calls today" value={stats?.callsToday ?? 0} color="blue" />
-        <StatCard icon={Calendar} label="Jobs booked today" value={stats?.bookedToday ?? 0} color="green" />
+        <StatCard icon={Calendar} label="Jobs booked" value={stats?.bookedToday ?? 0} color="green" />
         <StatCard icon={TrendingUp} label="Leads this week" value={stats?.leadsThisWeek ?? 0} color="purple" />
         <StatCard icon={Users} label="Total contacts" value={stats?.totalContacts ?? 0} color="gray" />
       </div>
@@ -71,9 +81,12 @@ export function OverviewPage() {
         <h2 className="text-lg font-semibold text-white mb-3">Recent calls</h2>
         {recentCalls.length === 0 ? (
           <Card>
-            <div className="text-center py-8 text-gray-500">
-              <Phone size={32} className="mx-auto mb-3 opacity-40" />
-              <p className="text-sm">No calls yet — once callers ring in, they'll appear here.</p>
+            <div className="text-center py-12 text-gray-600">
+              <div className="w-14 h-14 bg-blue-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <BarChart2 size={24} className="text-blue-400 opacity-60" />
+              </div>
+              <p className="font-medium text-gray-400 mb-1">No calls yet</p>
+              <p className="text-sm text-gray-600">Once callers ring in, you'll see a live feed here.</p>
             </div>
           </Card>
         ) : (
@@ -82,13 +95,13 @@ export function OverviewPage() {
               <Card key={call.id} hover className="animate-fade-in">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <span className="font-medium text-white text-sm">{formatPhone(call.callerNumber)}</span>
                       <OutcomeBadge outcome={call.outcome} />
                     </div>
                     <p className="text-xs text-gray-400 line-clamp-2">{call.summary || 'No summary available'}</p>
                   </div>
-                  <span className="text-xs text-gray-600 flex-shrink-0">
+                  <span className="text-xs text-gray-600 flex-shrink-0 mt-0.5">
                     {formatDistanceToNow(new Date(call.createdAt), { addSuffix: true })}
                   </span>
                 </div>

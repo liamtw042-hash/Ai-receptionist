@@ -3,6 +3,7 @@ import { MessageSquare, Send, ArrowLeft } from 'lucide-react';
 import { api } from '../lib/api';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { Skeleton } from '../components/ui/Skeleton';
 import { format } from 'date-fns';
 
 interface Message {
@@ -59,8 +60,23 @@ export function SMSPage() {
   });
 
   if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+    <div className="h-[calc(100vh-8rem)] flex gap-4 animate-fade-in">
+      <div className="w-full lg:w-72 flex-shrink-0 flex flex-col gap-3">
+        <Skeleton className="h-8 w-32" />
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="glass rounded-xl px-4 py-3 space-y-1.5">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-16" />
+          </div>
+        ))}
+      </div>
+      <div className="hidden lg:flex flex-1 items-center justify-center">
+        <div className="text-center text-gray-700">
+          <MessageSquare size={40} className="mx-auto mb-2 opacity-20" />
+          <p className="text-sm">Loading messages…</p>
+        </div>
+      </div>
     </div>
   );
 
@@ -71,9 +87,12 @@ export function SMSPage() {
         <h1 className="text-2xl font-bold text-white mb-4">SMS Inbox</h1>
         {sortedConversations.length === 0 ? (
           <Card>
-            <div className="text-center py-8 text-gray-500">
-              <MessageSquare size={28} className="mx-auto mb-2 opacity-40" />
-              <p className="text-sm">No messages yet</p>
+            <div className="text-center py-10 text-gray-600">
+              <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center mx-auto mb-3">
+                <MessageSquare size={20} className="text-green-400 opacity-60" />
+              </div>
+              <p className="font-medium text-gray-400 text-sm mb-1">No messages yet</p>
+              <p className="text-xs text-gray-600">SMS summaries from calls will appear here.</p>
             </div>
           </Card>
         ) : (
@@ -81,10 +100,15 @@ export function SMSPage() {
             {sortedConversations.map(([num, msgs]) => {
               const last = msgs[0];
               return (
-                <button key={num} onClick={() => setSelected(num)} className={`w-full text-left glass rounded-xl px-4 py-3 transition-all hover:border-blue-500/30 ${selected === num ? 'border-blue-500/40 bg-blue-500/10' : ''}`}>
+                <button key={num} onClick={() => setSelected(num)}
+                  className={`w-full text-left glass rounded-xl px-4 py-3 transition-all duration-200 hover:border-blue-500/30 ${
+                    selected === num ? 'border-blue-500/40 bg-blue-500/10' : ''
+                  }`}>
                   <div className="font-medium text-white text-sm mb-0.5">{formatPhone(num)}</div>
                   <div className="text-xs text-gray-400 truncate">{last?.body || ''}</div>
-                  <div className="text-xs text-gray-600 mt-0.5">{last?.timestamp ? format(new Date(last.timestamp), 'dd MMM, h:mm a') : ''}</div>
+                  <div className="text-xs text-gray-600 mt-0.5">
+                    {last?.timestamp ? format(new Date(last.timestamp), 'dd MMM, h:mm a') : ''}
+                  </div>
                 </button>
               );
             })}
@@ -94,9 +118,9 @@ export function SMSPage() {
 
       {/* Message thread */}
       {selected ? (
-        <div className={`flex-1 flex flex-col ${selected ? 'flex' : 'hidden lg:flex'}`}>
+        <div className="flex-1 flex flex-col">
           <div className="flex items-center gap-3 mb-4">
-            <button onClick={() => setSelected(null)} className="lg:hidden text-gray-400 hover:text-white">
+            <button onClick={() => setSelected(null)} className="lg:hidden text-gray-400 hover:text-white transition-colors p-1">
               <ArrowLeft size={20} />
             </button>
             <div>
@@ -128,8 +152,8 @@ export function SMSPage() {
               value={reply}
               onChange={e => setReply(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-              placeholder="Type a message..."
-              className="flex-1 glass rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/40"
+              placeholder="Type a message…"
+              className="flex-1 glass rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/40 transition-all"
             />
             <Button onClick={handleSend} loading={sending} disabled={!reply.trim()} className="px-4">
               <Send size={16} />
@@ -138,9 +162,9 @@ export function SMSPage() {
         </div>
       ) : (
         <div className="hidden lg:flex flex-1 items-center justify-center">
-          <div className="text-center text-gray-600">
-            <MessageSquare size={48} className="mx-auto mb-3 opacity-30" />
-            <p>Select a conversation</p>
+          <div className="text-center text-gray-700">
+            <MessageSquare size={48} className="mx-auto mb-3 opacity-20" />
+            <p className="text-sm">Select a conversation</p>
           </div>
         </div>
       )}

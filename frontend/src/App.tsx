@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
@@ -10,11 +10,19 @@ import { CallsPage } from './pages/CallsPage';
 import { SMSPage } from './pages/SMSPage';
 import { ContactsPage } from './pages/ContactsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { useEffect, useRef } from 'react';
 
 function Spinner() {
   return (
     <div className="min-h-screen bg-black flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center blue-glow animate-pulse">
+          <svg viewBox="0 0 32 32" className="w-5 h-5 fill-white">
+            <path d="M18 5L9 18H16L14 27L23 14H16L18 5Z" />
+          </svg>
+        </div>
+        <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      </div>
     </div>
   );
 }
@@ -33,21 +41,52 @@ function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Animated wrapper that fades in on route change
+function AnimatedPage({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (ref.current) {
+      ref.current.style.opacity = '0';
+      ref.current.style.transform = 'translateY(8px)';
+      const raf = requestAnimationFrame(() => {
+        if (ref.current) {
+          ref.current.style.transition = 'opacity 220ms ease, transform 220ms ease';
+          ref.current.style.opacity = '1';
+          ref.current.style.transform = 'translateY(0)';
+        }
+      });
+      return () => cancelAnimationFrame(raf);
+    }
+  }, []);
+  return <div ref={ref}>{children}</div>;
+}
+
 function AppRoutes() {
+  const location = useLocation();
   return (
-    <Routes>
-      {/* Public marketing page */}
-      <Route path="/" element={<LandingPage />} />
+    <Routes location={location} key={location.pathname}>
+      <Route path="/" element={<AnimatedPage><LandingPage /></AnimatedPage>} />
 
-      {/* Auth routes — redirect to app if already logged in */}
-      <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
-      <Route path="/signup" element={<PublicOnlyRoute><SignupPage /></PublicOnlyRoute>} />
+      <Route path="/login" element={
+        <PublicOnlyRoute>
+          <AnimatedPage><LoginPage /></AnimatedPage>
+        </PublicOnlyRoute>
+      } />
+      <Route path="/signup" element={
+        <PublicOnlyRoute>
+          <AnimatedPage><SignupPage /></AnimatedPage>
+        </PublicOnlyRoute>
+      } />
 
-      {/* Onboarding */}
-      <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
+      <Route path="/onboarding" element={
+        <ProtectedRoute>
+          <AnimatedPage><OnboardingPage /></AnimatedPage>
+        </ProtectedRoute>
+      } />
 
-      {/* Protected app — all under /dashboard */}
-      <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+      <Route path="/dashboard" element={
+        <ProtectedRoute><DashboardLayout /></ProtectedRoute>
+      }>
         <Route index element={<OverviewPage />} />
         <Route path="calls" element={<CallsPage />} />
         <Route path="sms" element={<SMSPage />} />

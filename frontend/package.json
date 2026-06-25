@@ -5,19 +5,20 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint src --ext .ts,.tsx"
+    "lint": "eslint src --ext .ts,.tsx",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "clsx": "^2.1.1",
+    "date-fns": "^3.6.0",
     "firebase": "^10.12.4",
+    "framer-motion": "^11.3.8",
+    "lucide-react": "^0.412.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.25.0",
-    "lucide-react": "^0.412.0",
-    "date-fns": "^3.6.0",
-    "clsx": "^2.1.1",
-    "framer-motion": "^11.3.8"
+    "react-router-dom": "^6.25.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",

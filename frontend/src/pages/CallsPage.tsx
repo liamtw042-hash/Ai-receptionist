@@ -3,6 +3,7 @@ import { Phone, ChevronDown, ChevronUp } from 'lucide-react';
 import { api } from '../lib/api';
 import { Card } from '../components/ui/Card';
 import { OutcomeBadge } from '../components/ui/Badge';
+import { SkeletonRow } from '../components/ui/Skeleton';
 import { formatDistanceToNow, format } from 'date-fns';
 
 interface Call {
@@ -23,12 +24,21 @@ interface CallDetail {
   turns: Array<{ role: string; content: string; timestamp: string }>;
 }
 
+const OUTCOME_FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'job_booked', label: 'Job Booked' },
+  { key: 'quote_given', label: 'Quote Given' },
+  { key: 'emergency', label: 'Emergency' },
+  { key: 'callback_needed', label: 'Callback Needed' },
+];
+
 export function CallsPage() {
   const [calls, setCalls] = useState<Call[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [detail, setDetail] = useState<CallDetail | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [filter, setFilter] = useState('all');
 
   useEffect(() => {
     api.get<Call[]>('/calls').then(setCalls).catch(console.error).finally(() => setLoading(false));
@@ -46,14 +56,20 @@ export function CallsPage() {
     }
   };
 
-  const OUTCOME_FILTERS = ['all', 'job_booked', 'quote_given', 'callback_needed', 'emergency'];
-  const [filter, setFilter] = useState('all');
-
   const filtered = filter === 'all' ? calls : calls.filter(c => c.outcome === filter);
 
   if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+    <div className="space-y-5 animate-fade-in">
+      <div className="space-y-1">
+        <div className="h-7 w-24 skeleton rounded-lg" />
+        <div className="h-4 w-32 skeleton rounded-md" />
+      </div>
+      <div className="flex gap-2 flex-wrap">
+        {[...Array(5)].map((_, i) => <div key={i} className="h-8 w-24 skeleton rounded-lg" />)}
+      </div>
+      <div className="space-y-2">
+        {[...Array(5)].map((_, i) => <SkeletonRow key={i} />)}
+      </div>
     </div>
   );
 
@@ -69,27 +85,43 @@ export function CallsPage() {
       {/* Filter chips */}
       <div className="flex gap-2 flex-wrap">
         {OUTCOME_FILTERS.map(f => (
-          <button key={f} onClick={() => setFilter(f)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              filter === f ? 'bg-blue-500 text-white' : 'glass text-gray-400 hover:text-white'
+          <button key={f.key} onClick={() => setFilter(f.key)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+              filter === f.key
+                ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20'
+                : 'glass text-gray-400 hover:text-white hover:border-white/15'
             }`}>
-            {f === 'all' ? 'All' : f.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+            {f.label}
+            {f.key !== 'all' && calls.filter(c => c.outcome === f.key).length > 0 && (
+              <span className={`ml-1.5 text-[10px] px-1 rounded-full ${filter === f.key ? 'bg-white/20' : 'bg-white/10'}`}>
+                {calls.filter(c => c.outcome === f.key).length}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
       {filtered.length === 0 ? (
         <Card>
-          <div className="text-center py-12 text-gray-500">
-            <Phone size={36} className="mx-auto mb-3 opacity-30" />
-            <p className="text-sm">No calls yet</p>
+          <div className="text-center py-14 text-gray-600">
+            <div className="w-14 h-14 bg-blue-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Phone size={22} className="text-blue-400 opacity-60" />
+            </div>
+            <p className="font-medium text-gray-400 mb-1">
+              {filter === 'all' ? 'No calls yet' : `No ${filter.replace(/_/g, ' ')} calls`}
+            </p>
+            <p className="text-sm text-gray-600">
+              {filter === 'all'
+                ? 'Calls will appear here once your AI starts answering.'
+                : 'Try a different filter to see other calls.'}
+            </p>
           </div>
         </Card>
       ) : (
         <div className="space-y-2">
           {filtered.map(call => (
             <div key={call.id} className="animate-fade-in">
-              <Card hover onClick={() => toggleExpand(call.id)} className="cursor-pointer">
+              <Card hover onClick={() => toggleExpand(call.id)} className="cursor-pointer transition-all duration-200">
                 <div className="flex items-start gap-4">
                   <div className="w-9 h-9 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
                     <Phone size={16} className="text-blue-400" />
@@ -107,8 +139,8 @@ export function CallsPage() {
                       <span className="text-xs text-gray-600">{call.turns} turns</span>
                     </div>
                   </div>
-                  <div className="text-gray-600 flex-shrink-0">
-                    {expanded === call.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  <div className="text-gray-600 flex-shrink-0 transition-transform duration-200" style={{ transform: expanded === call.id ? 'rotate(180deg)' : 'none' }}>
+                    <ChevronDown size={16} />
                   </div>
                 </div>
               </Card>
@@ -116,8 +148,10 @@ export function CallsPage() {
               {expanded === call.id && (
                 <div className="glass rounded-b-xl border-t-0 -mt-1 px-5 pb-5 pt-4 space-y-4 animate-fade-in">
                   {loadingDetail ? (
-                    <div className="flex justify-center py-4">
-                      <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                    <div className="space-y-2">
+                      <div className="h-3 w-20 skeleton rounded" />
+                      <div className="h-4 w-full skeleton rounded" />
+                      <div className="h-4 w-3/4 skeleton rounded" />
                     </div>
                   ) : detail ? (
                     <>

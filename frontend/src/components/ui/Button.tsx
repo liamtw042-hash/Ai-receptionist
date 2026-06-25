@@ -14,12 +14,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || loading}
         className={clsx(
-          'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-black disabled:opacity-50 disabled:cursor-not-allowed',
+          'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 focus:ring-offset-black disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.97] will-change-transform',
           {
-            'bg-blue-500 hover:bg-blue-600 text-white blue-glow hover:blue-glow active:scale-[0.98]': variant === 'primary',
-            'glass glass-hover text-white': variant === 'secondary',
+            'bg-blue-500 hover:bg-blue-600 text-white blue-glow hover:shadow-xl hover:shadow-blue-500/25': variant === 'primary',
+            'glass hover:bg-white/8 hover:border-white/20 text-white': variant === 'secondary',
             'text-gray-400 hover:text-white hover:bg-white/5': variant === 'ghost',
-            'bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30': variant === 'danger',
+            'bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 hover:border-red-500/50': variant === 'danger',
           },
           {
             'text-xs px-3 py-1.5 gap-1.5': size === 'sm',
