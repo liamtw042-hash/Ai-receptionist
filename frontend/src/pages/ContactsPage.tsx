@@ -107,7 +107,7 @@ export function ContactsPage() {
                   {contact.lastInteraction ? formatDistanceToNow(new Date(contact.lastInteraction), { addSuffix: true }) : 'Never'}
                 </span>
                 <div className="flex gap-2">
-                  <button onClick={() => navigate(`/sms?contact=${encodeURIComponent(contact.phoneNumber)}`)}
+                  <button onClick={() => navigate(`/dashboard/sms?contact=${encodeURIComponent(contact.phoneNumber)}`)}
                     className="w-7 h-7 glass rounded-lg flex items-center justify-center text-gray-400 hover:text-blue-400 transition-colors">
                     <MessageSquare size={13} />
                   </button>

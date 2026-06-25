@@ -22,7 +22,7 @@ export function SignupPage() {
     setLoading(true);
     try {
       await signUp(email, password);
-      navigate('/onboarding');
+      navigate('/onboarding'); // onboarding → /dashboard
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : '';
       if (message.includes('email-already-in-use')) {

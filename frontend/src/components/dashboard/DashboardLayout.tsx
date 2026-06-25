@@ -8,11 +8,11 @@ import { useAuth } from '../../contexts/AuthContext';
 import { clsx } from 'clsx';
 
 const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Overview', end: true },
-  { to: '/calls', icon: Phone, label: 'Calls' },
-  { to: '/sms', icon: MessageSquare, label: 'SMS' },
-  { to: '/contacts', icon: Users, label: 'Contacts' },
-  { to: '/settings', icon: Settings, label: 'Settings' },
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Overview', end: true },
+  { to: '/dashboard/calls', icon: Phone, label: 'Calls' },
+  { to: '/dashboard/sms', icon: MessageSquare, label: 'SMS' },
+  { to: '/dashboard/contacts', icon: Users, label: 'Contacts' },
+  { to: '/dashboard/settings', icon: Settings, label: 'Settings' },
 ];
 
 export function DashboardLayout() {

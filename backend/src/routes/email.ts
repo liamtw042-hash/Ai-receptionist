@@ -39,9 +39,9 @@ router.get('/callback', async (req: AuthRequest, res: Response) => {
       { merge: true }
     );
 
-    res.redirect(`${process.env.FRONTEND_URL}/settings?gmail=connected`);
+    res.redirect(`${process.env.FRONTEND_URL}/dashboard/settings?gmail=connected`);
   } catch (err) {
-    res.redirect(`${process.env.FRONTEND_URL}/settings?gmail=error`);
+    res.redirect(`${process.env.FRONTEND_URL}/dashboard/settings?gmail=error`);
   }
 });
 

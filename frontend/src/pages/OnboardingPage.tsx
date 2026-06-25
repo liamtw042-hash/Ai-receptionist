@@ -37,10 +37,10 @@ export function OnboardingPage() {
         services: form.services.split(',').map(s => s.trim()).filter(Boolean),
         onboardingComplete: true,
       });
-      navigate('/');
+      navigate('/dashboard');
     } catch {
       // still navigate — settings can be fixed later
-      navigate('/');
+      navigate('/dashboard');
     } finally {
       setLoading(false);
     }
