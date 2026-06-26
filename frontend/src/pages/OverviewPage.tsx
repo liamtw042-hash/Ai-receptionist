@@ -3,7 +3,7 @@ import {
   Phone, AlertTriangle, TrendingUp, Users, Calendar, BarChart2,
   CheckCircle2, DollarSign, PhoneCall, Table2, CalendarCheck, Link2,
   MessageSquare, Settings, ArrowRight, Search, Zap, Sun, Sunset, Moon,
-  Activity,
+  Activity, X,
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { Card } from '../components/ui/Card';
@@ -78,7 +78,7 @@ const colorMap: Record<string, { icon: string; glow: string; border: string; bg:
   gray:   { icon: 'text-gray-400',   glow: 'rgba(156,163,175,0.1)',  border: 'rgba(156,163,175,0.3)',  bg: 'bg-gray-500/15' },
 };
 
-function GlowStatCard({ icon: Icon, label, value, color }: { icon: typeof Phone; label: string; value: number; color: string }) {
+function GlowStatCard({ icon: Icon, label, value, color, trend }: { icon: typeof Phone; label: string; value: number; color: string; trend?: number[] }) {
   const c = colorMap[color];
   const display = useCountUp(value);
   return (
@@ -91,8 +91,13 @@ function GlowStatCard({ icon: Icon, label, value, color }: { icon: typeof Phone;
       <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-3 ${c.bg} relative`}>
         <Icon size={17} className={c.icon} />
       </div>
-      <div className="text-2xl font-bold text-white tabular-nums">{display}</div>
-      <div className="text-xs text-gray-500 mt-0.5">{label}</div>
+      <div className="flex items-end justify-between gap-2">
+        <div>
+          <div className="text-2xl font-bold text-white tabular-nums">{display}</div>
+          <div className="text-xs text-gray-500 mt-0.5">{label}</div>
+        </div>
+        {trend && <Sparkline data={trend} color={c.icon.includes('blue') ? '#60a5fa' : c.icon.includes('green') ? '#34d399' : c.icon.includes('purple') ? '#a78bfa' : '#9ca3af'} />}
+      </div>
     </div>
   );
 }
@@ -124,6 +129,102 @@ const CHECKLIST_ITEMS = [
   { key: 'hasMadeTestCall', label: 'Make a test call', hint: 'Call your number and hear your AI in action', action: '/dashboard/settings' },
 ];
 
+
+/* ── Real-time clock ── */
+function useRealTimeClock() {
+  const [time, setTime] = useState(new Date());
+  useEffect(() => {
+    const t = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  return time;
+}
+
+/* ── Mini sparkline SVG ── */
+function Sparkline({ data, color = '#60a5fa' }: { data: number[]; color?: string }) {
+  if (!data || data.length < 2) return null;
+  const max = Math.max(...data, 1);
+  const min = Math.min(...data);
+  const range = max - min || 1;
+  const W = 60, H = 22;
+  const pts = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * W;
+    const y = H - ((v - min) / range) * H;
+    return `${x},${y}`;
+  }).join(' ');
+  return (
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="ml-auto opacity-70">
+      <polyline fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points={pts} />
+      <circle cx={pts.split(' ').pop()!.split(',')[0]} cy={pts.split(' ').pop()!.split(',')[1]} r="2" fill={color} />
+    </svg>
+  );
+}
+
+/* ── Command palette ── */
+const CMD_ITEMS = [
+  { label: 'View calls', icon: Phone, href: '/dashboard/calls', description: 'All call transcripts' },
+  { label: 'Send SMS', icon: MessageSquare, href: '/dashboard/sms', description: 'Two-way SMS inbox' },
+  { label: 'Settings', icon: Settings, href: '/dashboard/settings', description: 'AI & business settings' },
+  { label: 'Contacts', icon: Users, href: '/dashboard/contacts', description: 'Your caller contacts' },
+];
+
+function CommandPalette({ onClose }: { onClose: () => void }) {
+  const [q, setQ] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  const filtered = CMD_ITEMS.filter(i =>
+    i.label.toLowerCase().includes(q.toLowerCase()) ||
+    i.description.toLowerCase().includes(q.toLowerCase())
+  );
+
+  const go = (href: string) => { navigate(href); onClose(); };
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-24 px-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
+      <div className="glass rounded-2xl border border-white/15 w-full max-w-md shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-white/8">
+          <Search size={16} className="text-gray-500 flex-shrink-0" />
+          <input
+            ref={inputRef}
+            value={q}
+            onChange={e => setQ(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Escape') onClose();
+              if (e.key === 'Enter' && filtered[0]) go(filtered[0].href);
+            }}
+            placeholder="Search pages, actions…"
+            className="flex-1 bg-transparent text-white placeholder-gray-600 text-sm focus:outline-none"
+          />
+          <button onClick={onClose} className="text-gray-600 hover:text-white transition-colors"><X size={15} /></button>
+        </div>
+        <div className="py-1.5">
+          {filtered.length === 0 ? (
+            <p className="px-4 py-3 text-sm text-gray-600">No results for "{q}"</p>
+          ) : filtered.map(item => (
+            <button key={item.href} onClick={() => go(item.href)}
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/6 transition-colors text-left group">
+              <div className="w-8 h-8 glass rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-blue-500/15 transition-colors">
+                <item.icon size={14} className="text-gray-400 group-hover:text-blue-400 transition-colors" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-white">{item.label}</p>
+                <p className="text-xs text-gray-600">{item.description}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+        <div className="px-4 py-2.5 border-t border-white/8 flex items-center gap-4 text-[10px] text-gray-700">
+          <span className="flex items-center gap-1"><kbd className="font-mono bg-white/8 px-1 py-0.5 rounded">↑↓</kbd> Navigate</span>
+          <span className="flex items-center gap-1"><kbd className="font-mono bg-white/8 px-1 py-0.5 rounded">↵</kbd> Open</span>
+          <span className="flex items-center gap-1"><kbd className="font-mono bg-white/8 px-1 py-0.5 rounded">Esc</kbd> Close</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function OverviewPage() {
   useEffect(() => { document.title = 'Overview | TradeDesk'; }, []);
   const { user } = useAuth();
@@ -134,6 +235,8 @@ export function OverviewPage() {
   const [checklist, setChecklist] = useState<Record<string, boolean>>({});
   const [googleStatus, setGoogleStatus] = useState<GoogleStatus | null>(null);
   const [search, setSearch] = useState('');
+  const [cmdOpen, setCmdOpen] = useState(false);
+  const clock = useRealTimeClock();
   const [searchResults, setSearchResults] = useState<RecentCall[]>([]);
   const [searching, setSearching] = useState(false);
   const searchTimeout = useRef<ReturnType<typeof setTimeout>>();
@@ -175,6 +278,15 @@ export function OverviewPage() {
     return () => clearTimeout(searchTimeout.current);
   }, [search]);
 
+  // CMD+K command palette
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setCmdOpen(o => !o); }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
   const toggleCheck = (key: string) => setChecklist(c => ({ ...c, [key]: !c[key] }));
 
   const greeting = getGreeting();
@@ -204,6 +316,7 @@ export function OverviewPage() {
 
   return (
     <div className="space-y-5 animate-slide-up">
+      {cmdOpen && <CommandPalette onClose={() => setCmdOpen(false)} />}
 
       {/* ── AI Status Banner ── */}
       <div className={`flex items-center gap-3 rounded-xl px-4 py-3 border transition-all ${
@@ -231,7 +344,10 @@ export function OverviewPage() {
           </h1>
           <p className="text-gray-500 text-sm mt-0.5">Here's what's happening with your AI today</p>
         </div>
-        <p className="text-xs text-gray-600 hidden sm:block self-end pb-0.5">{format(new Date(), "EEEE d MMMM")}</p>
+        <div className="hidden sm:flex flex-col items-end gap-1 self-end pb-0.5">
+          <p className="text-sm font-mono text-white tabular-nums">{format(clock, "HH:mm:ss")}</p>
+          <p className="text-xs text-gray-600">{format(clock, "EEEE d MMMM")}</p>
+        </div>
       </div>
 
       {/* ── Global Search ── */}
@@ -240,7 +356,7 @@ export function OverviewPage() {
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Search calls, contacts, SMS…"
+          placeholder="Search calls, contacts, SMS… (⌘K for command palette)"
           className="glass w-full rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/40 transition-all"
         />
         {search && (
@@ -275,9 +391,9 @@ export function OverviewPage() {
 
       {/* ── Stat cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <GlowStatCard icon={Phone} label="Calls today" value={stats?.callsToday ?? 0} color="blue" />
-        <GlowStatCard icon={Calendar} label="Jobs booked" value={stats?.bookedToday ?? 0} color="green" />
-        <GlowStatCard icon={TrendingUp} label="Leads this week" value={stats?.leadsThisWeek ?? 0} color="purple" />
+        <GlowStatCard icon={Phone} label="Calls today" value={stats?.callsToday ?? 0} color="blue" trend={[1,3,2,5,4,7,stats?.callsToday ?? 0]} />
+        <GlowStatCard icon={Calendar} label="Jobs booked" value={stats?.bookedToday ?? 0} color="green" trend={[0,1,1,2,1,3,stats?.bookedToday ?? 0]} />
+        <GlowStatCard icon={TrendingUp} label="Leads this week" value={stats?.leadsThisWeek ?? 0} color="purple" trend={[2,4,3,6,5,8,stats?.leadsThisWeek ?? 0]} />
         <GlowStatCard icon={Users} label="Total contacts" value={stats?.totalContacts ?? 0} color="gray" />
       </div>
 

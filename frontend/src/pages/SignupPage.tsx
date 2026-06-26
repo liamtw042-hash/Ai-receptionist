@@ -1,6 +1,6 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Zap, Check, CheckCircle, ArrowRight, ChevronDown } from 'lucide-react';
+import { Zap, Check, CheckCircle, ArrowRight, ChevronDown, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -31,6 +31,23 @@ export function SignupPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Password strength
+  const getPasswordStrength = (pw: string) => {
+    if (!pw) return { score: 0, label: '', color: '' };
+    let score = 0;
+    if (pw.length >= 8) score++;
+    if (pw.length >= 12) score++;
+    if (/[A-Z]/.test(pw)) score++;
+    if (/[0-9]/.test(pw)) score++;
+    if (/[^A-Za-z0-9]/.test(pw)) score++;
+    if (score <= 1) return { score, label: 'Weak', color: 'bg-red-500' };
+    if (score <= 2) return { score, label: 'Fair', color: 'bg-yellow-500' };
+    if (score <= 3) return { score, label: 'Good', color: 'bg-blue-500' };
+    return { score, label: 'Strong', color: 'bg-green-500' };
+  };
+  const pwStrength = getPasswordStrength(password);
   const { signUp } = useAuth();
   const navigate = useNavigate();
 
@@ -192,15 +209,34 @@ export function SignupPage() {
                   required
                   autoComplete="email"
                 />
-                <Input
-                  label="Password"
-                  type="password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder="Min. 8 characters"
-                  required
-                  autoComplete="new-password"
-                />
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-gray-300">Password</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      placeholder="Min. 8 characters"
+                      required
+                      autoComplete="new-password"
+                      className="glass w-full rounded-lg px-4 py-2.5 pr-10 text-sm text-white placeholder-gray-500 transition-all duration-200 focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/40"
+                    />
+                    <button type="button" onClick={() => setShowPassword(s => !s)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors p-0.5">
+                      {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                  {password && (
+                    <div className="space-y-1">
+                      <div className="flex gap-1 h-1">
+                        {[1,2,3,4].map(i => (
+                          <div key={i} className={`flex-1 rounded-full transition-all duration-300 ${i <= pwStrength.score ? pwStrength.color : 'bg-white/10'}`} />
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-500">Strength: <span className={`font-medium ${pwStrength.score >= 4 ? 'text-green-400' : pwStrength.score >= 3 ? 'text-blue-400' : pwStrength.score >= 2 ? 'text-yellow-400' : 'text-red-400'}`}>{pwStrength.label}</span></p>
+                    </div>
+                  )}
+                </div>
 
                 <Button type="submit" size="lg" loading={loading} className="w-full mt-2 text-base py-3.5">
                   Start my free trial <ArrowRight size={16} />

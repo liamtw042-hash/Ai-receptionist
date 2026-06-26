@@ -18,6 +18,16 @@ const TermsPage = lazy(() => import('./pages/TermsPage').then(m => ({ default: m
 const ContactPage = lazy(() => import('./pages/ContactPage').then(m => ({ default: m.ContactPage })));
 const DemoPage = lazy(() => import('./pages/DemoPage').then(m => ({ default: m.DemoPage })));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
+const AboutPage = lazy(() => import('./pages/AboutPage').then(m => ({ default: m.AboutPage })));
+const BlogPage = lazy(() => import('./pages/BlogPage').then(m => ({ default: m.BlogPage })));
+const CompareTalkmatePage = lazy(() => import('./pages/CompareTalkmatePage').then(m => ({ default: m.CompareTalkmatePage })));
+const HelpPage = lazy(() => import('./pages/HelpPage').then(m => ({ default: m.HelpPage })));
+const ChangelogPage = lazy(() => import('./pages/ChangelogPage').then(m => ({ default: m.ChangelogPage })));
+const StatusPage = lazy(() => import('./pages/StatusPage').then(m => ({ default: m.StatusPage })));
+const IndustryPlumbersPage = lazy(() => import('./pages/industries/IndustryPlumbersPage').then(m => ({ default: m.IndustryPlumbersPage })));
+const IndustryElectriciansPage = lazy(() => import('./pages/industries/IndustryElectriciansPage').then(m => ({ default: m.IndustryElectriciansPage })));
+const IndustryBuildersPage = lazy(() => import('./pages/industries/IndustryBuildersPage').then(m => ({ default: m.IndustryBuildersPage })));
+
 import { useEffect, useRef } from 'react';
 
 function Spinner() {
@@ -87,6 +97,15 @@ function AppRoutes() {
         <Route path="contacts" element={<ContactsPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
+      <Route path="/about" element={<FadeIn><AboutPage /></FadeIn>} />
+      <Route path="/blog" element={<FadeIn><BlogPage /></FadeIn>} />
+      <Route path="/compare/talkmate" element={<FadeIn><CompareTalkmatePage /></FadeIn>} />
+      <Route path="/help" element={<FadeIn><HelpPage /></FadeIn>} />
+      <Route path="/changelog" element={<FadeIn><ChangelogPage /></FadeIn>} />
+      <Route path="/status" element={<FadeIn><StatusPage /></FadeIn>} />
+      <Route path="/industries/plumbers" element={<FadeIn><IndustryPlumbersPage /></FadeIn>} />
+      <Route path="/industries/electricians" element={<FadeIn><IndustryElectriciansPage /></FadeIn>} />
+      <Route path="/industries/builders" element={<FadeIn><IndustryBuildersPage /></FadeIn>} />
       <Route path="*" element={<FadeIn><NotFoundPage /></FadeIn>} />
     </Routes>
   );
