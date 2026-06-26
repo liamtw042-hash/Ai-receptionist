@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://tradedesk-frontend-one.vercel.app/sitemap.xml

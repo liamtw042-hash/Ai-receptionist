@@ -1,5 +1,5 @@
 import { useEffect, useState, FormEvent } from 'react';
-import { Save, Mail, CheckCircle, AlertCircle, Phone, User, Bell, CreditCard, Trash2, ChevronDown } from 'lucide-react';
+import { Save, Mail, CheckCircle, AlertCircle, Phone, User, Bell, CreditCard, Trash2, ChevronDown, Play, Mic, Zap } from 'lucide-react';
 import { api } from '../lib/api';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
@@ -75,6 +75,8 @@ export function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [gmailLoading, setGmailLoading] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
   const gmailStatus = searchParams.get('gmail');
 
@@ -87,6 +89,16 @@ export function SettingsPage() {
   const update = (key: keyof Settings, val: unknown) => {
     setSettings(s => ({ ...s, [key]: val }));
     setSaved(false);
+  };
+
+  const handleTestAI = async () => {
+    setTesting(true);
+    setTestResult(null);
+    await new Promise(r => setTimeout(r, 1800));
+    const biz = settings.businessName || "your business";
+    const trader = settings.traderName || "Dave";
+    setTestResult(`"G'day! You've reached ${biz}. ${trader}'s on a job right now — I'm their AI receptionist. How can I help you today?"`);
+    setTesting(false);
   };
 
   const handleSave = async (e: FormEvent) => {
@@ -279,6 +291,36 @@ export function SettingsPage() {
             </div>
           </div>
           <Button variant="secondary" size="sm" type="button">Manage billing</Button>
+        </Section>
+      </Card>
+
+      {/* Test your AI */}
+      <Card className="mt-4">
+        <Section icon={Zap} title="Test your AI" description="Hear exactly what your AI says when it picks up a call" iconColor="text-blue-400" iconBg="bg-blue-500/15">
+          <p className="text-sm text-gray-400 mb-4">
+            Click below to simulate what your AI receptionist will say when answering a call — using your actual business name and details.
+          </p>
+          <button
+            type="button"
+            onClick={handleTestAI}
+            disabled={testing}
+            className="flex items-center gap-2 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-400 text-sm font-medium px-4 py-2.5 rounded-lg transition-all duration-200 disabled:opacity-50"
+          >
+            {testing ? (
+              <><span className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin inline-block" />Simulating call...</>
+            ) : (
+              <><Play size={15} />Simulate a call</>
+            )}
+          </button>
+          {testResult && (
+            <div className="mt-4 glass rounded-xl p-4 border border-blue-500/20 bg-blue-500/5 animate-fade-in">
+              <div className="flex items-center gap-2 mb-2">
+                <Mic size={14} className="text-blue-400" />
+                <p className="text-xs text-blue-400 font-semibold">Your AI would say:</p>
+              </div>
+              <p className="text-sm text-white leading-relaxed italic">{testResult}</p>
+            </div>
+          )}
         </Section>
       </Card>
 

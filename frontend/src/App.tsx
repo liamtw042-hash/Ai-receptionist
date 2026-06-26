@@ -11,18 +11,21 @@ import { CallsPage } from './pages/CallsPage';
 import { SMSPage } from './pages/SMSPage';
 import { ContactsPage } from './pages/ContactsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { PrivacyPage } from './pages/PrivacyPage';
+import { TermsPage } from './pages/TermsPage';
+import { ContactPage } from './pages/ContactPage';
+import { DemoPage } from './pages/DemoPage';
+import { NotFoundPage } from './pages/NotFoundPage';
 import { useEffect, useRef } from 'react';
 
 function Spinner() {
   return (
     <div className="min-h-screen bg-[#080c14] flex items-center justify-center">
       <div className="flex flex-col items-center gap-4">
-        <div className="relative w-12 h-12">
+        <div className="relative">
           <div className="absolute inset-0 bg-blue-500/20 rounded-2xl blur-lg" />
           <div className="relative w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30">
-            <svg viewBox="0 0 32 32" className="w-6 h-6 fill-white">
-              <path d="M18 5L9 18H16L14 27L23 14H16L18 5Z" />
-            </svg>
+            <svg viewBox="0 0 32 32" className="w-6 h-6 fill-white"><path d="M18 5L9 18H16L14 27L23 14H16L18 5Z" /></svg>
           </div>
         </div>
         <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
@@ -45,21 +48,19 @@ function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function AnimatedPage({ children }: { children: React.ReactNode }) {
+function FadeIn({ children }: { children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (ref.current) {
-      ref.current.style.opacity = '0';
-      ref.current.style.transform = 'translateY(8px)';
-      const raf = requestAnimationFrame(() => {
-        if (ref.current) {
-          ref.current.style.transition = 'opacity 220ms ease, transform 220ms ease';
-          ref.current.style.opacity = '1';
-          ref.current.style.transform = 'translateY(0)';
-        }
-      });
-      return () => cancelAnimationFrame(raf);
-    }
+    if (!ref.current) return;
+    ref.current.style.opacity = '0';
+    ref.current.style.transform = 'translateY(8px)';
+    const raf = requestAnimationFrame(() => {
+      if (!ref.current) return;
+      ref.current.style.transition = 'opacity 220ms ease, transform 220ms ease';
+      ref.current.style.opacity = '1';
+      ref.current.style.transform = 'translateY(0)';
+    });
+    return () => cancelAnimationFrame(raf);
   }, []);
   return <div ref={ref}>{children}</div>;
 }
@@ -68,10 +69,14 @@ function AppRoutes() {
   const location = useLocation();
   return (
     <Routes location={location} key={location.pathname}>
-      <Route path="/" element={<AnimatedPage><LandingPage /></AnimatedPage>} />
-      <Route path="/login" element={<PublicOnlyRoute><AnimatedPage><LoginPage /></AnimatedPage></PublicOnlyRoute>} />
-      <Route path="/signup" element={<PublicOnlyRoute><AnimatedPage><SignupPage /></AnimatedPage></PublicOnlyRoute>} />
-      <Route path="/onboarding" element={<ProtectedRoute><AnimatedPage><OnboardingPage /></AnimatedPage></ProtectedRoute>} />
+      <Route path="/" element={<FadeIn><LandingPage /></FadeIn>} />
+      <Route path="/privacy" element={<FadeIn><PrivacyPage /></FadeIn>} />
+      <Route path="/terms" element={<FadeIn><TermsPage /></FadeIn>} />
+      <Route path="/contact" element={<FadeIn><ContactPage /></FadeIn>} />
+      <Route path="/demo" element={<FadeIn><DemoPage /></FadeIn>} />
+      <Route path="/login" element={<PublicOnlyRoute><FadeIn><LoginPage /></FadeIn></PublicOnlyRoute>} />
+      <Route path="/signup" element={<PublicOnlyRoute><FadeIn><SignupPage /></FadeIn></PublicOnlyRoute>} />
+      <Route path="/onboarding" element={<ProtectedRoute><FadeIn><OnboardingPage /></FadeIn></ProtectedRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
         <Route index element={<OverviewPage />} />
         <Route path="calls" element={<CallsPage />} />
@@ -79,7 +84,7 @@ function AppRoutes() {
         <Route path="contacts" element={<ContactsPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<FadeIn><NotFoundPage /></FadeIn>} />
     </Routes>
   );
 }

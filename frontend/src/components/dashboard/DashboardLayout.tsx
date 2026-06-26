@@ -1,6 +1,10 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
-import { LayoutDashboard, Phone, MessageSquare, Users, Settings, Menu, X, LogOut, Zap } from 'lucide-react';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import {
+  LayoutDashboard, Phone, MessageSquare, Users, Settings,
+  Menu, X, LogOut, Zap, Bell, ChevronLeft, ChevronRight,
+  CheckCircle, PhoneIncoming, AlertTriangle,
+} from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { clsx } from 'clsx';
 
@@ -12,96 +16,164 @@ const navItems = [
   { to: '/dashboard/settings', icon: Settings, label: 'Settings' },
 ];
 
+// Mock notifications
+const MOCK_NOTIFS = [
+  { id: 1, type: 'call', icon: PhoneIncoming, color: 'text-blue-400', title: 'New call from 0412 345 678', desc: 'Burst pipe emergency — urgent', time: '2 min ago' },
+  { id: 2, type: 'booked', icon: CheckCircle, color: 'text-green-400', title: 'Job booked!', desc: 'Hot water replacement — Tuesday 9am', time: '18 min ago' },
+  { id: 3, type: 'emergency', icon: AlertTriangle, color: 'text-red-400', title: 'Emergency call flagged', desc: '0438 123 456 — gas leak suspected', time: '1 hr ago' },
+  { id: 4, type: 'call', icon: PhoneIncoming, color: 'text-blue-400', title: 'New call from 0421 987 654', desc: 'Quote request — new hot water system', time: '2 hr ago' },
+];
+
+const BREADCRUMBS: Record<string, string> = {
+  '/dashboard': 'Overview',
+  '/dashboard/calls': 'Calls',
+  '/dashboard/sms': 'SMS',
+  '/dashboard/contacts': 'Contacts',
+  '/dashboard/settings': 'Settings',
+};
+
 export function DashboardLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('td_sidebar') === '1');
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [unread, setUnread] = useState(2);
   const { logOut, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const initials = user?.email ? user.email[0].toUpperCase() : '?';
+  const currentPage = BREADCRUMBS[location.pathname] ?? 'Dashboard';
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === 'Escape') { setNotifOpen(false); setMobileOpen(false); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const toggleCollapse = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    localStorage.setItem('td_sidebar', next ? '1' : '0');
+  };
 
   const handleLogout = async () => {
     await logOut();
     navigate('/login');
   };
 
+  const openNotifs = () => {
+    setNotifOpen(o => !o);
+    setUnread(0);
+  };
+
   const Sidebar = () => (
     <aside className={clsx(
-      'fixed inset-y-0 left-0 z-50 w-64 flex flex-col transition-transform duration-300',
+      'fixed inset-y-0 left-0 z-50 flex flex-col transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
+      collapsed ? 'w-16' : 'w-64',
       'lg:translate-x-0 lg:static lg:flex',
-      mobileOpen ? 'translate-x-0' : '-translate-x-full'
+      mobileOpen ? 'translate-x-0 w-64' : '-translate-x-full lg:translate-x-0'
     )} style={{
       background: 'linear-gradient(180deg, #0a0f1e 0%, #0d1426 50%, #101828 100%)',
       borderRight: '1px solid rgba(59,130,246,0.15)',
     }}>
       {/* Logo */}
-      <div className="flex items-center gap-3 px-5 py-5 border-b border-white/6">
-        <div className="relative">
+      <div className={clsx(
+        'flex items-center border-b border-white/6 flex-shrink-0 transition-all duration-300',
+        collapsed ? 'px-3 py-5 justify-center' : 'px-5 py-5 gap-3'
+      )}>
+        <div className="relative flex-shrink-0">
           <div className="absolute inset-0 bg-blue-500/40 rounded-xl blur-md" />
           <div className="relative w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
             <Zap size={18} className="text-white" />
           </div>
         </div>
-        <div>
-          <span className="font-extrabold text-white text-lg tracking-tight">TradeDesk</span>
-          <p className="text-[10px] text-blue-400/70 font-medium tracking-wide uppercase">AI Receptionist</p>
-        </div>
+        {!collapsed && (
+          <div className="overflow-hidden">
+            <span className="font-extrabold text-white text-lg tracking-tight whitespace-nowrap">TradeDesk</span>
+            <p className="text-[10px] text-blue-400/70 font-medium tracking-wide uppercase whitespace-nowrap">AI Receptionist</p>
+          </div>
+        )}
         <button className="lg:hidden ml-auto text-gray-400 hover:text-white p-1" onClick={() => setMobileOpen(false)}>
           <X size={20} />
         </button>
       </div>
 
+      {/* Live indicator */}
+      {!collapsed && (
+        <div className="mx-3 mt-3 flex items-center gap-2 glass rounded-lg px-3 py-2 border border-green-500/20">
+          <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse flex-shrink-0" />
+          <span className="text-xs text-green-400 font-medium">AI is live · answering calls</span>
+        </div>
+      )}
+      {collapsed && (
+        <div className="mx-auto mt-3 w-2 h-2 rounded-full bg-green-400 animate-pulse" title="AI is live" />
+      )}
+
       {/* Nav */}
-      <nav className="flex-1 px-3 py-5 space-y-0.5">
+      <nav className={clsx('flex-1 py-4 space-y-0.5 overflow-y-auto', collapsed ? 'px-2' : 'px-3')}>
         {navItems.map(({ to, icon: Icon, label, end }) => (
           <NavLink
-            key={to}
-            to={to}
-            end={end}
+            key={to} to={to} end={end}
             onClick={() => setMobileOpen(false)}
+            title={collapsed ? label : undefined}
             className={({ isActive }) => clsx(
-              'relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group',
-              isActive
-                ? 'text-white bg-blue-500/15'
-                : 'text-gray-500 hover:text-gray-200 hover:bg-white/5'
+              'relative flex items-center rounded-lg text-sm font-medium transition-all duration-200 group',
+              collapsed ? 'justify-center px-2 py-3' : 'gap-3 px-3 py-2.5',
+              isActive ? 'text-white bg-blue-500/15' : 'text-gray-500 hover:text-gray-200 hover:bg-white/5'
             )}
           >
             {({ isActive }) => (
               <>
-                {isActive && (
+                {isActive && !collapsed && (
                   <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-blue-400 rounded-full" />
                 )}
                 <Icon size={17} className={clsx(
-                  'transition-colors duration-200',
+                  'transition-colors flex-shrink-0',
                   isActive ? 'text-blue-400' : 'text-gray-500 group-hover:text-gray-300'
                 )} />
-                <span>{label}</span>
-                {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-400" />}
+                {!collapsed && <span>{label}</span>}
+                {isActive && !collapsed && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-400" />}
               </>
             )}
           </NavLink>
         ))}
       </nav>
 
-      {/* User card */}
-      <div className="px-3 pb-4 border-t border-white/6 pt-4">
-        <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-white/4 border border-white/6 mb-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-xs font-bold text-white flex-shrink-0 shadow-sm">
-            {initials}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-white truncate">{user?.email}</p>
-            <p className="text-[10px] text-green-400 flex items-center gap-1 mt-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
-              Active
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-sm text-gray-500 hover:text-white hover:bg-white/5 transition-all duration-200 group"
-        >
-          <LogOut size={16} className="group-hover:text-red-400 transition-colors duration-200" />
-          Sign out
+      {/* Bottom: user + collapse toggle */}
+      <div className={clsx('border-t border-white/6 pt-3 pb-4 flex-shrink-0', collapsed ? 'px-2' : 'px-3')}>
+        {!collapsed ? (
+          <>
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/4 border border-white/6 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+                {initials}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium text-white truncate">{user?.email}</p>
+                <p className="text-[10px] text-green-400 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />Active
+                </p>
+              </div>
+            </div>
+            <button onClick={handleLogout}
+              className="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-sm text-gray-500 hover:text-white hover:bg-white/5 transition-all group">
+              <LogOut size={16} className="group-hover:text-red-400 transition-colors" />
+              Sign out
+            </button>
+          </>
+        ) : (
+          <button onClick={handleLogout} title="Sign out"
+            className="flex items-center justify-center p-3 w-full rounded-lg text-gray-500 hover:text-red-400 hover:bg-white/5 transition-all">
+            <LogOut size={16} />
+          </button>
+        )}
+        {/* Collapse toggle — desktop only */}
+        <button onClick={toggleCollapse}
+          className="hidden lg:flex items-center justify-center w-full mt-2 py-2 rounded-lg text-gray-600 hover:text-gray-300 hover:bg-white/5 transition-all text-xs gap-1.5">
+          {collapsed ? <ChevronRight size={14} /> : <><ChevronLeft size={14} /><span>Collapse</span></>}
         </button>
       </div>
     </aside>
@@ -111,32 +183,82 @@ export function DashboardLayout() {
     <div className="min-h-screen bg-[#080c14] flex">
       <Sidebar />
 
-      {/* Mobile overlay */}
       {mobileOpen && (
         <div className="fixed inset-0 bg-black/70 z-40 lg:hidden backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
       )}
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Mobile header */}
-        <header className="lg:hidden flex items-center gap-4 px-4 py-3.5 border-b border-white/6" style={{ background: 'rgba(10,15,30,0.95)' }}>
-          <button onClick={() => setMobileOpen(true)} className="text-gray-400 hover:text-white p-1">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Top bar */}
+        <header className="flex items-center gap-3 px-4 py-3 border-b border-white/6 flex-shrink-0"
+          style={{ background: 'rgba(8,12,20,0.95)', backdropFilter: 'blur(12px)' }}>
+          {/* Mobile hamburger */}
+          <button onClick={() => setMobileOpen(true)} className="lg:hidden text-gray-400 hover:text-white p-1 flex-shrink-0">
             <Menu size={22} />
           </button>
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-blue-500 rounded-lg flex items-center justify-center">
-              <Zap size={13} className="text-white" />
-            </div>
-            <span className="font-bold text-white text-sm">TradeDesk</span>
+
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-2 text-sm flex-1 min-w-0">
+            <span className="text-gray-600 hidden sm:block">Dashboard</span>
+            {currentPage !== 'Overview' && (
+              <>
+                <span className="text-gray-700 hidden sm:block">/</span>
+                <span className="text-white font-medium">{currentPage}</span>
+              </>
+            )}
+            {currentPage === 'Overview' && <span className="text-white font-medium">Overview</span>}
+          </div>
+
+          {/* Right: Notifications */}
+          <div className="relative flex-shrink-0">
+            <button onClick={openNotifs}
+              className="relative w-9 h-9 glass rounded-xl flex items-center justify-center text-gray-400 hover:text-white hover:border-white/20 transition-all border border-white/8">
+              <Bell size={16} />
+              {unread > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] font-bold text-white flex items-center justify-center">
+                  {unread}
+                </span>
+              )}
+            </button>
+
+            {/* Notification dropdown */}
+            {notifOpen && (
+              <>
+                <div className="fixed inset-0 z-30" onClick={() => setNotifOpen(false)} />
+                <div className="absolute right-0 top-12 w-80 glass rounded-xl border border-white/12 shadow-2xl z-40 overflow-hidden animate-slide-in-right">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-white/8">
+                    <span className="text-sm font-semibold text-white">Notifications</span>
+                    <button onClick={() => setNotifOpen(false)} className="text-gray-500 hover:text-white">
+                      <X size={14} />
+                    </button>
+                  </div>
+                  <div className="divide-y divide-white/5 max-h-80 overflow-y-auto">
+                    {MOCK_NOTIFS.map(n => (
+                      <div key={n.id} className="flex items-start gap-3 px-4 py-3 hover:bg-white/4 transition-colors cursor-pointer">
+                        <n.icon size={16} className={clsx('flex-shrink-0 mt-0.5', n.color)} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-white truncate">{n.title}</p>
+                          <p className="text-xs text-gray-500 truncate">{n.desc}</p>
+                        </div>
+                        <span className="text-[10px] text-gray-600 flex-shrink-0">{n.time}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="px-4 py-3 border-t border-white/8">
+                    <NavLink to="/dashboard/calls" onClick={() => setNotifOpen(false)} className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
+                      View all calls →
+                    </NavLink>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </header>
 
-        {/* Page content with grid bg */}
-        <main className="flex-1 overflow-auto p-4 lg:p-6 animate-fade-in relative"
-          style={{
-            backgroundImage: 'linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px)',
-            backgroundSize: '40px 40px',
-          }}>
+        {/* Page content */}
+        <main className="flex-1 overflow-auto p-4 lg:p-6 animate-fade-in" style={{
+          backgroundImage: 'linear-gradient(rgba(59,130,246,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,0.025) 1px, transparent 1px)',
+          backgroundSize: '40px 40px',
+        }}>
           <Outlet />
         </main>
       </div>
