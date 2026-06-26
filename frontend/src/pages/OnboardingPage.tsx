@@ -181,7 +181,7 @@ export function OnboardingPage() {
                 <div className="flex flex-wrap gap-2">
                   {TRADES.map(t => (
                     <button key={t} type="button" onClick={() => update('tradeType', t)}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 min-h-[44px] ${
                         form.tradeType === t
                           ? 'bg-blue-500 text-white shadow-md shadow-blue-500/20'
                           : 'glass text-gray-400 hover:text-white hover:border-white/20'
@@ -203,13 +203,13 @@ export function OnboardingPage() {
                   <div className="flex-1 relative">
                     <Clock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
                     <input type="time" value={form.hoursStart} onChange={e => update('hoursStart', e.target.value)}
-                      className="glass w-full rounded-lg pl-9 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/40 transition-all bg-transparent" />
+                      className="glass w-full rounded-lg pl-9 pr-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/40 transition-all bg-transparent min-h-[48px]" />
                   </div>
                   <span className="text-gray-500 text-sm flex-shrink-0">to</span>
                   <div className="flex-1 relative">
                     <Clock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
                     <input type="time" value={form.hoursEnd} onChange={e => update('hoursEnd', e.target.value)}
-                      className="glass w-full rounded-lg pl-9 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/40 transition-all bg-transparent" />
+                      className="glass w-full rounded-lg pl-9 pr-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/40 transition-all bg-transparent min-h-[48px]" />
                   </div>
                 </div>
                 <p className="text-xs text-gray-500">The AI will mention this when callers ask about availability</p>

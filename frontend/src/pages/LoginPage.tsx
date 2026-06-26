@@ -80,8 +80,8 @@ export function LoginPage() {
 
           <div className="grid lg:grid-cols-2 gap-0 glass rounded-2xl overflow-hidden border border-white/10">
 
-            {/* LEFT — Branding */}
-            <div className="relative bg-gradient-to-br from-blue-600/20 via-blue-500/10 to-transparent border-r border-white/8 p-8 lg:p-12 flex flex-col justify-between overflow-hidden">
+            {/* LEFT — Branding (hidden on mobile) */}
+            <div className="hidden lg:flex relative bg-gradient-to-br from-blue-600/20 via-blue-500/10 to-transparent border-r border-white/8 p-8 lg:p-12 flex-col justify-between overflow-hidden">
 
               {/* Animated pulse rings behind the icon */}
               <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
@@ -134,7 +134,7 @@ export function LoginPage() {
             </div>
 
             {/* RIGHT — Form */}
-            <div className="p-8 lg:p-12 flex flex-col justify-center">
+            <div className="p-6 sm:p-8 lg:p-12 flex flex-col justify-center">
               <h2 className="text-2xl font-bold text-white mb-1">Sign in</h2>
               <p className="text-gray-500 text-sm mb-8">Access your dashboard and call history</p>
 

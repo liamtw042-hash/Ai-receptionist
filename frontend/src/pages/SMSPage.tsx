@@ -49,7 +49,7 @@ export function SMSPage() {
     .sort(([, a], [, b]) => (b[0]?.timestamp ?? '').localeCompare(a[0]?.timestamp ?? ''));
 
   if (loading) return (
-    <div className="h-[calc(100vh-8rem)] flex gap-4 animate-fade-in">
+    <div className="h-[calc(100dvh-9rem)] lg:h-[calc(100vh-7rem)] flex gap-4 animate-fade-in">
       <div className="w-full lg:w-72 flex-shrink-0 space-y-3">
         <Skeleton className="h-8 w-28" />
         <Skeleton className="h-10 w-full rounded-xl" />
@@ -65,7 +65,7 @@ export function SMSPage() {
   );
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex gap-3 animate-slide-up">
+    <div className="h-[calc(100dvh-9rem)] lg:h-[calc(100vh-7rem)] flex gap-3 animate-slide-up">
       {/* Conversation list */}
       <div className={`w-full lg:w-72 flex-shrink-0 flex flex-col gap-2 ${selected ? 'hidden lg:flex' : 'flex'}`}>
         <div>
@@ -162,7 +162,7 @@ export function SMSPage() {
               onChange={e => setReply(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
               placeholder="Type a message…"
-              className="flex-1 glass rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/40 transition-all"
+              className="flex-1 glass rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/40 transition-all min-h-[48px]"
             />
             <Button onClick={handleSend} loading={sending} disabled={!reply.trim()} className="px-4 py-3 flex-shrink-0">
               <Send size={16} />

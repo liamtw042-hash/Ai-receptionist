@@ -78,7 +78,7 @@ export function SignupPage() {
 
           <div className="grid lg:grid-cols-2 gap-0 glass rounded-2xl overflow-hidden border border-white/10">
             {/* LEFT — Plan */}
-            <div className="bg-gradient-to-br from-blue-600/20 via-blue-500/10 to-transparent border-r border-white/8 p-8 lg:p-10 flex flex-col">
+            <div className="hidden lg:flex bg-gradient-to-br from-blue-600/20 via-blue-500/10 to-transparent border-r border-white/8 p-8 lg:p-10 flex-col">
               {/* Trial badge */}
               <div className="inline-flex items-center gap-2 bg-green-500/20 border border-green-500/30 text-green-400 text-xs font-bold px-3 py-1.5 rounded-full w-fit mb-6">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
@@ -125,7 +125,7 @@ export function SignupPage() {
             </div>
 
             {/* RIGHT — Form */}
-            <div className="p-8 lg:p-10">
+            <div className="p-6 sm:p-8 lg:p-10">
               <h2 className="text-2xl font-bold text-white mb-1">Start your free trial</h2>
               <p className="text-gray-500 text-sm mb-6">Live in 10 minutes. No credit card needed.</p>
 
