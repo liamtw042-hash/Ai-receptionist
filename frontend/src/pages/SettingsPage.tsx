@@ -1,5 +1,9 @@
 import { useEffect, useState, FormEvent } from 'react';
-import { Save, Mail, CheckCircle, AlertCircle, Phone, User, Bell, CreditCard, Trash2, ChevronDown, Play, Mic, Zap } from 'lucide-react';
+import {
+  Save, Mail, CheckCircle, AlertCircle, Phone, User, Bell, CreditCard, Trash2,
+  ChevronDown, Play, Mic, Zap, Link2, ExternalLink, Table2, CalendarCheck,
+  Loader2, Unlink,
+} from 'lucide-react';
 import { api } from '../lib/api';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
@@ -28,7 +32,16 @@ interface Settings {
   weeklySummaryEnabled?: boolean;
 }
 
-// Section wrapper
+interface GoogleStatus {
+  connected: boolean;
+  email?: string;
+  sheetsConnected: boolean;
+  spreadsheetId?: string;
+  spreadsheetUrl?: string;
+  calendarConnected: boolean;
+  calendarId?: string;
+}
+
 function Section({ icon: Icon, title, description, children, iconColor = 'text-blue-400', iconBg = 'bg-blue-500/15' }: {
   icon: typeof User; title: string; description?: string; children: React.ReactNode;
   iconColor?: string; iconBg?: string;
@@ -49,7 +62,6 @@ function Section({ icon: Icon, title, description, children, iconColor = 'text-b
   );
 }
 
-// Toggle row
 function Toggle({ label, hint, checked, onChange }: { label: string; hint?: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <div className="flex items-center justify-between gap-4 py-3 border-b border-white/6 last:border-0">
@@ -68,6 +80,236 @@ function Toggle({ label, hint, checked, onChange }: { label: string; hint?: stri
   );
 }
 
+// ── Google Integrations Card ──────────────────────────────────────────────────
+function GoogleIntegrationsCard() {
+  const [status, setStatus] = useState<GoogleStatus | null>(null);
+  const [loadingStatus, setLoadingStatus] = useState(true);
+  const [connecting, setConnecting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [creatingSheet, setCreatingSheet] = useState(false);
+  const [testingSheet, setTestingSheet] = useState(false);
+  const [testingCal, setTestingCal] = useState(false);
+  const [sheetMsg, setSheetMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [calMsg, setCalMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const fetchStatus = async () => {
+    try {
+      const s = await api.get<GoogleStatus>('/google/status');
+      setStatus(s);
+    } catch {
+      setStatus({ connected: false, sheetsConnected: false, calendarConnected: false });
+    } finally {
+      setLoadingStatus(false);
+    }
+  };
+
+  useEffect(() => { fetchStatus(); }, []);
+
+  const handleConnect = async () => {
+    setConnecting(true);
+    try {
+      const { url } = await api.get<{ url: string }>('/google/connect');
+      window.location.href = url;
+    } catch {
+      setConnecting(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (!confirm('Disconnect your Google account? Calls will no longer be logged to Sheets or Calendar.')) return;
+    setDisconnecting(true);
+    try {
+      await api.post('/google/disconnect', {});
+      setStatus({ connected: false, sheetsConnected: false, calendarConnected: false });
+    } catch { /* ignore */ } finally {
+      setDisconnecting(false);
+    }
+  };
+
+  const handleCreateSheet = async () => {
+    setCreatingSheet(true);
+    setSheetMsg(null);
+    try {
+      const res = await api.post<{ spreadsheetUrl: string }>('/google/create-sheet', {});
+      setSheetMsg({ ok: true, text: 'Sheet created!' });
+      await fetchStatus();
+      if (res.spreadsheetUrl) window.open(res.spreadsheetUrl, '_blank');
+    } catch (err: any) {
+      setSheetMsg({ ok: false, text: err?.message || 'Failed to create sheet' });
+    } finally {
+      setCreatingSheet(false);
+    }
+  };
+
+  const handleTestSheet = async () => {
+    setTestingSheet(true);
+    setSheetMsg(null);
+    try {
+      await api.post('/google/test-sheet', {});
+      setSheetMsg({ ok: true, text: 'Test row added to your sheet ✓' });
+    } catch (err: any) {
+      setSheetMsg({ ok: false, text: err?.message || 'Failed to write test row' });
+    } finally {
+      setTestingSheet(false);
+    }
+  };
+
+  const handleTestCal = async () => {
+    setTestingCal(true);
+    setCalMsg(null);
+    try {
+      await api.post('/google/test-calendar', {});
+      setCalMsg({ ok: true, text: 'Test event created in your calendar ✓' });
+    } catch (err: any) {
+      setCalMsg({ ok: false, text: err?.message || 'Failed to create test event' });
+    } finally {
+      setTestingCal(false);
+    }
+  };
+
+  return (
+    <Card>
+      <Section icon={Link2} title="Integrations" description="Auto-log calls to Google Sheets and create Calendar jobs" iconColor="text-emerald-400" iconBg="bg-emerald-500/15">
+
+        {/* Connect / Connected header */}
+        {loadingStatus ? (
+          <div className="flex items-center gap-2 text-sm text-gray-500 mb-5"><Loader2 size={14} className="animate-spin" /> Checking connection…</div>
+        ) : !status?.connected ? (
+          <div className="mb-5">
+            <p className="text-sm text-gray-400 mb-4">
+              Connect your Google account to automatically log every call to a spreadsheet and create calendar jobs when a booking is made.
+            </p>
+            <Button variant="secondary" onClick={handleConnect} loading={connecting} type="button">
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-4 h-4" alt="" />
+              Connect Google Account
+            </Button>
+          </div>
+        ) : (
+          <div className="mb-5 flex items-center justify-between gap-3 glass rounded-lg px-4 py-3 border border-emerald-500/20 bg-emerald-500/5">
+            <div className="flex items-center gap-2">
+              <CheckCircle size={15} className="text-emerald-400 flex-shrink-0" />
+              <div>
+                <p className="text-sm text-white font-medium">Google connected</p>
+                {status.email && <p className="text-xs text-gray-500">{status.email}</p>}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleDisconnect}
+              disabled={disconnecting}
+              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-red-400 transition-colors"
+            >
+              {disconnecting ? <Loader2 size={12} className="animate-spin" /> : <Unlink size={12} />}
+              Disconnect
+            </button>
+          </div>
+        )}
+
+        {status?.connected && (
+          <div className="space-y-4">
+            {/* Google Sheets card */}
+            <div className="glass rounded-xl p-4 border border-white/8">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                  <Table2 size={15} className="text-emerald-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white">Google Sheets</p>
+                  <p className="text-xs text-gray-500">Auto-log every call as a row</p>
+                </div>
+                {status.sheetsConnected && (
+                  <span className="flex items-center gap-1 text-xs text-emerald-400 font-semibold flex-shrink-0">
+                    <CheckCircle size={12} /> Active
+                  </span>
+                )}
+              </div>
+
+              {status.sheetsConnected ? (
+                <div className="space-y-3">
+                  {status.spreadsheetUrl && (
+                    <a href={status.spreadsheetUrl} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition-colors">
+                      <ExternalLink size={11} /> Open your calls spreadsheet
+                    </a>
+                  )}
+                  {sheetMsg && (
+                    <p className={`text-xs ${sheetMsg.ok ? 'text-emerald-400' : 'text-red-400'}`}>{sheetMsg.text}</p>
+                  )}
+                  <div className="flex gap-2 flex-wrap">
+                    <button type="button" onClick={handleTestSheet} disabled={testingSheet}
+                      className="flex items-center gap-1.5 text-xs px-3 py-1.5 glass rounded-lg text-gray-300 hover:text-white hover:border-white/20 transition-all disabled:opacity-50">
+                      {testingSheet ? <Loader2 size={11} className="animate-spin" /> : null}
+                      Test — add row
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs text-gray-500">No spreadsheet linked yet. Create a pre-formatted template to get started.</p>
+                  {sheetMsg && (
+                    <p className={`text-xs ${sheetMsg.ok ? 'text-emerald-400' : 'text-red-400'}`}>{sheetMsg.text}</p>
+                  )}
+                  <button type="button" onClick={handleCreateSheet} disabled={creatingSheet}
+                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 rounded-lg transition-all disabled:opacity-50">
+                    {creatingSheet ? <Loader2 size={11} className="animate-spin" /> : <Table2 size={11} />}
+                    {creatingSheet ? 'Creating…' : 'Create sheet template'}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Google Calendar card */}
+            <div className="glass rounded-xl p-4 border border-white/8">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center flex-shrink-0">
+                  <CalendarCheck size={15} className="text-blue-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white">Google Calendar</p>
+                  <p className="text-xs text-gray-500">Auto-create events when jobs are booked</p>
+                </div>
+                {status.calendarConnected && (
+                  <span className="flex items-center gap-1 text-xs text-blue-400 font-semibold flex-shrink-0">
+                    <CheckCircle size={12} /> Active
+                  </span>
+                )}
+              </div>
+
+              {status.calendarConnected ? (
+                <div className="space-y-3">
+                  <p className="text-xs text-gray-500">
+                    Logging to: <span className="text-gray-300">{status.calendarId === 'primary' ? 'Primary calendar' : status.calendarId}</span>
+                  </p>
+                  {calMsg && (
+                    <p className={`text-xs ${calMsg.ok ? 'text-blue-400' : 'text-red-400'}`}>{calMsg.text}</p>
+                  )}
+                  <div className="flex gap-2 flex-wrap">
+                    <button type="button" onClick={handleTestCal} disabled={testingCal}
+                      className="flex items-center gap-1.5 text-xs px-3 py-1.5 glass rounded-lg text-gray-300 hover:text-white hover:border-white/20 transition-all disabled:opacity-50">
+                      {testingCal ? <Loader2 size={11} className="animate-spin" /> : null}
+                      Test — create event
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-gray-500">Calendar access granted — events will appear in your primary calendar when jobs are booked.</p>
+              )}
+            </div>
+
+            {/* How it works note */}
+            <div className="glass rounded-lg px-3 py-2.5 border border-white/5 bg-white/[0.02]">
+              <p className="text-xs text-gray-500 leading-relaxed">
+                <span className="text-gray-400 font-medium">How it works:</span> After every call, TradeDesk logs a row to your sheet with the date, caller details, job type, quote and outcome. If the call results in a booking, a Calendar event is automatically created for the next business day at 9am.
+              </p>
+            </div>
+          </div>
+        )}
+      </Section>
+    </Card>
+  );
+}
+
+// ── Main SettingsPage ─────────────────────────────────────────────────────────
 export function SettingsPage() {
   useEffect(() => { document.title = 'Settings | TradeDesk'; }, []);
   const [settings, setSettings] = useState<Partial<Settings>>({});
@@ -79,6 +321,7 @@ export function SettingsPage() {
   const [testResult, setTestResult] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
   const gmailStatus = searchParams.get('gmail');
+  const googleStatus = searchParams.get('google');
 
   useEffect(() => {
     api.get<Settings>('/settings').then(s => {
@@ -95,8 +338,8 @@ export function SettingsPage() {
     setTesting(true);
     setTestResult(null);
     await new Promise(r => setTimeout(r, 1800));
-    const biz = settings.businessName || "your business";
-    const trader = settings.traderName || "Dave";
+    const biz = settings.businessName || 'your business';
+    const trader = settings.traderName || 'Dave';
     setTestResult(`"G'day! You've reached ${biz}. ${trader}'s on a job right now — I'm their AI receptionist. How can I help you today?"`);
     setTesting(false);
   };
@@ -171,6 +414,16 @@ export function SettingsPage() {
           <AlertCircle size={16} /> Gmail connection failed — try again
         </div>
       )}
+      {googleStatus === 'connected' && (
+        <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm px-4 py-3 rounded-lg mb-4">
+          <CheckCircle size={16} /> Google account connected — set up your sheet below
+        </div>
+      )}
+      {googleStatus === 'error' && (
+        <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/30 text-red-400 text-sm px-4 py-3 rounded-lg mb-4">
+          <AlertCircle size={16} /> Google connection failed — try again
+        </div>
+      )}
 
       <form onSubmit={handleSave} className="space-y-4">
 
@@ -218,7 +471,22 @@ export function SettingsPage() {
           </Section>
         </Card>
 
-        {/* 3. Notification Preferences */}
+        {/* Save button (mid-form, before integrations) */}
+        <div className="flex items-center gap-4 pb-2">
+          <Button type="submit" loading={saving} size="lg" variant={saved ? 'success' : 'primary'}>
+            {saved ? <CheckCircle size={16} /> : <Save size={16} />}
+            {saving ? 'Saving…' : saved ? 'Saved!' : 'Save settings'}
+          </Button>
+        </div>
+      </form>
+
+      {/* 3. Integrations (outside form — manages its own state) */}
+      <div className="mt-4">
+        <GoogleIntegrationsCard />
+      </div>
+
+      {/* 4. Notification Preferences */}
+      <form onSubmit={handleSave} className="space-y-4 mt-4">
         <Card>
           <Section icon={Bell} title="Notification Preferences" description="How and when you get notified" iconColor="text-yellow-400" iconBg="bg-yellow-500/15">
             <Toggle label="SMS alerts after each call" hint="Receive a text summary after every call" checked={!!(settings.smsAlertsEnabled)} onChange={v => update('smsAlertsEnabled', v)} />
@@ -227,7 +495,7 @@ export function SettingsPage() {
           </Section>
         </Card>
 
-        {/* 4. Twilio / Phone Number */}
+        {/* 5. Twilio / Phone Number */}
         <Card>
           <Section icon={Phone} title="Your TradeDesk Number" description="The number callers reach your AI on" iconColor="text-green-400" iconBg="bg-green-500/15">
             <div className="flex items-center gap-3 glass rounded-lg px-4 py-3 mb-3">
@@ -238,7 +506,7 @@ export function SettingsPage() {
           </Section>
         </Card>
 
-        {/* 5. Gmail */}
+        {/* 6. Gmail */}
         <Card>
           <Section icon={Mail} title="Gmail Integration" description="AI auto-replies to enquiry emails" iconColor="text-red-400" iconBg="bg-red-500/15">
             <div className="flex items-center justify-between gap-4 mb-4">
@@ -274,11 +542,10 @@ export function SettingsPage() {
             {saved ? <CheckCircle size={16} /> : <Save size={16} />}
             {saving ? 'Saving…' : saved ? 'Saved!' : 'Save settings'}
           </Button>
-
         </div>
       </form>
 
-      {/* 6. Billing */}
+      {/* 7. Billing */}
       <Card className="mt-4">
         <Section icon={CreditCard} title="Billing" description="Your plan and payment details" iconColor="text-blue-400" iconBg="bg-blue-500/15">
           <div className="glass rounded-xl p-4 border border-blue-500/20 bg-blue-500/5 mb-4">
@@ -324,7 +591,7 @@ export function SettingsPage() {
         </Section>
       </Card>
 
-      {/* 7. Danger Zone */}
+      {/* Danger Zone */}
       <Card className="mt-4 border-red-500/20">
         <Section icon={Trash2} title="Danger Zone" description="Irreversible actions — proceed with caution" iconColor="text-red-400" iconBg="bg-red-500/15">
           <Button variant="danger" size="sm" type="button"

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Phone, ChevronDown, PhoneIncoming, Search } from 'lucide-react';
+import { Phone, ChevronDown, PhoneIncoming, Search, Table2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { Card } from '../components/ui/Card';
 import { OutcomeBadge } from '../components/ui/Badge';
 import { SkeletonRow } from '../components/ui/Skeleton';
 import { formatDistanceToNow, format } from 'date-fns';
 
-interface Call { id: string; callerNumber: string; outcome: string; summary: string; createdAt: string; turns: number; }
+interface Call { id: string; callerNumber: string; outcome: string; summary: string; createdAt: string; turns: number; googleSheetLogged?: boolean; }
 interface CallDetail { id: string; callerNumber: string; outcome: string; summary: string; createdAt: string; turns: Array<{ role: string; content: string; timestamp: string }>; }
 
 const OUTCOME_FILTERS = [
@@ -137,6 +137,11 @@ export function CallsPage() {
                     <div className="flex items-center gap-3 mt-1.5">
                       <span className="text-xs text-gray-600">{call.createdAt ? format(new Date(call.createdAt), 'dd MMM, h:mm a') : '—'}</span>
                       {call.turns > 0 && <span className="text-xs text-gray-700">{call.turns} exchanges</span>}
+                      {call.googleSheetLogged && (
+                        <span title="Logged to Google Sheets" className="flex items-center gap-1 text-xs text-emerald-500">
+                          <Table2 size={11} /> Sheet
+                        </span>
+                      )}
                     </div>
                   </div>
                   <ChevronDown size={16} className={`text-gray-600 flex-shrink-0 transition-transform duration-200 ${expanded === call.id ? 'rotate-180' : ''}`} />

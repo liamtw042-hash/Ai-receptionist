@@ -10,6 +10,7 @@ import { contactsRouter } from './routes/contacts';
 import { settingsRouter } from './routes/settings';
 import { emailRouter } from './routes/email';
 import { dashboardRouter } from './routes/dashboard';
+import { googleRouter } from './routes/google';
 
 dotenv.config();
 
@@ -37,6 +38,7 @@ app.use('/api/contacts', contactsRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/email', emailRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/google', googleRouter);
 
 app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'TradeDesk' }));
 

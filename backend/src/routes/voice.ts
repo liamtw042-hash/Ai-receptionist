@@ -12,9 +12,47 @@ import {
 } from '../services/smsService';
 import { upsertContact } from '../services/contactService';
 import { resolveTwilioUser } from '../middleware/authMiddleware';
+import { appendToSheet, createCalendarEvent } from './google';
 
 const router = Router();
 const VoiceResponse = twilio.twiml.VoiceResponse;
+
+// Helper: extract structured fields from AI summary for Sheet row
+function extractCallDetails(
+  transcript: string,
+  summary: string,
+  outcome: string,
+  callerNumber: string,
+  now: Date
+): Record<string, string> {
+  // Try to extract caller name from transcript
+  const nameMatch = transcript.match(/(?:my name is|this is|it'?s)\s+([A-Z][a-z]+ ?[A-Z]?[a-z]*)/i);
+  const callerName = nameMatch ? nameMatch[1].trim() : '';
+
+  // Try to extract address
+  const addrMatch = transcript.match(/(\d+\s+[A-Za-z]+ (?:St|Street|Rd|Road|Ave|Avenue|Dr|Drive|Cl|Close|Pl|Place|Cres|Crescent)[a-z,\s]*)/i);
+  const address = addrMatch ? addrMatch[1].trim() : '';
+
+  // Try to extract job type from first user turn
+  const jobMatch = transcript.match(/(?:need|want|looking for|fix|repair|install|replace)\s+([a-zA-Z\s]{3,40}?)(?:\.|,|$)/i);
+  const jobType = jobMatch ? jobMatch[1].trim() : '';
+
+  // Try to extract quote
+  const quoteMatch = transcript.match(/\$[\d,]+(?:\s*[-–]\s*\$[\d,]+)?/);
+  const quoteGiven = quoteMatch ? quoteMatch[0] : '';
+
+  return {
+    date: now.toLocaleDateString('en-AU'),
+    time: now.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' }),
+    callerName,
+    callerNumber,
+    jobType,
+    address,
+    quoteGiven,
+    outcome: outcome.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+    notes: summary.replace(/\n/g, ' ').slice(0, 500),
+  };
+}
 
 // Incoming call
 router.post('/', async (req: Request, res: Response) => {
@@ -159,7 +197,7 @@ router.post('/status', async (req: Request, res: Response) => {
         summaryPrompt
       );
 
-      await finalizeSession(CallSid, summary, outcome);
+      const callDoc = await finalizeSession(CallSid, summary, outcome);
       await sendCallSummaryToTradie(settings.mobileNumber, From, summary, outcome.replace(/_/g, ' ').toUpperCase());
 
       if (outcome === 'job_booked') {
@@ -168,6 +206,60 @@ router.post('/status', async (req: Request, res: Response) => {
       }
 
       await upsertContact(userId, From, { lastInteraction: new Date(), notes: summary });
+
+      // ── Google integrations ────────────────────────────────────────────────
+      const now = new Date();
+      const tokenDoc = await db.collection('googleTokens').doc(userId).get();
+
+      if (tokenDoc.exists) {
+        const tokenData = tokenDoc.data()!;
+
+        // Append to Google Sheets if connected
+        if (tokenData.spreadsheetId) {
+          try {
+            const rowData = extractCallDetails(transcript, summary, outcome, From, now);
+            await appendToSheet(userId, rowData);
+
+            // Mark this call as logged in the DB doc if we have the id
+            if (callDoc) {
+              await db.collection('calls').doc(callDoc).update({ googleSheetLogged: true });
+            }
+          } catch (sheetErr) {
+            console.error('Google Sheets append error:', sheetErr);
+          }
+        }
+
+        // Create Calendar event if job booked
+        if (outcome === 'job_booked') {
+          try {
+            const details = extractCallDetails(transcript, summary, outcome, From, now);
+            // Schedule for next business day 9 AM by default
+            const eventStart = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+            eventStart.setHours(9, 0, 0, 0);
+            const eventEnd = new Date(eventStart.getTime() + 2 * 60 * 60 * 1000);
+
+            await createCalendarEvent(userId, {
+              title: `🔧 ${details.jobType || 'Job'} — ${details.callerName || From}`,
+              description: [
+                `Customer: ${details.callerName || 'Unknown'}`,
+                `Phone: ${From}`,
+                `Job: ${details.jobType || 'See notes'}`,
+                `Address: ${details.address || 'TBC'}`,
+                `Quote: ${details.quoteGiven || 'TBC'}`,
+                '',
+                'Notes:',
+                summary,
+              ].join('\n'),
+              startTime: eventStart.toISOString(),
+              endTime: eventEnd.toISOString(),
+              location: details.address,
+            });
+          } catch (calErr) {
+            console.error('Google Calendar event error:', calErr);
+          }
+        }
+      }
+      // ── End Google integrations ───────────────────────────────────────────
     } catch (err) {
       console.error('Call status error:', err);
     }

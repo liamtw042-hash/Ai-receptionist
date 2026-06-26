@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Phone, AlertTriangle, TrendingUp, Users, Calendar, BarChart2, CheckCircle2, Circle, DollarSign, PhoneCall } from 'lucide-react';
+import { Phone, AlertTriangle, TrendingUp, Users, Calendar, BarChart2, CheckCircle2, Circle, DollarSign, PhoneCall, Table2, CalendarCheck, Link2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { Card } from '../components/ui/Card';
 import { OutcomeBadge } from '../components/ui/Badge';
@@ -19,6 +19,14 @@ interface Stats {
   hasBusinessDetails?: boolean;
   hasForwardingSetup?: boolean;
   hasMadeTestCall?: boolean;
+}
+
+interface GoogleStatus {
+  connected: boolean;
+  sheetsConnected: boolean;
+  calendarConnected: boolean;
+  email?: string;
+  spreadsheetUrl?: string;
 }
 
 interface RecentCall {
@@ -60,6 +68,7 @@ export function OverviewPage() {
   const [recentCalls, setRecentCalls] = useState<RecentCall[]>([]);
   const [loading, setLoading] = useState(true);
   const [checklist, setChecklist] = useState<Record<string, boolean>>({});
+  const [googleStatus, setGoogleStatus] = useState<GoogleStatus | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -74,6 +83,8 @@ export function OverviewPage() {
         hasMadeTestCall: !!(s.hasMadeTestCall || s.callsToday > 0 || s.totalContacts > 0),
       });
     }).catch(console.error).finally(() => setLoading(false));
+    // Fetch Google status in background (non-blocking)
+    api.get<GoogleStatus>('/google/status').then(setGoogleStatus).catch(() => null);
   }, []);
 
   const toggleCheck = (key: string) => {
@@ -192,6 +203,32 @@ export function OverviewPage() {
           </div>
         </div>
       </div>
+
+      {/* Integrations status */}
+      {googleStatus?.connected && (
+        <div className="glass rounded-xl p-4 border border-white/8">
+          <div className="flex items-center gap-2 mb-3">
+            <Link2 size={14} className="text-emerald-400" />
+            <h2 className="text-sm font-semibold text-white">Integrations</h2>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <div className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg ${googleStatus.sheetsConnected ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'glass text-gray-500'}`}>
+              <Table2 size={11} />
+              Google Sheets {googleStatus.sheetsConnected ? '· Active' : '· Not configured'}
+            </div>
+            <div className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg ${googleStatus.calendarConnected ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'glass text-gray-500'}`}>
+              <CalendarCheck size={11} />
+              Google Calendar {googleStatus.calendarConnected ? '· Active' : '· Not configured'}
+            </div>
+          </div>
+          {googleStatus.sheetsConnected && googleStatus.spreadsheetUrl && (
+            <a href={googleStatus.spreadsheetUrl} target="_blank" rel="noopener noreferrer"
+              className="mt-2 inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-300 transition-colors">
+              Open spreadsheet →
+            </a>
+          )}
+        </div>
+      )}
 
       {/* Recent calls */}
       <div>
