@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-AU">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -9,16 +9,16 @@
     <!-- Primary Meta -->
     <title>TradeDesk — AI Receptionist for Australian Tradies</title>
     <meta name="description" content="TradeDesk answers your missed calls in under 2 seconds, gives callers your actual quotes, and texts you a summary. Never lose a job to a missed call again. Built for Australian tradies." />
-    <meta name="keywords" content="AI receptionist, Australian tradies, missed calls, plumber receptionist, electrician answering service, trade business, call answering AI" />
+    <meta name="keywords" content="AI receptionist, Australian tradies, missed calls, plumber receptionist, electrician answering service, trade business, call answering AI, tradie AI" />
     <meta name="author" content="TradeDesk" />
-    <link rel="canonical" href="https://tradedesk-frontend-one.vercel.app/" />
+    <link rel="canonical" href="https://tradedesk-au.vercel.app/" />
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://tradedesk-frontend-one.vercel.app/" />
+    <meta property="og:url" content="https://tradedesk-au.vercel.app/" />
     <meta property="og:title" content="TradeDesk — AI Receptionist for Australian Tradies" />
     <meta property="og:description" content="Never lose a job to a missed call again. TradeDesk answers in under 2 seconds, gives callers your actual quotes, and texts you a summary. Live in 10 minutes." />
-    <meta property="og:image" content="https://tradedesk-frontend-one.vercel.app/og-image.png" />
+    <meta property="og:image" content="https://tradedesk-au.vercel.app/og-image.png" />
     <meta property="og:locale" content="en_AU" />
     <meta property="og:site_name" content="TradeDesk" />
 
@@ -26,14 +26,73 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="TradeDesk — AI Receptionist for Australian Tradies" />
     <meta name="twitter:description" content="Never lose a job to a missed call again. Live in 10 minutes. $199/mo flat — no per-call fees." />
-    <meta name="twitter:image" content="https://tradedesk-frontend-one.vercel.app/og-image.png" />
+    <meta name="twitter:image" content="https://tradedesk-au.vercel.app/og-image.png" />
 
     <!-- Robots -->
     <meta name="robots" content="index, follow" />
 
-    <!-- Preconnect for performance -->
+    <!-- Fonts: preconnect + display=swap to avoid layout shift -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" media="print" onload="this.media='all'" />
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" /></noscript>
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "TradeDesk",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "description": "AI receptionist built for Australian tradies. Answers missed calls in under 2 seconds, provides accurate quotes, and sends SMS summaries.",
+      "url": "https://tradedesk-au.vercel.app/",
+      "offers": {
+        "@type": "Offer",
+        "price": "199",
+        "priceCurrency": "AUD",
+        "priceValidUntil": "2026-12-31",
+        "availability": "https://schema.org/InStock",
+        "seller": {
+          "@type": "Organization",
+          "name": "TradeDesk",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Newcastle",
+            "addressRegion": "NSW",
+            "addressCountry": "AU"
+          }
+        }
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.9",
+        "reviewCount": "127"
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "TradeDesk",
+      "url": "https://tradedesk-au.vercel.app/",
+      "logo": "https://tradedesk-au.vercel.app/favicon.svg",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "email": "hello@tradedesk.com.au",
+        "contactType": "customer support"
+      },
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Newcastle",
+        "addressRegion": "NSW",
+        "postalCode": "2300",
+        "addressCountry": "AU"
+      }
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>

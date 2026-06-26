@@ -1,11 +1,17 @@
-import { useEffect, useState, useRef } from 'react';
-import { Phone, AlertTriangle, TrendingUp, Users, Calendar, BarChart2, CheckCircle2, Circle, DollarSign, PhoneCall, Table2, CalendarCheck, Link2 } from 'lucide-react';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import {
+  Phone, AlertTriangle, TrendingUp, Users, Calendar, BarChart2,
+  CheckCircle2, DollarSign, PhoneCall, Table2, CalendarCheck, Link2,
+  MessageSquare, Settings, ArrowRight, Search, Zap, Sun, Sunset, Moon,
+  Activity,
+} from 'lucide-react';
 import { api } from '../lib/api';
 import { Card } from '../components/ui/Card';
 import { OutcomeBadge } from '../components/ui/Badge';
 import { SkeletonCard, SkeletonRow } from '../components/ui/Skeleton';
-import { formatDistanceToNow } from 'date-fns';
-import { Link } from 'react-router-dom';
+import { formatDistanceToNow, format } from 'date-fns';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Stats {
   callsToday: number;
@@ -37,7 +43,7 @@ interface RecentCall {
   createdAt: string;
 }
 
-// Animated counter hook
+/* ── Animated counter ── */
 function useCountUp(target: number, duration = 800) {
   const [value, setValue] = useState(0);
   const frameRef = useRef<number>(0);
@@ -56,19 +62,81 @@ function useCountUp(target: number, duration = 800) {
   return value;
 }
 
+/* ── Greeting ── */
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return { text: 'Good morning', icon: Sun };
+  if (h < 17) return { text: 'Good afternoon', icon: Sunset };
+  return { text: 'Good evening', icon: Moon };
+}
+
+/* ── Stat card with hover lift ── */
+const colorMap: Record<string, { icon: string; glow: string; border: string; bg: string }> = {
+  blue:   { icon: 'text-blue-400',   glow: 'rgba(59,130,246,0.2)',   border: 'rgba(59,130,246,0.5)',   bg: 'bg-blue-500/15' },
+  green:  { icon: 'text-green-400',  glow: 'rgba(34,197,94,0.2)',    border: 'rgba(34,197,94,0.5)',    bg: 'bg-green-500/15' },
+  purple: { icon: 'text-purple-400', glow: 'rgba(168,85,247,0.2)',   border: 'rgba(168,85,247,0.5)',   bg: 'bg-purple-500/15' },
+  gray:   { icon: 'text-gray-400',   glow: 'rgba(156,163,175,0.1)',  border: 'rgba(156,163,175,0.3)',  bg: 'bg-gray-500/15' },
+};
+
+function GlowStatCard({ icon: Icon, label, value, color }: { icon: typeof Phone; label: string; value: number; color: string }) {
+  const c = colorMap[color];
+  const display = useCountUp(value);
+  return (
+    <div
+      className="glass rounded-xl p-5 relative overflow-hidden transition-all duration-200 hover:scale-[1.03] hover:-translate-y-0.5 cursor-default group"
+      style={{ borderTop: `2px solid ${c.border}` }}
+    >
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-12 blur-2xl pointer-events-none transition-opacity duration-200 group-hover:opacity-150"
+        style={{ background: c.glow }} />
+      <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-3 ${c.bg} relative`}>
+        <Icon size={17} className={c.icon} />
+      </div>
+      <div className="text-2xl font-bold text-white tabular-nums">{display}</div>
+      <div className="text-xs text-gray-500 mt-0.5">{label}</div>
+    </div>
+  );
+}
+
+function WeekRow({ icon: Icon, iconClass, label, value }: { icon: typeof Phone; iconClass: string; label: string; value: number }) {
+  return (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${iconClass}`}>
+          <Icon size={14} />
+        </div>
+        <span className="text-sm text-gray-300">{label}</span>
+      </div>
+      <span className="text-white font-bold">{value}</span>
+    </div>
+  );
+}
+
+function formatPhone(num: string): string {
+  if (!num) return 'Unknown';
+  const clean = num.replace(/\D/g, '');
+  if (clean.startsWith('61') && clean.length === 11) return `0${clean.slice(2, 5)} ${clean.slice(5, 8)} ${clean.slice(8)}`;
+  return num;
+}
+
 const CHECKLIST_ITEMS = [
-  { key: 'hasBusinessDetails', label: 'Add your business details', hint: 'Go to Settings → Business Profile' },
-  { key: 'hasForwardingSetup', label: 'Set up call forwarding', hint: 'Forward missed calls to your TradeDesk number' },
-  { key: 'hasMadeTestCall', label: 'Make a test call', hint: 'Call your number and hear your AI in action' },
+  { key: 'hasBusinessDetails', label: 'Add your business details', hint: 'Settings → Business Profile', action: '/dashboard/settings' },
+  { key: 'hasForwardingSetup', label: 'Set up call forwarding', hint: 'Forward missed calls to your TradeDesk number', action: '/dashboard/settings' },
+  { key: 'hasMadeTestCall', label: 'Make a test call', hint: 'Call your number and hear your AI in action', action: '/dashboard/settings' },
 ];
 
 export function OverviewPage() {
   useEffect(() => { document.title = 'Overview | TradeDesk'; }, []);
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState<Stats | null>(null);
   const [recentCalls, setRecentCalls] = useState<RecentCall[]>([]);
   const [loading, setLoading] = useState(true);
   const [checklist, setChecklist] = useState<Record<string, boolean>>({});
   const [googleStatus, setGoogleStatus] = useState<GoogleStatus | null>(null);
+  const [search, setSearch] = useState('');
+  const [searchResults, setSearchResults] = useState<RecentCall[]>([]);
+  const [searching, setSearching] = useState(false);
+  const searchTimeout = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
     Promise.all([
@@ -83,19 +151,41 @@ export function OverviewPage() {
         hasMadeTestCall: !!(s.hasMadeTestCall || s.callsToday > 0 || s.totalContacts > 0),
       });
     }).catch(console.error).finally(() => setLoading(false));
-    // Fetch Google status in background (non-blocking)
     api.get<GoogleStatus>('/google/status').then(setGoogleStatus).catch(() => null);
   }, []);
 
-  const toggleCheck = (key: string) => {
-    setChecklist(c => ({ ...c, [key]: !c[key] }));
-  };
+  // Debounced search across calls
+  useEffect(() => {
+    if (!search.trim()) { setSearchResults([]); setSearching(false); return; }
+    setSearching(true);
+    clearTimeout(searchTimeout.current);
+    searchTimeout.current = setTimeout(async () => {
+      try {
+        const all = await api.get<RecentCall[]>('/calls');
+        const q = search.toLowerCase();
+        setSearchResults(
+          all.filter(c =>
+            c.callerNumber?.includes(q) ||
+            c.summary?.toLowerCase().includes(q) ||
+            c.outcome?.toLowerCase().includes(q)
+          ).slice(0, 5)
+        );
+      } catch { setSearchResults([]); } finally { setSearching(false); }
+    }, 350);
+    return () => clearTimeout(searchTimeout.current);
+  }, [search]);
+
+  const toggleCheck = (key: string) => setChecklist(c => ({ ...c, [key]: !c[key] }));
+
+  const greeting = getGreeting();
+  const GreetIcon = greeting.icon;
+  const firstName = user?.displayName?.split(' ')[0] || user?.email?.split('@')[0] || 'there';
 
   if (loading) return (
     <div className="space-y-6 animate-fade-in">
       <div className="space-y-1">
-        <div className="h-7 w-32 skeleton rounded-lg" />
-        <div className="h-4 w-48 skeleton rounded-md" />
+        <div className="h-7 w-48 skeleton rounded-lg" />
+        <div className="h-4 w-32 skeleton rounded-md" />
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
@@ -114,12 +204,76 @@ export function OverviewPage() {
 
   return (
     <div className="space-y-5 animate-slide-up">
-      <div>
-        <h1 className="text-2xl font-bold text-white">Overview</h1>
-        <p className="text-gray-500 text-sm mt-0.5">Today's activity at a glance</p>
+
+      {/* ── AI Status Banner ── */}
+      <div className={`flex items-center gap-3 rounded-xl px-4 py-3 border transition-all ${
+        allDone
+          ? 'bg-green-500/8 border-green-500/25 text-green-400'
+          : 'bg-yellow-500/8 border-yellow-500/25 text-yellow-400'
+      }`}>
+        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${allDone ? 'bg-green-400 animate-pulse' : 'bg-yellow-400 animate-pulse'}`} />
+        <p className="text-sm font-medium flex-1">
+          {allDone
+            ? 'Your AI is live and answering calls'
+            : `Setup incomplete — ${CHECKLIST_ITEMS.length - doneCount} step${CHECKLIST_ITEMS.length - doneCount > 1 ? 's' : ''} remaining`}
+        </p>
+        {!allDone && (
+          <Link to="/dashboard/settings" className="text-xs underline underline-offset-2 flex-shrink-0">Finish setup →</Link>
+        )}
       </div>
 
-      {/* Stat cards */}
+      {/* ── Greeting ── */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <GreetIcon size={22} className="text-blue-400" />
+            {greeting.text}, {firstName}!
+          </h1>
+          <p className="text-gray-500 text-sm mt-0.5">Here's what's happening with your AI today</p>
+        </div>
+        <p className="text-xs text-gray-600 hidden sm:block self-end pb-0.5">{format(new Date(), "EEEE d MMMM")}</p>
+      </div>
+
+      {/* ── Global Search ── */}
+      <div className="relative">
+        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search calls, contacts, SMS…"
+          className="glass w-full rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/40 transition-all"
+        />
+        {search && (
+          <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-white text-xs">✕</button>
+        )}
+        {/* Search results dropdown */}
+        {search && (
+          <div className="absolute top-full left-0 right-0 mt-1.5 glass rounded-xl border border-white/10 z-20 overflow-hidden shadow-xl">
+            {searching ? (
+              <div className="px-4 py-3 text-sm text-gray-500">Searching…</div>
+            ) : searchResults.length === 0 ? (
+              <div className="px-4 py-3 text-sm text-gray-500">No results for "{search}"</div>
+            ) : (
+              <>
+                <p className="px-4 py-2 text-xs text-gray-600 border-b border-white/8 font-semibold uppercase tracking-wider">Calls</p>
+                {searchResults.map(r => (
+                  <button key={r.id} onClick={() => { navigate('/dashboard/calls'); setSearch(''); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors text-left border-b border-white/5 last:border-0">
+                    <Phone size={13} className="text-blue-400 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-white font-medium">{formatPhone(r.callerNumber)}</p>
+                      <p className="text-xs text-gray-500 truncate">{r.summary?.slice(0, 60) || 'No summary'}</p>
+                    </div>
+                    <OutcomeBadge outcome={r.outcome} />
+                  </button>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── Stat cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <GlowStatCard icon={Phone} label="Calls today" value={stats?.callsToday ?? 0} color="blue" />
         <GlowStatCard icon={Calendar} label="Jobs booked" value={stats?.bookedToday ?? 0} color="green" />
@@ -127,6 +281,7 @@ export function OverviewPage() {
         <GlowStatCard icon={Users} label="Total contacts" value={stats?.totalContacts ?? 0} color="gray" />
       </div>
 
+      {/* ── Emergency alert ── */}
       {(stats?.emergenciesToday ?? 0) > 0 && (
         <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3">
           <AlertTriangle size={18} className="text-red-400 flex-shrink-0" />
@@ -135,6 +290,22 @@ export function OverviewPage() {
           </p>
         </div>
       )}
+
+      {/* ── Quick actions ── */}
+      <div className="flex gap-2 flex-wrap">
+        <Link to="/dashboard/sms"
+          className="flex items-center gap-1.5 glass rounded-lg px-3.5 py-2.5 text-xs font-medium text-gray-300 hover:text-white hover:border-white/20 transition-all border border-white/8 min-h-[40px]">
+          <MessageSquare size={13} className="text-blue-400" /> Send test SMS
+        </Link>
+        <Link to="/dashboard/calls"
+          className="flex items-center gap-1.5 glass rounded-lg px-3.5 py-2.5 text-xs font-medium text-gray-300 hover:text-white hover:border-white/20 transition-all border border-white/8 min-h-[40px]">
+          <Phone size={13} className="text-purple-400" /> View last call
+        </Link>
+        <Link to="/dashboard/settings"
+          className="flex items-center gap-1.5 glass rounded-lg px-3.5 py-2.5 text-xs font-medium text-gray-300 hover:text-white hover:border-white/20 transition-all border border-white/8 min-h-[40px]">
+          <Settings size={13} className="text-green-400" /> Edit AI settings
+        </Link>
+      </div>
 
       <div className="grid lg:grid-cols-2 gap-4">
         {/* Getting started checklist */}
@@ -151,26 +322,25 @@ export function OverviewPage() {
                 style={{ width: `${(doneCount / CHECKLIST_ITEMS.length) * 100}%` }} />
             </div>
             <ul className="space-y-3">
-              {CHECKLIST_ITEMS.map(({ key, label, hint }) => {
+              {CHECKLIST_ITEMS.map(({ key, label, hint, action }) => {
                 const done = !!checklist[key];
                 return (
-                  <li key={key}>
-                    <button
-                      onClick={() => toggleCheck(key)}
-                      className="flex items-start gap-3 w-full text-left group"
-                    >
-                      <div className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200 ${
-                        done
-                          ? 'bg-green-500 border-green-500'
-                          : 'border-gray-600 group-hover:border-blue-400'
+                  <li key={key} className="flex items-start gap-3">
+                    <button onClick={() => toggleCheck(key)}
+                      className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200 ${
+                        done ? 'bg-green-500 border-green-500' : 'border-gray-600 hover:border-blue-400'
                       }`}>
-                        {done && <CheckCircle2 size={12} className="text-white" />}
-                      </div>
-                      <div>
-                        <p className={`text-sm font-medium transition-all duration-200 ${done ? 'text-gray-500 line-through' : 'text-white'}`}>{label}</p>
-                        {!done && <p className="text-xs text-gray-600 mt-0.5">{hint}</p>}
-                      </div>
+                      {done && <CheckCircle2 size={12} className="text-white" />}
                     </button>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-medium transition-all duration-200 ${done ? 'text-gray-500 line-through' : 'text-white'}`}>{label}</p>
+                      {!done && (
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <p className="text-xs text-gray-600">{hint}</p>
+                          <Link to={action} className="text-xs text-blue-400 hover:text-blue-300 flex-shrink-0">Go →</Link>
+                        </div>
+                      )}
+                    </div>
                   </li>
                 );
               })}
@@ -204,7 +374,7 @@ export function OverviewPage() {
         </div>
       </div>
 
-      {/* Integrations status */}
+      {/* ── Integrations status ── */}
       {googleStatus?.connected && (
         <div className="glass rounded-xl p-4 border border-white/8">
           <div className="flex items-center gap-2 mb-3">
@@ -230,7 +400,36 @@ export function OverviewPage() {
         </div>
       )}
 
-      {/* Recent calls */}
+      {/* ── Recent activity feed ── */}
+      {recentCalls.length > 0 && (
+        <div className="glass rounded-xl p-5 border border-white/8">
+          <div className="flex items-center gap-2 mb-4">
+            <Activity size={15} className="text-blue-400" />
+            <h2 className="text-base font-semibold text-white">Recent activity</h2>
+          </div>
+          <div className="space-y-3">
+            {recentCalls.slice(0, 5).map(call => (
+              <div key={call.id} className="flex items-center gap-3 py-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-400/60 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-gray-300">
+                    Call from <span className="text-white font-medium">{formatPhone(call.callerNumber)}</span>
+                    {' '}<OutcomeBadge outcome={call.outcome} />
+                  </p>
+                </div>
+                <span className="text-xs text-gray-600 flex-shrink-0">
+                  {call.createdAt ? formatDistanceToNow(new Date(call.createdAt), { addSuffix: true }) : ''}
+                </span>
+              </div>
+            ))}
+          </div>
+          <Link to="/dashboard/calls" className="mt-4 flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition-colors">
+            View all calls <ArrowRight size={12} />
+          </Link>
+        </div>
+      )}
+
+      {/* ── Recent calls ── */}
       <div>
         <h2 className="text-lg font-semibold text-white mb-3">Recent calls</h2>
         {recentCalls.length === 0 ? (
@@ -246,8 +445,8 @@ export function OverviewPage() {
               Once your AI answers its first call, you'll see a live feed here with transcripts and summaries.
             </p>
             <Link to="/dashboard/settings"
-              className="inline-flex items-center gap-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-400 text-sm font-medium px-4 py-2 rounded-lg transition-all duration-200">
-              Set up call forwarding
+              className="inline-flex items-center gap-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-400 text-sm font-medium px-4 py-2.5 rounded-lg transition-all duration-200 min-h-[44px]">
+              <Settings size={14} /> Set up call forwarding
             </Link>
           </div>
         ) : (
@@ -273,49 +472,4 @@ export function OverviewPage() {
       </div>
     </div>
   );
-}
-
-function WeekRow({ icon: Icon, iconClass, label, value }: { icon: typeof Phone; iconClass: string; label: string; value: number }) {
-  return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${iconClass}`}>
-          <Icon size={14} />
-        </div>
-        <span className="text-sm text-gray-300">{label}</span>
-      </div>
-      <span className="text-white font-bold">{value}</span>
-    </div>
-  );
-}
-
-const colorMap: Record<string, { icon: string; glow: string; border: string; bg: string }> = {
-  blue:   { icon: 'text-blue-400',   glow: 'rgba(59,130,246,0.2)',   border: 'rgba(59,130,246,0.5)',   bg: 'bg-blue-500/15' },
-  green:  { icon: 'text-green-400',  glow: 'rgba(34,197,94,0.2)',    border: 'rgba(34,197,94,0.5)',    bg: 'bg-green-500/15' },
-  purple: { icon: 'text-purple-400', glow: 'rgba(168,85,247,0.2)',   border: 'rgba(168,85,247,0.5)',   bg: 'bg-purple-500/15' },
-  gray:   { icon: 'text-gray-400',   glow: 'rgba(156,163,175,0.1)',  border: 'rgba(156,163,175,0.3)',  bg: 'bg-gray-500/15' },
-};
-
-function GlowStatCard({ icon: Icon, label, value, color }: { icon: typeof Phone; label: string; value: number; color: string }) {
-  const c = colorMap[color];
-  const display = useCountUp(value);
-  return (
-    <div className="glass rounded-xl p-5 relative overflow-hidden transition-all duration-200 hover:scale-[1.02]"
-      style={{ borderTop: `2px solid ${c.border}` }}>
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-12 blur-2xl pointer-events-none"
-        style={{ background: c.glow }} />
-      <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-3 ${c.bg} relative`}>
-        <Icon size={17} className={c.icon} />
-      </div>
-      <div className="text-2xl font-bold text-white tabular-nums">{display}</div>
-      <div className="text-xs text-gray-500 mt-0.5">{label}</div>
-    </div>
-  );
-}
-
-function formatPhone(num: string): string {
-  if (!num) return 'Unknown';
-  const clean = num.replace(/\D/g, '');
-  if (clean.startsWith('61') && clean.length === 11) return `0${clean.slice(2, 5)} ${clean.slice(5, 8)} ${clean.slice(8)}`;
-  return num;
 }

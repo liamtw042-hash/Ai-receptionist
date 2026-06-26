@@ -1,21 +1,23 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Suspense, lazy } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider } from './components/ui/Toast';
-import { LandingPage } from './pages/LandingPage';
-import { LoginPage } from './pages/LoginPage';
-import { SignupPage } from './pages/SignupPage';
-import { OnboardingPage } from './pages/OnboardingPage';
+const LandingPage = lazy(() => import('./pages/LandingPage').then(m => ({ default: m.LandingPage })));
+const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
+const SignupPage = lazy(() => import('./pages/SignupPage').then(m => ({ default: m.SignupPage })));
+const WelcomePage = lazy(() => import('./pages/WelcomePage').then(m => ({ default: m.WelcomePage })));
+const OnboardingPage = lazy(() => import('./pages/OnboardingPage').then(m => ({ default: m.OnboardingPage })));
 import { DashboardLayout } from './components/dashboard/DashboardLayout';
-import { OverviewPage } from './pages/OverviewPage';
-import { CallsPage } from './pages/CallsPage';
-import { SMSPage } from './pages/SMSPage';
-import { ContactsPage } from './pages/ContactsPage';
-import { SettingsPage } from './pages/SettingsPage';
-import { PrivacyPage } from './pages/PrivacyPage';
-import { TermsPage } from './pages/TermsPage';
-import { ContactPage } from './pages/ContactPage';
-import { DemoPage } from './pages/DemoPage';
-import { NotFoundPage } from './pages/NotFoundPage';
+const OverviewPage = lazy(() => import('./pages/OverviewPage').then(m => ({ default: m.OverviewPage })));
+const CallsPage = lazy(() => import('./pages/CallsPage').then(m => ({ default: m.CallsPage })));
+const SMSPage = lazy(() => import('./pages/SMSPage').then(m => ({ default: m.SMSPage })));
+const ContactsPage = lazy(() => import('./pages/ContactsPage').then(m => ({ default: m.ContactsPage })));
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage').then(m => ({ default: m.PrivacyPage })));
+const TermsPage = lazy(() => import('./pages/TermsPage').then(m => ({ default: m.TermsPage })));
+const ContactPage = lazy(() => import('./pages/ContactPage').then(m => ({ default: m.ContactPage })));
+const DemoPage = lazy(() => import('./pages/DemoPage').then(m => ({ default: m.DemoPage })));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
 import { useEffect, useRef } from 'react';
 
 function Spinner() {
@@ -76,6 +78,7 @@ function AppRoutes() {
       <Route path="/demo" element={<FadeIn><DemoPage /></FadeIn>} />
       <Route path="/login" element={<PublicOnlyRoute><FadeIn><LoginPage /></FadeIn></PublicOnlyRoute>} />
       <Route path="/signup" element={<PublicOnlyRoute><FadeIn><SignupPage /></FadeIn></PublicOnlyRoute>} />
+      <Route path="/welcome" element={<ProtectedRoute><FadeIn><WelcomePage /></FadeIn></ProtectedRoute>} />
       <Route path="/onboarding" element={<ProtectedRoute><FadeIn><OnboardingPage /></FadeIn></ProtectedRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
         <Route index element={<OverviewPage />} />

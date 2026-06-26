@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://tradedesk-frontend-one.vercel.app/sitemap.xml
+Sitemap: https://tradedesk-au.vercel.app/sitemap.xml

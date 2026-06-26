@@ -126,3 +126,55 @@ html, body {
 .animate-slide-in-right {
   animation: slide-in-right 0.25s ease forwards;
 }
+
+/* ── Scroll reveal ── */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.65s cubic-bezier(0.4,0,0.2,1), transform 0.65s cubic-bezier(0.4,0,0.2,1);
+}
+[data-reveal].revealed {
+  opacity: 1;
+  transform: none;
+}
+
+/* Stagger delay helpers */
+[data-reveal-delay="100"] { transition-delay: 0.1s; }
+[data-reveal-delay="200"] { transition-delay: 0.2s; }
+[data-reveal-delay="300"] { transition-delay: 0.3s; }
+
+/* ── Hero animated gradient ── */
+@keyframes hero-gradient-shift {
+  0% { background-position: 50% 0%; }
+  50% { background-position: 50% 100%; }
+  100% { background-position: 50% 0%; }
+}
+.hero-gradient-bg {
+  background: radial-gradient(ellipse 100% 80% at 50% -10%, rgba(10,18,55,0.95) 0%, rgba(5,10,30,0.7) 40%, transparent 75%);
+  background-size: 100% 200%;
+  animation: hero-gradient-shift 10s ease-in-out infinite;
+}
+
+/* ── Pricing glow animation ── */
+@keyframes pricing-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(59,130,246,0.25), 0 0 60px rgba(59,130,246,0.1); }
+  50% { box-shadow: 0 0 35px rgba(59,130,246,0.45), 0 0 90px rgba(59,130,246,0.2); }
+}
+.pricing-card-glow {
+  animation: pricing-glow 3s ease-in-out infinite;
+}
+
+/* ── Marquee ── */
+@keyframes marquee-slow {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.marquee-track {
+  animation: marquee-slow 30s linear infinite;
+}
+
+@keyframes confetti-fall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}

@@ -44,7 +44,7 @@ export function SignupPage() {
       await signUp(email, password);
       // Store pre-fill data for onboarding
       localStorage.setItem('td_onboard', JSON.stringify({ fullName, businessName, tradeType, phone }));
-      navigate('/onboarding');
+      navigate('/welcome');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : '';
       if (message.includes('email-already-in-use')) {

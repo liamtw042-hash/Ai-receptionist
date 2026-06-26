@@ -45,6 +45,8 @@ const STEPS = ['Business Setup', 'Your Services', 'Go Live'];
 export function OnboardingPage() {
   useEffect(() => { document.title = 'Set up TradeDesk | TradeDesk'; }, []);
   const [step, setStep] = useState(0);
+  const [errors, setErrors] = useState<Record<string,string>>({});
+  const [confetti, setConfetti] = useState(false);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const tradeskNumber = '+61 2 8320 5000';
@@ -92,7 +94,27 @@ export function OnboardingPage() {
 
   const update = (key: string, val: string) => setForm(f => ({ ...f, [key]: val }));
 
+  const validateStep = (s: number) => {
+    const errs: Record<string,string> = {};
+    if (s === 0) {
+      if (!form.traderName.trim()) errs.traderName = 'Your name is required';
+      if (!form.businessName.trim()) errs.businessName = 'Business name is required';
+      if (!form.tradeType) errs.tradeType = 'Please select your trade type';
+      if (!form.mobileNumber.trim()) errs.mobileNumber = 'Mobile number is required';
+    }
+    if (s === 1) {
+      if (!form.services.trim()) errs.services = 'Please list at least one service';
+    }
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const goNext = () => {
+    if (validateStep(step)) setStep(s => s + 1);
+  };
+
   const handleFinish = async () => {
+    if (!validateStep(1)) return;
     setLoading(true);
     try {
       await api.put('/settings', {
@@ -112,6 +134,8 @@ export function OnboardingPage() {
     } finally {
       setLoading(false);
       setStep(3);
+      setConfetti(true);
+      setTimeout(() => setConfetti(false), 3500);
     }
   };
 
@@ -121,11 +145,31 @@ export function OnboardingPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const step1Valid = form.traderName && form.businessName && form.tradeType;
-  const step2Valid = form.services;
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      {/* Confetti overlay */}
+      {confetti && (
+        <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
+          {[...Array(60)].map((_, i) => {
+            const colors = ['#3b82f6','#22c55e','#a855f7','#f59e0b','#ef4444','#06b6d4'];
+            const color = colors[i % colors.length];
+            const left = `${Math.random() * 100}%`;
+            const delay = `${Math.random() * 0.8}s`;
+            const size = 6 + Math.random() * 8;
+            return (
+              <div key={i}
+                style={{
+                  position:'absolute', left, top:'-20px', width: size, height: size,
+                  backgroundColor: color, borderRadius: Math.random() > 0.5 ? '50%' : '2px',
+                  animation: `confetti-fall ${1.5 + Math.random()}s ${delay} ease-in forwards`,
+                  transform: `rotate(${Math.random()*360}deg)`,
+                }}
+              />
+            );
+          })}
+        </div>
+      )}
       <div className="w-full max-w-xl animate-slide-up">
         {/* Header */}
         <div className="flex items-center gap-3 mb-8 justify-center">
@@ -172,7 +216,10 @@ export function OnboardingPage() {
                 <p className="text-gray-500 text-sm mt-0.5">Let's personalise your AI receptionist</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <Input label="Your name" value={form.traderName} onChange={e => update('traderName', e.target.value)} placeholder="Dave Smith" required />
+                <div>
+                  <Input label="Your name" value={form.traderName} onChange={e => { update('traderName', e.target.value); if(errors.traderName) setErrors(e2=>({...e2,traderName:''})); }} placeholder="Dave Smith" required className={errors.traderName ? 'border-red-500' : ''} />
+                  {errors.traderName && <p className="text-xs text-red-400 mt-1">{errors.traderName}</p>}
+                </div>
                 <Input label="Business name" value={form.businessName} onChange={e => update('businessName', e.target.value)} placeholder="Smith's Plumbing" required />
               </div>
 
@@ -215,7 +262,7 @@ export function OnboardingPage() {
                 <p className="text-xs text-gray-500">The AI will mention this when callers ask about availability</p>
               </div>
 
-              <Button onClick={() => setStep(1)} size="lg" className="w-full" disabled={!step1Valid}>
+              <Button onClick={goNext} size="lg" className="w-full">
                 Next: Your Services <ChevronRight size={16} />
               </Button>
             </div>
@@ -254,7 +301,7 @@ export function OnboardingPage() {
 
               <div className="flex gap-3 pt-1">
                 <Button variant="secondary" onClick={() => setStep(0)} size="lg" className="flex-1">Back</Button>
-                <Button onClick={handleFinish} size="lg" loading={loading} className="flex-1" disabled={!step2Valid}>
+                <Button onClick={handleFinish} size="lg" loading={loading} className="flex-1">
                   Finish setup <ChevronRight size={16} />
                 </Button>
               </div>
