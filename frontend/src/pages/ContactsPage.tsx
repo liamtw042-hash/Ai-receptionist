@@ -16,6 +16,7 @@ interface Contact {
 }
 
 export function ContactsPage() {
+  useEffect(() => { document.title = 'Contacts | TradeDesk'; }, []);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');

@@ -16,6 +16,7 @@ interface Message {
 type Conversations = Record<string, Message[]>;
 
 export function SMSPage() {
+  useEffect(() => { document.title = 'SMS | TradeDesk'; }, []);
   const [conversations, setConversations] = useState<Conversations>({});
   const [selected, setSelected] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);

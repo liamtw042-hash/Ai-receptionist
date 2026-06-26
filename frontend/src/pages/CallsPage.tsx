@@ -33,6 +33,7 @@ const OUTCOME_FILTERS = [
 ];
 
 export function CallsPage() {
+  useEffect(() => { document.title = 'Calls | TradeDesk'; }, []);
   const [calls, setCalls] = useState<Call[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);

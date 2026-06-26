@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Phone, AlertTriangle, TrendingUp, Users, Calendar, BarChart2 } from 'lucide-react';
+import { Phone, AlertTriangle, TrendingUp, Users, Calendar, BarChart2, CheckCircle2, Circle, DollarSign } from 'lucide-react';
 import { api } from '../lib/api';
 import { Card } from '../components/ui/Card';
 import { OutcomeBadge } from '../components/ui/Badge';
@@ -12,6 +12,12 @@ interface Stats {
   bookedToday: number;
   leadsThisWeek: number;
   totalContacts: number;
+  callsThisWeek?: number;
+  jobsThisWeek?: number;
+  onboardingComplete?: boolean;
+  hasBusinessDetails?: boolean;
+  hasForwardingSetup?: boolean;
+  hasMadeTestCall?: boolean;
 }
 
 interface RecentCall {
@@ -22,7 +28,14 @@ interface RecentCall {
   createdAt: string;
 }
 
+const CHECKLIST = [
+  { key: 'hasBusinessDetails', label: 'Add your business details', hint: 'Go to Settings → Business Profile', link: '/dashboard/settings' },
+  { key: 'hasForwardingSetup', label: 'Set up call forwarding', hint: 'Forward your missed calls to your TradeDesk number', link: '/dashboard/settings' },
+  { key: 'hasMadeTestCall', label: 'Make a test call', hint: 'Call your TradeDesk number and hear your AI in action' },
+];
+
 export function OverviewPage() {
+  useEffect(() => { document.title = 'Overview | TradeDesk'; }, []);
   const [stats, setStats] = useState<Stats | null>(null);
   const [recentCalls, setRecentCalls] = useState<RecentCall[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,6 +65,21 @@ export function OverviewPage() {
     </div>
   );
 
+  // Derive checklist status from stats
+  const checklistStatus: Record<string, boolean> = {
+    hasBusinessDetails: !!(stats?.hasBusinessDetails),
+    hasForwardingSetup: !!(stats?.hasForwardingSetup),
+    hasMadeTestCall: !!(stats?.hasMadeTestCall || (stats?.callsToday ?? 0) > 0 || (stats?.totalContacts ?? 0) > 0),
+  };
+  const allDone = Object.values(checklistStatus).every(Boolean);
+  const doneCount = Object.values(checklistStatus).filter(Boolean).length;
+  const isNewUser = !stats?.onboardingComplete && recentCalls.length === 0;
+
+  // Weekly summary
+  const callsThisWeek = stats?.callsThisWeek ?? stats?.leadsThisWeek ?? 0;
+  const jobsThisWeek = stats?.jobsThisWeek ?? stats?.bookedToday ?? 0;
+  const estRevenue = jobsThisWeek * 350; // rough estimate $350 avg job
+
   return (
     <div className="space-y-6 animate-slide-up">
       <div>
@@ -67,14 +95,96 @@ export function OverviewPage() {
         <StatCard icon={Users} label="Total contacts" value={stats?.totalContacts ?? 0} color="gray" />
       </div>
 
-      {stats?.emergenciesToday ? (
+      {/* Emergency alert */}
+      {(stats?.emergenciesToday ?? 0) > 0 && (
         <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3">
           <AlertTriangle size={18} className="text-red-400 flex-shrink-0" />
           <p className="text-sm text-red-300">
-            <strong>{stats.emergenciesToday} emergency call{stats.emergenciesToday > 1 ? 's' : ''}</strong> today — make sure you've followed up!
+            <strong>{stats!.emergenciesToday} emergency call{stats!.emergenciesToday > 1 ? 's' : ''}</strong> today — make sure you've followed up!
           </p>
         </div>
-      ) : null}
+      )}
+
+      <div className="grid lg:grid-cols-2 gap-4">
+        {/* Getting started checklist (shown when new or incomplete) */}
+        {(!allDone || isNewUser) && (
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold text-white">Getting started</h2>
+              <span className="text-xs text-blue-400 font-medium bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full">
+                {doneCount}/{CHECKLIST.length} done
+              </span>
+            </div>
+            {/* Progress bar */}
+            <div className="h-1.5 bg-white/8 rounded-full mb-4 overflow-hidden">
+              <div
+                className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                style={{ width: `${(doneCount / CHECKLIST.length) * 100}%` }}
+              />
+            </div>
+            <ul className="space-y-3">
+              {CHECKLIST.map(({ key, label, hint }) => {
+                const done = checklistStatus[key];
+                return (
+                  <li key={key} className="flex items-start gap-3">
+                    <div className="mt-0.5 flex-shrink-0">
+                      {done
+                        ? <CheckCircle2 size={18} className="text-green-400" />
+                        : <Circle size={18} className="text-gray-600" />
+                      }
+                    </div>
+                    <div>
+                      <p className={`text-sm font-medium ${done ? 'text-gray-500 line-through' : 'text-white'}`}>{label}</p>
+                      {!done && <p className="text-xs text-gray-600 mt-0.5">{hint}</p>}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </Card>
+        )}
+
+        {/* Weekly summary card */}
+        <Card>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-semibold text-white">This week</h2>
+            <span className="text-xs text-gray-600">Mon – today</span>
+          </div>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 bg-blue-500/15 rounded-lg flex items-center justify-center">
+                  <Phone size={14} className="text-blue-400" />
+                </div>
+                <span className="text-sm text-gray-300">Calls handled</span>
+              </div>
+              <span className="text-white font-bold">{callsThisWeek}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 bg-green-500/15 rounded-lg flex items-center justify-center">
+                  <Calendar size={14} className="text-green-400" />
+                </div>
+                <span className="text-sm text-gray-300">Jobs booked</span>
+              </div>
+              <span className="text-white font-bold">{jobsThisWeek}</span>
+            </div>
+            <div className="h-px bg-white/6" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 bg-emerald-500/15 rounded-lg flex items-center justify-center">
+                  <DollarSign size={14} className="text-emerald-400" />
+                </div>
+                <div>
+                  <span className="text-sm text-gray-300">Est. revenue saved</span>
+                  <p className="text-xs text-gray-600">Based on avg $350/job</p>
+                </div>
+              </div>
+              <span className="text-emerald-400 font-bold">${estRevenue.toLocaleString()}</span>
+            </div>
+          </div>
+        </Card>
+      </div>
 
       {/* Recent calls */}
       <div>
