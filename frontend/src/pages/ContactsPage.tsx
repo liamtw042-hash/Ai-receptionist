@@ -1,151 +1,159 @@
 import { useEffect, useState } from 'react';
-import { Users, Search, Phone, MessageSquare } from 'lucide-react';
+import { Users, Search, Phone, MessageSquare, Clock } from 'lucide-react';
 import { api } from '../lib/api';
-import { Card } from '../components/ui/Card';
 import { SkeletonRow } from '../components/ui/Skeleton';
-import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 
 interface Contact {
   id: string;
-  phoneNumber: string;
   name: string;
-  notes: string;
-  lastInteraction: string;
-  createdAt: string;
+  phone: string;
+  tradeType?: string;
+  lastContact?: string;
+  totalCalls?: number;
+  notes?: string;
 }
+
+const TRADE_COLORS: Record<string, { bg: string; text: string }> = {
+  plumber:       { bg: 'bg-blue-500/15',   text: 'text-blue-400' },
+  electrician:   { bg: 'bg-yellow-500/15', text: 'text-yellow-400' },
+  carpenter:     { bg: 'bg-amber-500/15',  text: 'text-amber-400' },
+  roofer:        { bg: 'bg-orange-500/15', text: 'text-orange-400' },
+  landscaper:    { bg: 'bg-green-500/15',  text: 'text-green-400' },
+  hvac:          { bg: 'bg-cyan-500/15',   text: 'text-cyan-400' },
+  locksmith:     { bg: 'bg-purple-500/15', text: 'text-purple-400' },
+  concreter:     { bg: 'bg-stone-500/15',  text: 'text-stone-400' },
+  default:       { bg: 'bg-gray-500/15',   text: 'text-gray-400' },
+};
+
+const AVATAR_COLORS = [
+  'from-blue-500 to-purple-500',
+  'from-green-500 to-teal-500',
+  'from-orange-500 to-red-500',
+  'from-purple-500 to-pink-500',
+  'from-cyan-500 to-blue-500',
+  'from-yellow-500 to-orange-500',
+];
 
 export function ContactsPage() {
   useEffect(() => { document.title = 'Contacts | TradeDesk'; }, []);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     api.get<Contact[]>('/contacts').then(setContacts).catch(console.error).finally(() => setLoading(false));
   }, []);
 
   const filtered = contacts.filter(c =>
+    !search ||
     c.name?.toLowerCase().includes(search.toLowerCase()) ||
-    c.phoneNumber?.includes(search)
+    c.phone?.includes(search) ||
+    c.tradeType?.toLowerCase().includes(search.toLowerCase())
   );
-
-  const saveName = async () => {
-    if (!editing) return;
-    await api.patch(`/contacts/${editing.id}`, { name: editing.name });
-    setContacts(cs => cs.map(c => c.id === editing.id ? { ...c, name: editing.name } : c));
-    setEditing(null);
-  };
 
   if (loading) return (
     <div className="space-y-5 animate-fade-in">
-      <div className="space-y-1">
-        <div className="h-7 w-28 skeleton rounded-lg" />
-        <div className="h-4 w-40 skeleton rounded-md" />
-      </div>
+      <div className="h-7 w-28 skeleton rounded-lg" />
       <div className="h-10 w-full skeleton rounded-xl" />
-      <div className="space-y-2">
-        {[...Array(5)].map((_, i) => <SkeletonRow key={i} />)}
-      </div>
+      <div className="space-y-2">{[...Array(5)].map((_, i) => <SkeletonRow key={i} />)}</div>
     </div>
   );
 
   return (
     <div className="space-y-5 animate-slide-up">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Contacts</h1>
-          <p className="text-gray-500 text-sm mt-0.5">{contacts.length} callers on record</p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-white">Contacts</h1>
+        <p className="text-gray-500 text-sm mt-0.5">{contacts.length} callers in your CRM</p>
       </div>
 
       {/* Search */}
       <div className="relative">
-        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
+        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
         <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Search by name or number…"
-          className="w-full glass rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/40 transition-all"
+          value={search} onChange={e => setSearch(e.target.value)}
+          placeholder="Search by name, phone or trade…"
+          className="glass w-full rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/40 transition-all"
         />
       </div>
 
-      {contacts.length === 0 ? (
-        <Card>
-          <div className="text-center py-14 text-gray-600">
-            <div className="w-14 h-14 bg-purple-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Users size={24} className="text-purple-400 opacity-60" />
+      {filtered.length === 0 ? (
+        <div className="glass rounded-xl border border-white/8 text-center py-16">
+          <div className="relative w-16 h-16 mx-auto mb-4">
+            <div className="absolute inset-0 bg-blue-500/10 rounded-2xl blur-xl" />
+            <div className="relative w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center">
+              <Users size={26} className="text-blue-400/50" />
             </div>
-            <p className="font-medium text-gray-400 mb-1">No contacts yet</p>
-            <p className="text-sm text-gray-600">Callers are automatically saved here after their first call.</p>
           </div>
-        </Card>
-      ) : filtered.length === 0 ? (
-        <Card>
-          <div className="text-center py-10 text-gray-600">
-            <Search size={28} className="mx-auto mb-3 opacity-30" />
-            <p className="text-sm">No contacts match "{search}"</p>
-          </div>
-        </Card>
+          <p className="font-semibold text-gray-300 mb-1">
+            {search ? 'No matching contacts' : 'No contacts yet'}
+          </p>
+          <p className="text-sm text-gray-600 max-w-xs mx-auto">
+            {search ? 'Try a different search term.' : 'Contacts are automatically created from incoming calls.'}
+          </p>
+        </div>
       ) : (
-        <div className="space-y-2">
-          {filtered.map(contact => (
-            <Card key={contact.id} hover className="animate-fade-in">
-              <div className="flex items-center gap-4">
-                {/* Avatar */}
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500/30 to-purple-500/30 flex items-center justify-center flex-shrink-0 text-sm font-bold text-white">
-                  {(contact.name || contact.phoneNumber || '?')[0].toUpperCase()}
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {filtered.map((contact, i) => {
+            const tradeKey = contact.tradeType?.toLowerCase() ?? 'default';
+            const tradeStyle = TRADE_COLORS[tradeKey] ?? TRADE_COLORS.default;
+            const avatarGrad = AVATAR_COLORS[i % AVATAR_COLORS.length];
+            const initials = contact.name
+              ? contact.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+              : contact.phone?.[0] ?? '?';
+
+            return (
+              <div key={contact.id} className="glass rounded-xl p-4 border border-white/8 hover:border-white/15 hover:bg-white/[0.03] transition-all duration-200 flex flex-col gap-3 animate-fade-in">
+                {/* Header */}
+                <div className="flex items-start gap-3">
+                  <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${avatarGrad} flex items-center justify-center text-sm font-bold text-white flex-shrink-0 shadow-sm`}>
+                    {initials}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-white text-sm truncate">{contact.name || formatPhone(contact.phone)}</p>
+                    <p className="text-xs text-gray-500 truncate">{formatPhone(contact.phone)}</p>
+                  </div>
+                  {contact.tradeType && (
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${tradeStyle.bg} ${tradeStyle.text}`}>
+                      {contact.tradeType}
+                    </span>
+                  )}
                 </div>
 
-                <div className="flex-1 min-w-0">
-                  {editing?.id === contact.id ? (
-                    <div className="flex items-center gap-2">
-                      <input
-                        autoFocus
-                        value={editing.name}
-                        onChange={e => setEditing({ ...editing, name: e.target.value })}
-                        onBlur={saveName}
-                        onKeyDown={e => { if (e.key === 'Enter') saveName(); if (e.key === 'Escape') setEditing(null); }}
-                        className="glass rounded-lg px-2 py-1 text-sm text-white focus:outline-none focus:border-blue-500/60 w-full max-w-[180px]"
-                      />
+                {/* Stats row */}
+                <div className="flex items-center gap-3 text-xs text-gray-600">
+                  {(contact.totalCalls ?? 0) > 0 && (
+                    <div className="flex items-center gap-1">
+                      <Phone size={11} className="text-blue-400/60" />
+                      <span>{contact.totalCalls} call{contact.totalCalls !== 1 ? 's' : ''}</span>
                     </div>
-                  ) : (
-                    <button
-                      onClick={() => setEditing({ id: contact.id, name: contact.name || '' })}
-                      className="font-medium text-white text-sm hover:text-blue-400 transition-colors text-left"
-                    >
-                      {contact.name || <span className="text-gray-500 italic">Unnamed caller</span>}
-                    </button>
                   )}
-                  <p className="text-xs text-gray-500 mt-0.5">{formatPhone(contact.phoneNumber)}</p>
-                  {contact.lastInteraction && (
-                    <p className="text-xs text-gray-600 mt-0.5">
-                      Last contact {formatDistanceToNow(new Date(contact.lastInteraction), { addSuffix: true })}
-                    </p>
+                  {contact.lastContact && (
+                    <div className="flex items-center gap-1">
+                      <Clock size={11} className="text-gray-600" />
+                      <span>{formatDistanceToNow(new Date(contact.lastContact), { addSuffix: true })}</span>
+                    </div>
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <button
-                    onClick={() => navigate(`/dashboard/calls`)}
-                    className="w-8 h-8 glass rounded-lg flex items-center justify-center text-gray-500 hover:text-white hover:border-white/20 transition-all duration-200"
-                    title="View calls"
-                  >
-                    <Phone size={14} />
-                  </button>
-                  <button
-                    onClick={() => navigate(`/dashboard/sms`)}
-                    className="w-8 h-8 glass rounded-lg flex items-center justify-center text-gray-500 hover:text-white hover:border-white/20 transition-all duration-200"
-                    title="Send SMS"
-                  >
-                    <MessageSquare size={14} />
-                  </button>
+                {contact.notes && (
+                  <p className="text-xs text-gray-500 line-clamp-2 border-t border-white/5 pt-2">{contact.notes}</p>
+                )}
+
+                {/* Actions */}
+                <div className="flex gap-2 mt-auto pt-1">
+                  <a href={`tel:${contact.phone}`}
+                    className="flex-1 flex items-center justify-center gap-1.5 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 text-xs font-medium py-1.5 rounded-lg transition-all duration-200">
+                    <Phone size={12} /> Call
+                  </a>
+                  <a href={`sms:${contact.phone}`}
+                    className="flex-1 flex items-center justify-center gap-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 text-xs font-medium py-1.5 rounded-lg transition-all duration-200">
+                    <MessageSquare size={12} /> SMS
+                  </a>
                 </div>
               </div>
-            </Card>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

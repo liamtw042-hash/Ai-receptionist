@@ -6,7 +6,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Textarea } from '../components/ui/Textarea';
 
-const TRADES = ['Plumber', 'Electrician', 'Builder', 'Carpenter', 'Painter', 'Landscaper', 'Roofer', 'Tiler', 'Locksmith', 'HVAC', 'Other'];
+const TRADES = ['Plumber', 'Electrician', 'Builder', 'Carpenter', 'Painter', 'Landscaper', 'Roofer', 'Tiler', 'Locksmith', 'HVAC', 'Pest Control', 'Concreter', 'Other'];
 
 const TRADE_SERVICES: Record<string, string> = {
   Plumber: 'Hot water repairs, blocked drains, leak detection, pipe relining, new tap installation, toilet repairs, emergency callouts',
@@ -19,6 +19,8 @@ const TRADE_SERVICES: Record<string, string> = {
   Tiler: 'Bathroom tiling, floor tiling, wall tiling, waterproofing, grout repairs, pool tiling',
   Locksmith: 'Lockout service, lock replacement, deadbolt installation, key cutting, security upgrades',
   HVAC: 'Air conditioning installation, split system install, ducted AC, service and cleaning, emergency repairs',
+  'Pest Control': 'General pest inspections, termite treatment, rodent control, cockroach treatment, spider control, pre-purchase pest inspections',
+  Concreter: 'Concrete driveways, concrete slabs, exposed aggregate, footpaths, patios, concrete cutting and removal, decorative concrete',
   Other: 'General trade services — please contact for a full quote',
 };
 
@@ -33,6 +35,8 @@ const TRADE_PRICING: Record<string, string> = {
   Tiler: 'Bathroom: $1,500–$4,000. Floor tiling: $50–$90 per m². Wall tiling: $60–$100 per m². Waterproofing included.',
   Locksmith: 'Lockout service: $100–$150. Lock replacement: $120–$250. Deadbolt install: $150–$300. Emergency: $150 callout fee.',
   HVAC: 'Service/clean: $150–$250. Split system install: $800–$1,500. Ducted system: $3,000–$8,000. Emergency repair: $180 callout fee.',
+  'Pest Control': 'General inspection: $150–$250. Termite treatment: $800–$3,000. Rodent control: $200–$400. Annual pest maintenance: $350–$500.',
+  Concreter: 'Concrete driveway: $3,000–$8,000. Shed slab: $1,500–$4,000. Exposed aggregate: $60–$90 per m². Footpath: $50–$80 per m².',
   Other: 'Service call: $120/hr. Please contact for a detailed quote.',
 };
 
@@ -137,17 +141,17 @@ export function OnboardingPage() {
             {STEPS.map((s, i) => (
               <div key={s} className="flex items-center flex-1">
                 <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
                     i < step
-                      ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
+                      ? 'bg-green-500 text-white shadow-lg shadow-green-500/30'
                       : i === step
-                      ? 'bg-blue-500/20 text-blue-400 border-2 border-blue-500/60'
+                      ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
                       : 'bg-white/5 text-gray-600 border border-white/10'
                   }`}>
-                    {i < step ? <Check size={14} /> : i + 1}
+                    {i < step ? <Check size={15} /> : i + 1}
                   </div>
                   <span className={`text-[10px] font-medium hidden sm:block transition-colors duration-300 whitespace-nowrap ${
-                    i === step ? 'text-white' : i < step ? 'text-blue-400' : 'text-gray-600'
+                    i === step ? 'text-white' : i < step ? 'text-green-400' : 'text-gray-600'
                   }`}>{s}</span>
                 </div>
                 {i < STEPS.length - 1 && (
@@ -162,7 +166,7 @@ export function OnboardingPage() {
 
           {/* Step 0 — Business Setup */}
           {step === 0 && (
-            <div className="space-y-4 animate-fade-in">
+            <div className="space-y-4 animate-slide-in-right">
               <div className="mb-5">
                 <h2 className="text-xl font-bold text-white">Your business</h2>
                 <p className="text-gray-500 text-sm mt-0.5">Let's personalise your AI receptionist</p>
@@ -219,7 +223,7 @@ export function OnboardingPage() {
 
           {/* Step 1 — Services & Pricing */}
           {step === 1 && (
-            <div className="space-y-4 animate-fade-in">
+            <div className="space-y-4 animate-slide-in-right">
               <div className="mb-5">
                 <h2 className="text-xl font-bold text-white">Services & pricing</h2>
                 <p className="text-gray-500 text-sm mt-0.5">
@@ -259,7 +263,7 @@ export function OnboardingPage() {
 
           {/* Step 3 — Go Live! */}
           {step === 3 && (
-            <div className="space-y-6 animate-fade-in">
+            <div className="space-y-6 animate-slide-in-right">
               {/* Hero icon */}
               <div className="text-center">
                 <div className="relative mx-auto w-20 h-20 mb-4">

@@ -258,15 +258,11 @@ export function SettingsPage() {
 
         {/* Save button */}
         <div className="flex items-center gap-4 pb-2">
-          <Button type="submit" loading={saving} size="lg">
-            <Save size={16} />
-            {saving ? 'Saving…' : 'Save settings'}
+          <Button type="submit" loading={saving} size="lg" variant={saved ? 'success' : 'primary'}>
+            {saved ? <CheckCircle size={16} /> : <Save size={16} />}
+            {saving ? 'Saving…' : saved ? 'Saved!' : 'Save settings'}
           </Button>
-          {saved && (
-            <div className="flex items-center gap-2 text-green-400 text-sm animate-fade-in">
-              <CheckCircle size={16} /> Saved!
-            </div>
-          )}
+
         </div>
       </form>
 

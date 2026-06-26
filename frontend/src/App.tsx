@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ToastProvider } from './components/ui/Toast';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
@@ -14,14 +15,17 @@ import { useEffect, useRef } from 'react';
 
 function Spinner() {
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center">
+    <div className="min-h-screen bg-[#080c14] flex items-center justify-center">
       <div className="flex flex-col items-center gap-4">
-        <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center blue-glow animate-pulse">
-          <svg viewBox="0 0 32 32" className="w-5 h-5 fill-white">
-            <path d="M18 5L9 18H16L14 27L23 14H16L18 5Z" />
-          </svg>
+        <div className="relative w-12 h-12">
+          <div className="absolute inset-0 bg-blue-500/20 rounded-2xl blur-lg" />
+          <div className="relative w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30">
+            <svg viewBox="0 0 32 32" className="w-6 h-6 fill-white">
+              <path d="M18 5L9 18H16L14 27L23 14H16L18 5Z" />
+            </svg>
+          </div>
         </div>
-        <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
       </div>
     </div>
   );
@@ -41,7 +45,6 @@ function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// Animated wrapper that fades in on route change
 function AnimatedPage({ children }: { children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -66,34 +69,16 @@ function AppRoutes() {
   return (
     <Routes location={location} key={location.pathname}>
       <Route path="/" element={<AnimatedPage><LandingPage /></AnimatedPage>} />
-
-      <Route path="/login" element={
-        <PublicOnlyRoute>
-          <AnimatedPage><LoginPage /></AnimatedPage>
-        </PublicOnlyRoute>
-      } />
-      <Route path="/signup" element={
-        <PublicOnlyRoute>
-          <AnimatedPage><SignupPage /></AnimatedPage>
-        </PublicOnlyRoute>
-      } />
-
-      <Route path="/onboarding" element={
-        <ProtectedRoute>
-          <AnimatedPage><OnboardingPage /></AnimatedPage>
-        </ProtectedRoute>
-      } />
-
-      <Route path="/dashboard" element={
-        <ProtectedRoute><DashboardLayout /></ProtectedRoute>
-      }>
+      <Route path="/login" element={<PublicOnlyRoute><AnimatedPage><LoginPage /></AnimatedPage></PublicOnlyRoute>} />
+      <Route path="/signup" element={<PublicOnlyRoute><AnimatedPage><SignupPage /></AnimatedPage></PublicOnlyRoute>} />
+      <Route path="/onboarding" element={<ProtectedRoute><AnimatedPage><OnboardingPage /></AnimatedPage></ProtectedRoute>} />
+      <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
         <Route index element={<OverviewPage />} />
         <Route path="calls" element={<CallsPage />} />
         <Route path="sms" element={<SMSPage />} />
         <Route path="contacts" element={<ContactsPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
-
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
@@ -102,9 +87,11 @@ function AppRoutes() {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
+      <ToastProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </ToastProvider>
     </AuthProvider>
   );
 }
