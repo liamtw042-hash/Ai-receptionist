@@ -1,200 +1,277 @@
 import { useEffect, useState } from 'react';
-import { Phone, ChevronDown, PhoneIncoming, Search, Table2 } from 'lucide-react';
+import {
+  Phone, ChevronDown, Search, Filter, PhoneIncoming, PhoneOutgoing,
+  PhoneMissed, Clock, User, MessageSquare, RefreshCw, X,
+} from 'lucide-react';
 import { api } from '../lib/api';
-import { Card } from '../components/ui/Card';
 import { OutcomeBadge } from '../components/ui/Badge';
 import { SkeletonRow } from '../components/ui/Skeleton';
 import { formatDistanceToNow, format } from 'date-fns';
+import { clsx } from 'clsx';
 
-interface Call { id: string; callerNumber: string; outcome: string; summary: string; createdAt: string; turns: number; googleSheetLogged?: boolean; }
-interface CallDetail { id: string; callerNumber: string; outcome: string; summary: string; createdAt: string; turns: Array<{ role: string; content: string; timestamp: string }>; }
+interface Message { role: 'assistant' | 'user'; content: string; }
+interface Call {
+  id: string;
+  callerNumber: string;
+  outcome: string;
+  summary: string;
+  createdAt: string;
+  durationSeconds?: number;
+  transcript?: Message[];
+  turns?: number;
+}
 
-const OUTCOME_FILTERS = [
-  { key: 'all', label: 'All' },
-  { key: 'job_booked', label: 'Job Booked' },
-  { key: 'quote_given', label: 'Quote Given' },
-  { key: 'emergency', label: 'Emergency' },
-  { key: 'callback_needed', label: 'Callback Needed' },
-];
+const OUTCOME_CONFIG: Record<string, {
+  bar: string; icon: typeof Phone; iconColor: string; label: string;
+}> = {
+  booked:     { bar: '#22c55e', icon: PhoneIncoming,  iconColor: 'text-green-400',  label: 'Booked' },
+  emergency:  { bar: '#ef4444', icon: PhoneIncoming,  iconColor: 'text-red-400',    label: 'Emergency' },
+  lead:       { bar: '#3b82f6', icon: PhoneIncoming,  iconColor: 'text-blue-400',   label: 'Lead' },
+  'no-action':{ bar: '#6b7280', icon: PhoneMissed,    iconColor: 'text-gray-500',   label: 'No Action' },
+  transferred:{ bar: '#a78bfa', icon: PhoneOutgoing,  iconColor: 'text-purple-400', label: 'Transferred' },
+  callback:   { bar: '#fb923c', icon: PhoneIncoming,  iconColor: 'text-orange-400', label: 'Callback' },
+};
 
-export function CallsPage() {
-  useEffect(() => { document.title = 'Calls | TradeDesk'; }, []);
-  const [calls, setCalls] = useState<Call[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const [detail, setDetail] = useState<CallDetail | null>(null);
-  const [loadingDetail, setLoadingDetail] = useState(false);
-  const [filter, setFilter] = useState('all');
-  const [search, setSearch] = useState('');
-
-  useEffect(() => {
-    api.get<Call[]>('/calls').then(setCalls).catch(console.error).finally(() => setLoading(false));
-  }, []);
-
-  const toggleExpand = async (id: string) => {
-    if (expanded === id) { setExpanded(null); setDetail(null); return; }
-    setExpanded(id);
-    setLoadingDetail(true);
-    try {
-      const d = await api.get<CallDetail>(`/calls/${id}`);
-      setDetail(d);
-    } catch { /* ignore */ } finally {
-      setLoadingDetail(false);
-    }
+function getOutcomeConfig(outcome: string) {
+  return OUTCOME_CONFIG[outcome?.toLowerCase()] ?? {
+    bar: '#6b7280', icon: Phone, iconColor: 'text-gray-400', label: outcome || 'Unknown',
   };
+}
 
-  const filtered = calls
-    .filter(c => filter === 'all' || c.outcome === filter)
-    .filter(c => !search || c.callerNumber?.includes(search) || c.summary?.toLowerCase().includes(search.toLowerCase()));
+function fmtPhone(num: string): string {
+  if (!num) return 'Unknown';
+  const clean = num.replace(/\D/g, '');
+  if (clean.startsWith('61') && clean.length === 11) return `0${clean.slice(2, 5)} ${clean.slice(5, 8)} ${clean.slice(8)}`;
+  if (clean.length === 10 && clean.startsWith('0')) return `${clean.slice(0, 4)} ${clean.slice(4, 7)} ${clean.slice(7)}`;
+  return num;
+}
 
-  if (loading) return (
-    <div className="space-y-5 animate-fade-in">
-      <div className="h-7 w-24 skeleton rounded-lg" />
-      <div className="flex gap-2 flex-wrap">
-        {[...Array(5)].map((_, i) => <div key={i} className="h-8 w-24 skeleton rounded-lg" />)}
-      </div>
-      <div className="space-y-2">{[...Array(5)].map((_, i) => <SkeletonRow key={i} />)}</div>
-    </div>
-  );
+function fmtDuration(secs?: number): string {
+  if (!secs) return '';
+  const m = Math.floor(secs / 60), s = secs % 60;
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
 
+const FILTERS = ['All', 'Booked', 'Emergency', 'Lead', 'No Action', 'Transferred'];
+
+function TranscriptBubble({ msg }: { msg: Message }) {
+  const isAI = msg.role === 'assistant';
   return (
-    <div className="space-y-5 animate-slide-up">
-      <div>
-        <h1 className="text-2xl font-bold text-white">Calls</h1>
-        <p className="text-gray-500 text-sm mt-0.5">{calls.length} total</p>
-      </div>
-
-      {/* Search bar */}
-      <div className="relative">
-        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Search calls by number or transcript…"
-          className="glass w-full rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/40 transition-all"
-        />
-      </div>
-
-      {/* Filter chips */}
-      <div className="flex gap-2 flex-wrap">
-        {OUTCOME_FILTERS.map(f => {
-          const count = f.key === 'all' ? calls.length : calls.filter(c => c.outcome === f.key).length;
-          return (
-            <button key={f.key} onClick={() => setFilter(f.key)}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 border ${
-                filter === f.key
-                  ? 'bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-500/20'
-                  : 'glass text-gray-400 hover:text-white hover:border-white/20 border-transparent'
-              }`}>
-              {f.label}
-              {count > 0 && (
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-                  filter === f.key ? 'bg-white/25 text-white' : 'bg-white/8 text-gray-500'
-                }`}>{count}</span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {filtered.length === 0 ? (
-        <div className="glass rounded-xl border border-white/8 text-center py-16">
-          <div className="relative w-16 h-16 mx-auto mb-4">
-            <div className="absolute inset-0 bg-blue-500/10 rounded-2xl blur-xl" />
-            <div className="relative w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center">
-              <PhoneIncoming size={26} className="text-blue-400/50" />
-            </div>
-          </div>
-          <p className="font-semibold text-gray-300 mb-1">
-            {filter === 'all' && !search ? 'No calls yet' : 'No matching calls'}
-          </p>
-          <p className="text-sm text-gray-600 max-w-xs mx-auto">
-            {filter === 'all' && !search
-              ? "Once your AI answers its first call, you'll see the full transcript here."
-              : 'Try adjusting your search or filter.'}
-          </p>
+    <div className={clsx('flex gap-2.5', isAI ? 'justify-start' : 'justify-end')}>
+      {isAI && (
+        <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <Phone size={10} className="text-blue-400" />
         </div>
-      ) : (
-        <div className="space-y-2">
-          {filtered.map(call => (
-            <div key={call.id} className="animate-fade-in">
-              <div
-                onClick={() => toggleExpand(call.id)}
-                className={`glass rounded-xl p-4 cursor-pointer transition-all duration-200 hover:border-white/15 hover:bg-white/[0.04] ${
-                  expanded === call.id ? 'rounded-b-none border-b-0' : ''
-                }`}
-              >
-                <div className="flex items-start gap-4">
-                  <div className="w-9 h-9 rounded-full bg-blue-500/15 border border-blue-500/20 flex items-center justify-center flex-shrink-0">
-                    <Phone size={15} className="text-blue-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className="font-semibold text-white text-sm">{formatPhone(call.callerNumber)}</span>
-                      <OutcomeBadge outcome={call.outcome} />
-                    </div>
-                    <p className="text-xs text-gray-400 line-clamp-1">{call.summary || 'No summary available'}</p>
-                    <div className="flex items-center gap-3 mt-1.5">
-                      <span className="text-xs text-gray-600">{call.createdAt ? format(new Date(call.createdAt), 'dd MMM, h:mm a') : '—'}</span>
-                      {call.turns > 0 && <span className="text-xs text-gray-700">{call.turns} exchanges</span>}
-                      {call.googleSheetLogged && (
-                        <span title="Logged to Google Sheets" className="flex items-center gap-1 text-xs text-emerald-500">
-                          <Table2 size={11} /> Sheet
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <ChevronDown size={16} className={`text-gray-600 flex-shrink-0 transition-transform duration-200 ${expanded === call.id ? 'rotate-180' : ''}`} />
-                </div>
-              </div>
-
-              {expanded === call.id && (
-                <div className="glass rounded-t-none rounded-b-xl border-t border-white/5 px-5 pb-5 pt-4 space-y-4 animate-fade-in">
-                  {loadingDetail ? (
-                    <div className="space-y-2">
-                      <div className="h-3 w-20 skeleton rounded" />
-                      {[...Array(3)].map((_, i) => <div key={i} className="h-4 skeleton rounded" />)}
-                    </div>
-                  ) : detail ? (
-                    <>
-                      <div>
-                        <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-2">Summary</p>
-                        <p className="text-sm text-gray-300 leading-relaxed">{detail.summary}</p>
-                      </div>
-                      {detail.turns?.length > 0 && (
-                        <div>
-                          <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-3">Transcript</p>
-                          <div className="space-y-2">
-                            {detail.turns.map((t, i) => (
-                              <div key={i} className={`flex ${t.role === 'assistant' ? 'justify-start' : 'justify-end'}`}>
-                                <div className={`max-w-xs lg:max-w-md px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                                  t.role === 'assistant'
-                                    ? 'bg-blue-500/20 text-blue-100 rounded-tl-sm border border-blue-500/15'
-                                    : 'bg-white/8 text-gray-200 rounded-tr-sm'
-                                }`}>
-                                  <p className="text-[10px] font-semibold opacity-50 mb-0.5">{t.role === 'assistant' ? 'TradeDesk AI' : 'Caller'}</p>
-                                  {t.content}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  ) : null}
-                </div>
-              )}
-            </div>
-          ))}
+      )}
+      <div className={clsx(
+        'max-w-[78%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed',
+        isAI
+          ? 'bg-white/8 text-gray-200 rounded-tl-sm border border-white/6'
+          : 'bg-blue-600/80 text-white rounded-tr-sm'
+      )}>
+        {msg.content}
+      </div>
+      {!isAI && (
+        <div className="w-6 h-6 rounded-full bg-gray-600/40 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <User size={10} className="text-gray-400" />
         </div>
       )}
     </div>
   );
 }
 
-function formatPhone(num: string): string {
-  if (!num) return 'Unknown';
-  const clean = num.replace(/\D/g, '');
-  if (clean.startsWith('61') && clean.length === 11) return `0${clean.slice(2, 5)} ${clean.slice(5, 8)} ${clean.slice(8)}`;
-  return num;
+export function CallsPage() {
+  useEffect(() => { document.title = 'Calls | TradeDesk'; }, []);
+  const [calls, setCalls] = useState<Call[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('All');
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = async (silent = false) => {
+    if (!silent) setLoading(true);
+    else setRefreshing(true);
+    try {
+      const data = await api.get<Call[]>('/calls');
+      setCalls(data);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); setRefreshing(false); }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const filtered = calls.filter(c => {
+    if (filter !== 'All' && c.outcome?.toLowerCase() !== filter.toLowerCase()) return false;
+    if (search && !c.callerNumber?.includes(search) && !c.summary?.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  const toggle = (id: string) => setExpanded(e => e === id ? null : id);
+
+  return (
+    <div className="space-y-4 animate-slide-up">
+      {/* Header row */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1">
+          <h1 className="text-lg font-bold text-white tracking-tight">Calls</h1>
+          <p className="text-xs text-gray-600 mt-0.5">{calls.length} total Â· AI-handled</p>
+        </div>
+        <button onClick={() => load(true)} disabled={refreshing}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs text-gray-500 hover:text-white bg-white/4 hover:bg-white/8 border border-white/7 transition-all min-h-[38px]">
+          <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
+          <span className="hidden sm:inline">Refresh</span>
+        </button>
+      </div>
+
+      {/* Search + filter */}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1">
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
+          <input value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Search number or summaryâ¦"
+            className="w-full bg-white/4 border border-white/7 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-700 focus:outline-none focus:border-blue-500/50 transition-colors min-h-[42px]" />
+          {search && (
+            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-white">
+              <X size={12} />
+            </button>
+          )}
+        </div>
+        <div className="flex gap-1.5 flex-wrap sm:flex-nowrap">
+          <Filter size={13} className="self-center text-gray-600 flex-shrink-0 ml-1 hidden sm:block" />
+          {FILTERS.map(f => (
+            <button key={f} onClick={() => setFilter(f)}
+              className={clsx(
+                'px-3 py-2 rounded-xl text-xs font-medium transition-all border min-h-[38px] whitespace-nowrap',
+                filter === f
+                  ? 'bg-blue-500/15 border-blue-500/30 text-blue-400'
+                  : 'bg-white/3 border-white/7 text-gray-500 hover:text-gray-200 hover:border-white/15'
+              )}>
+              {f}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Calls list */}
+      {loading ? (
+        <div className="space-y-2">{[...Array(6)].map((_, i) => <SkeletonRow key={i} />)}</div>
+      ) : filtered.length === 0 ? (
+        <div className="rounded-2xl border border-white/7 py-14 text-center" style={{ background: 'rgba(13,20,38,0.5)' }}>
+          <div className="w-14 h-14 bg-blue-500/8 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Phone size={24} className="text-blue-400/30" />
+          </div>
+          <p className="text-sm font-semibold text-gray-400 mb-1">No calls found</p>
+          <p className="text-xs text-gray-600">
+            {search || filter !== 'All' ? 'Try adjusting your filters.' : 'Calls will appear here once your AI starts answering.'}
+          </p>
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-white/7 overflow-hidden" style={{ background: 'rgba(13,20,38,0.5)' }}>
+          {filtered.map((call, idx) => {
+            const cfg = getOutcomeConfig(call.outcome);
+            const isOpen = expanded === call.id;
+            const CallIcon = cfg.icon;
+
+            return (
+              <div key={call.id} className={clsx('border-white/5', idx > 0 && 'border-t')}>
+                {/* Row */}
+                <button
+                  onClick={() => toggle(call.id)}
+                  className="w-full flex items-center gap-0 hover:bg-white/3 transition-colors text-left group">
+                  {/* Coloured outcome bar */}
+                  <div className="w-[3px] self-stretch flex-shrink-0 rounded-r"
+                    style={{ background: cfg.bar, boxShadow: `0 0 8px ${cfg.bar}60` }} />
+
+                  <div className="flex items-center gap-3 flex-1 px-4 py-3.5 min-w-0">
+                    {/* Icon */}
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ background: `${cfg.bar}18`, border: `1px solid ${cfg.bar}30` }}>
+                      <CallIcon size={15} className={cfg.iconColor} />
+                    </div>
+
+                    {/* Number + summary */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2.5 flex-wrap">
+                        <span className="text-sm font-bold text-white">{fmtPhone(call.callerNumber)}</span>
+                        <OutcomeBadge outcome={call.outcome} />
+                        {call.durationSeconds && (
+                          <span className="text-xs text-gray-700 flex items-center gap-1">
+                            <Clock size={10} />
+                            {fmtDuration(call.durationSeconds)}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-0.5 truncate">{call.summary || 'No summary available'}</p>
+                    </div>
+
+                    {/* Time + chevron */}
+                    <div className="flex-shrink-0 flex items-center gap-2.5 ml-2">
+                      <span className="hidden sm:block text-xs text-gray-700 whitespace-nowrap">
+                        {call.createdAt ? formatDistanceToNow(new Date(call.createdAt), { addSuffix: true }) : ''}
+                      </span>
+                      <ChevronDown size={14} className={clsx(
+                        'text-gray-600 transition-transform duration-200',
+                        isOpen && 'rotate-180 text-blue-400'
+                      )} />
+                    </div>
+                  </div>
+                </button>
+
+                {/* Expanded transcript */}
+                {isOpen && (
+                  <div className="border-t border-white/5 px-4 pb-4" style={{ background: 'rgba(0,0,0,0.2)' }}>
+                    <div className="pt-3 mb-3 flex flex-wrap items-center gap-3 text-xs text-gray-600">
+                      {call.createdAt && (
+                        <span className="flex items-center gap-1">
+                          <Clock size={10} />
+                          {format(new Date(call.createdAt), 'dd MMM yyyy Â· HH:mm')}
+                        </span>
+                      )}
+                      {call.durationSeconds && (
+                        <span className="flex items-center gap-1">
+                          <Phone size={10} />
+                          Duration: {fmtDuration(call.durationSeconds)}
+                        </span>
+                      )}
+                      {call.turns && (
+                        <span className="flex items-center gap-1">
+                          <MessageSquare size={10} />
+                          {call.turns} turns
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Summary pill */}
+                    {call.summary && (
+                      <div className="mb-3 px-3.5 py-2.5 rounded-xl text-xs text-gray-300 border border-white/6"
+                        style={{ background: 'rgba(59,130,246,0.06)' }}>
+                        <span className="text-blue-400 font-semibold text-[10px] uppercase tracking-wider">AI Summary Â· </span>
+                        {call.summary}
+                      </div>
+                    )}
+
+                    {/* Transcript */}
+                    {call.transcript && call.transcript.length > 0 ? (
+                      <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                        {call.transcript.map((msg, i) => <TranscriptBubble key={i} msg={msg} />)}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-700 italic">No transcript available.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {!loading && filtered.length > 0 && (
+        <p className="text-center text-xs text-gray-700 pb-2">
+          Showing {filtered.length} of {calls.length} calls
+        </p>
+      )}
+    </div>
+  );
 }
