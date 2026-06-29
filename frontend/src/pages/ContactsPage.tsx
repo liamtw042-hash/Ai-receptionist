@@ -1,168 +1,272 @@
 import { useEffect, useState } from 'react';
-import { Users, Search, Phone, MessageSquare, Clock } from 'lucide-react';
+import {
+  Phone, MessageSquare, Users, Search, ChevronUp, ChevronDown,
+  ArrowUpRight, MoreHorizontal, Mail, X,
+} from 'lucide-react';
 import { api } from '../lib/api';
 import { SkeletonRow } from '../components/ui/Skeleton';
 import { formatDistanceToNow } from 'date-fns';
+import { clsx } from 'clsx';
+import { useNavigate } from 'react-router-dom';
 
 interface Contact {
   id: string;
-  name: string;
+  name?: string;
   phone: string;
-  tradeType?: string;
+  email?: string;
+  trade?: string;
+  callCount?: number;
   lastContact?: string;
   totalCalls?: number;
-  notes?: string;
+  tags?: string[];
 }
 
 const TRADE_COLORS: Record<string, { bg: string; text: string }> = {
-  plumber:       { bg: 'bg-blue-500/15',   text: 'text-blue-400' },
-  electrician:   { bg: 'bg-yellow-500/15', text: 'text-yellow-400' },
-  carpenter:     { bg: 'bg-amber-500/15',  text: 'text-amber-400' },
-  roofer:        { bg: 'bg-orange-500/15', text: 'text-orange-400' },
-  landscaper:    { bg: 'bg-green-500/15',  text: 'text-green-400' },
-  hvac:          { bg: 'bg-cyan-500/15',   text: 'text-cyan-400' },
-  locksmith:     { bg: 'bg-purple-500/15', text: 'text-purple-400' },
-  concreter:     { bg: 'bg-stone-500/15',  text: 'text-stone-400' },
-  default:       { bg: 'bg-gray-500/15',   text: 'text-gray-400' },
+  plumber:      { bg: 'bg-blue-500/15 border-blue-500/25',     text: 'text-blue-400' },
+  electrician:  { bg: 'bg-yellow-500/15 border-yellow-500/25', text: 'text-yellow-400' },
+  builder:      { bg: 'bg-orange-500/15 border-orange-500/25', text: 'text-orange-400' },
+  hvac:         { bg: 'bg-cyan-500/15 border-cyan-500/25',     text: 'text-cyan-400' },
+  locksmith:    { bg: 'bg-purple-500/15 border-purple-500/25', text: 'text-purple-400' },
+  cleaner:      { bg: 'bg-green-500/15 border-green-500/25',   text: 'text-green-400' },
 };
+const defaultTrade = { bg: 'bg-white/8 border-white/12', text: 'text-gray-400' };
 
-const AVATAR_COLORS = [
+function getTradeColors(trade?: string) {
+  if (!trade) return defaultTrade;
+  return TRADE_COLORS[trade.toLowerCase()] ?? defaultTrade;
+}
+
+function avatarInitials(contact: Contact): string {
+  if (contact.name) {
+    return contact.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  }
+  const clean = contact.phone.replace(/\D/g, '');
+  return clean.slice(-2);
+}
+
+const AVATAR_GRADIENTS = [
   'from-blue-500 to-purple-500',
   'from-green-500 to-teal-500',
   'from-orange-500 to-red-500',
-  'from-purple-500 to-pink-500',
-  'from-cyan-500 to-blue-500',
-  'from-yellow-500 to-orange-500',
+  'from-pink-500 to-rose-500',
+  'from-indigo-500 to-blue-500',
+  'from-emerald-500 to-green-500',
 ];
+
+function fmtPhone(num: string): string {
+  if (!num) return 'â';
+  const clean = num.replace(/\D/g, '');
+  if (clean.startsWith('61') && clean.length === 11) return `0${clean.slice(2, 5)} ${clean.slice(5, 8)} ${clean.slice(8)}`;
+  if (clean.length === 10 && clean.startsWith('0')) return `${clean.slice(0, 4)} ${clean.slice(4, 7)} ${clean.slice(7)}`;
+  return num;
+}
+
+type SortKey = 'name' | 'lastContact' | 'totalCalls';
+type SortDir = 'asc' | 'desc';
 
 export function ContactsPage() {
   useEffect(() => { document.title = 'Contacts | TradeDesk'; }, []);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [sortKey, setSortKey] = useState<SortKey>('lastContact');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    api.get<Contact[]>('/contacts').then(setContacts).catch(console.error).finally(() => setLoading(false));
+    api.get<Contact[]>('/contacts')
+      .then(setContacts)
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
-  const filtered = contacts.filter(c =>
-    !search ||
-    c.name?.toLowerCase().includes(search.toLowerCase()) ||
-    c.phone?.includes(search) ||
-    c.tradeType?.toLowerCase().includes(search.toLowerCase())
-  );
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortKey(key); setSortDir('desc'); }
+  };
 
-  if (loading) return (
-    <div className="space-y-5 animate-fade-in">
-      <div className="h-7 w-28 skeleton rounded-lg" />
-      <div className="h-10 w-full skeleton rounded-xl" />
-      <div className="space-y-2">{[...Array(5)].map((_, i) => <SkeletonRow key={i} />)}</div>
-    </div>
+  const sorted = [...contacts]
+    .filter(c => {
+      if (!search) return true;
+      const q = search.toLowerCase();
+      return (c.name?.toLowerCase().includes(q) || c.phone.includes(q) || c.trade?.toLowerCase().includes(q));
+    })
+    .sort((a, b) => {
+      let va: string | number = '', vb: string | number = '';
+      if (sortKey === 'name') { va = a.name ?? a.phone; vb = b.name ?? b.phone; }
+      if (sortKey === 'lastContact') { va = a.lastContact ?? ''; vb = b.lastContact ?? ''; }
+      if (sortKey === 'totalCalls') { va = a.totalCalls ?? a.callCount ?? 0; vb = b.totalCalls ?? b.callCount ?? 0; }
+      if (va < vb) return sortDir === 'asc' ? -1 : 1;
+      if (va > vb) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+  const SortBtn = ({ col, label }: { col: SortKey; label: string }) => (
+    <button onClick={() => toggleSort(col)}
+      className={clsx(
+        'flex items-center gap-1 text-xs font-semibold uppercase tracking-wider transition-colors',
+        sortKey === col ? 'text-blue-400' : 'text-gray-600 hover:text-gray-300'
+      )}>
+      {label}
+      {sortKey === col ? (
+        sortDir === 'desc' ? <ChevronDown size={11} /> : <ChevronUp size={11} />
+      ) : (
+        <span className="w-2" />
+      )}
+    </button>
   );
 
   return (
-    <div className="space-y-5 animate-slide-up">
-      <div>
-        <h1 className="text-2xl font-bold text-white">Contacts</h1>
-        <p className="text-gray-500 text-sm mt-0.5">{contacts.length} callers in your CRM</p>
+    <div className="space-y-4 animate-slide-up" onClick={() => setActiveMenu(null)}>
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1">
+          <h1 className="text-lg font-bold text-white tracking-tight">Contacts</h1>
+          <p className="text-xs text-gray-600 mt-0.5">{contacts.length} callers in your CRM</p>
+        </div>
       </div>
 
       {/* Search */}
       <div className="relative">
-        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
-        <input
-          value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Search by name, phone or trade…"
-          className="glass w-full rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/40 transition-all"
-        />
+        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
+        <input value={search} onChange={e => setSearch(e.target.value)}
+          placeholder="Search name, phone, or tradeâ¦"
+          className="w-full bg-white/4 border border-white/7 rounded-xl pl-9 pr-9 py-2.5 text-sm text-white placeholder-gray-700 focus:outline-none focus:border-blue-500/50 transition-colors min-h-[42px]" />
+        {search && (
+          <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-white">
+            <X size={12} />
+          </button>
+        )}
       </div>
 
-      {filtered.length === 0 ? (
-        <div className="glass rounded-xl border border-white/8 text-center py-16">
-          <div className="relative w-16 h-16 mx-auto mb-4">
-            <div className="absolute inset-0 bg-blue-500/10 rounded-2xl blur-xl" />
-            <div className="relative w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center">
-              <Users size={26} className="text-blue-400/50" />
-            </div>
+      {/* Table */}
+      {loading ? (
+        <div className="space-y-2">{[...Array(6)].map((_, i) => <SkeletonRow key={i} />)}</div>
+      ) : sorted.length === 0 ? (
+        <div className="rounded-2xl border border-white/7 py-14 text-center" style={{ background: 'rgba(13,20,38,0.5)' }}>
+          <div className="w-14 h-14 bg-blue-500/8 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Users size={24} className="text-blue-400/30" />
           </div>
-          <p className="font-semibold text-gray-300 mb-1">
-            {search ? 'No matching contacts' : 'No contacts yet'}
-          </p>
-          <p className="text-sm text-gray-600 max-w-xs mx-auto">
-            {search ? 'Try a different search term.' : 'Contacts are automatically created from incoming calls.'}
-          </p>
+          <p className="text-sm font-semibold text-gray-400 mb-1">No contacts yet</p>
+          <p className="text-xs text-gray-600 max-w[200px] mx-auto">Callers are automatically added when your AI handles a call.</p>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((contact, i) => {
-            const tradeKey = contact.tradeType?.toLowerCase() ?? 'default';
-            const tradeStyle = TRADE_COLORS[tradeKey] ?? TRADE_COLORS.default;
-            const avatarGrad = AVATAR_COLORS[i % AVATAR_COLORS.length];
-            const initials = contact.name
-              ? contact.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
-              : contact.phone?.[0] ?? '?';
+        <div className="rounded-2xl border border-white/7 overflow-hidden" style={{ background: 'rgba(13,20,38,0.5)' }}>
+          {/* Table header */}
+          <div className="hidden sm:grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-4 items-center px-4 py-3 border-b border-white/6"
+            style={{ background: 'rgba(0,0,0,0.25)' }}>
+            <SortBtn col="name" label="Name / Number" />
+            <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Trade</span>
+            <SortBtn col="lastContact" label="Last call" />
+            <SortBtn col="totalCalls" label="Total calls" />
+            <span className="w8" />
+          </div>
 
-            return (
-              <div key={contact.id} className="glass rounded-xl p-4 border border-white/8 hover:border-white/15 hover:bg-white/[0.03] transition-all duration-200 flex flex-col gap-3 animate-fade-in">
-                {/* Header */}
-                <div className="flex items-start gap-3">
-                  <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${avatarGrad} flex items-center justify-center text-sm font-bold text-white flex-shrink-0 shadow-sm`}>
-                    {initials}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-white text-sm truncate">{contact.name || formatPhone(contact.phone)}</p>
-                    <p className="text-xs text-gray-500 truncate">{formatPhone(contact.phone)}</p>
-                  </div>
-                  {contact.tradeType && (
-                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${tradeStyle.bg} ${tradeStyle.text}`}>
-                      {contact.tradeType}
-                    </span>
-                  )}
-                </div>
+          {/* Rows */}
+          <div className="divide-y divide-white/5">
+            {sorted.map((contact, idx) => {
+              const grad = AVATAK_GRADIENTS[idx % AVATAR_GRADIENTS.length];
+              const tc = getTradeColors(contact.trade);
+              const calls = contact.totalCalls ?? contact.callCount ?? 0;
+              const isMenuOpen = activeMenu === contact.id;
 
-                {/* Stats row */}
-                <div className="flex items-center gap-3 text-xs text-gray-600">
-                  {(contact.totalCalls ?? 0) > 0 && (
-                    <div className="flex items-center gap-1">
-                      <Phone size={11} className="text-blue-400/60" />
-                      <span>{contact.totalCalls} call{contact.totalCalls !== 1 ? 's' : ''}</span>
+              return (
+                <div key={contact.id}
+                  className="flex sm:grid sm:grid-cols-[2fr_1fr_1fr_1fr_auto] gap-3 sm:gap-4 items-center px-4 py-3.5 hover:bg-white/3 transition-colors group">
+                  {/* Avatar + name */}
+                  <div className="flex items-center gap-3 min-w-0 flex-1 sm:flex-none">
+                    <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${grad} flex items-center justify-center text-xs font-bold text-white flex-shrink-0 shadow-sm`}>
+                      {avatarInitials(contact)}
                     </div>
-                  )}
-                  {contact.lastContact && (
-                    <div className="flex items-center gap-1">
-                      <Clock size={11} className="text-gray-600" />
-                      <span>{formatDistanceToNow(new Date(contact.lastContact), { addSuffix: true })}</span>
+                    <div className="min-w-0">
+                      {contact.name && <p className="text-sm font-semibold text-white truncate">{contact.name}</p>}
+                      <p className={clsx('text-xs truncate', contact.name ? 'text-gray-500' : 'text-sm font-semibold text-white')}>
+                        {fmtPhone(contact.phone)}
+                      </p>
                     </div>
-                  )}
-                </div>
+                  </div>
 
-                {contact.notes && (
-                  <p className="text-xs text-gray-500 line-clamp-2 border-t border-white/5 pt-2">{contact.notes}</p>
-                )}
+                  {/* Trade */}
+                  <div className="hidden sm:flex">
+                    {contact.trade ? (
+                      <span className={`text-xs font-medium px-2 py-1 rounded-lg border capitalize ${tc.bg} ${tc.text}`}>
+                        {contact.trade}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-700">â</span>
+                    )}
+                  </div>
 
-                {/* Actions */}
-                <div className="flex gap-2 mt-auto pt-1">
-                  <a href={`tel:${contact.phone}`}
-                    className="flex-1 flex items-center justify-center gap-1.5 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 text-xs font-medium py-1.5 rounded-lg transition-all duration-200">
-                    <Phone size={12} /> Call
-                  </a>
-                  <a href={`sms:${contact.phone}`}
-                    className="flex-1 flex items-center justify-center gap-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 text-xs font-medium py-1.5 rounded-lg transition-all duration-200">
-                    <MessageSquare size={12} /> SMS
-                  </a>
+                  {/* Last call */}
+                  <div className="hidden sm:block text-xs text-gray-500">
+                    {contact.lastContact
+                      ? formatDistanceToNow(new Date(contact.lastContact), { addSuffix: true })
+                      : 'â'}
+                  </div>
+
+                  {/* Call count */}
+                  <div className="hidden sm:flex items-center gap-2">
+                    <div className="flex gap-0.5">
+                      {[...Array(Math.min(calls, 5))].map((_, i) => (
+                        <div key={i} className="w-1.5 h-1.5 rounded-full bg-blue-500/60" />
+                      ))}
+                      {calls > 5 && <span className="text-[10px] text-gray-600 ml-1">+{calls - 5}</span>}
+                    </div>
+                    <span className="text-sm font-semibold text-white tabular-nums">{calls}</span>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-1.5 flex-shrink-0 ml-auto sm:ml-0">
+                    {/* Mobile quick stats */}
+                    <span className="sm:hidden text-xs text-gray-600">{calls} calls</span>
+
+                    <button
+                      onClick={e => { e.stopPropagation(); navigate('/dashboard/calls'); }}
+                      title="View calls"
+                      className="w-7 h-7 rounded-lg bg-white/5 hover:bg-blue-500/15 flex items-center justify-center text-gray-500 hover:text-blue-400 transition-all border border-white/5 hover:border-blue-500/25">
+                      <Phone size={12} />
+                    </button>
+                    <button
+                      onClick={e => { e.stopPropagation(); navigate('/dashboard/sms'); }}
+                      title="Send SMS"
+                      className="w-7 h-7 rounded-lg bg-white/5 hover:bg-green-500/15 flex items-center justify-center text-gray-500 hover:text-green-400 transition-all border border-white/5 hover:border-green-500/25">
+                      <MessageSquare size={12} />
+                    </button>
+                    <div className="relative">
+                      <button
+                        onClick={e => { e.stopPropagation(); setActiveMenu(isMenuOpen ? null : contact.id); }}
+                        className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-600 hover:text-gray-300 transition-all border border-white/5">
+                        <MoreHorizontal size={12} />
+                      </button>
+                      {isMenuOpen && (
+                        <div className="absolute right-0 top-9 w-40 rounded-xl border border-white/10 shadow-2xl shadow-black/60 z-20 overflow-hidden"
+                          style={{ background: '#0d1426' }}
+                          onClick={e => e.stopPropagation()}>
+                          {contact.email && (
+                            <button className="flex items-center gap-2.5 w-full px-3.5 py-2.5 text-xs text-gray-300 hover:bg-white/8 hover:text-white transition-colors text-left">
+                              <Mail size={12} className="text-gray-600" />Email
+                            </button>
+                          )}
+                          <button className="flex items-center gap-2.5 w-full px-3.5 py-2.5 text-xs text-gray-300 hover:bg-white/8 hover:text-white transition-colors text-left">
+                            <ArrowUpRight size={12} className="text-gray-600" />View history
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
+      )}
+
+      {!loading && sorted.length > 0 && (
+        <p className="text-center text-xs text-gray-700 pb-2">
+          {sorted.length} contact{sorted.length !== 1 ? 's' : ''}
+        </p>
       )}
     </div>
   );
-}
-
-function formatPhone(num: string): string {
-  if (!num) return 'Unknown';
-  const clean = num.replace(/\D/g, '');
-  if (clean.startsWith('61') && clean.length === 11) return `0${clean.slice(2, 5)} ${clean.slice(5, 8)} ${clean.slice(8)}`;
-  return num;
 }
