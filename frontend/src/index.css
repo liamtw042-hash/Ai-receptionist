@@ -179,31 +179,6 @@ html, body {
   100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
 }
 
-/* ── Cursor follower ── */
-.cursor-dot {
-  position: fixed;
-  width: 10px;
-  height: 10px;
-  background: rgba(59,130,246,0.7);
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 9999;
-  transition: transform 0.1s ease, opacity 0.3s ease;
-  transform: translate(-50%, -50%);
-  mix-blend-mode: screen;
-}
-.cursor-ring {
-  position: fixed;
-  width: 36px;
-  height: 36px;
-  border: 1.5px solid rgba(59,130,246,0.35);
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 9998;
-  transform: translate(-50%, -50%);
-  transition: all 0.18s cubic-bezier(0.25,0.46,0.45,0.94);
-}
-
 /* ── Shimmer button ── */
 .btn-shimmer {
   position: relative;
@@ -293,7 +268,6 @@ html, body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-  .cursor-dot, .cursor-ring { display: none; }
   #scroll-progress { display: none; }
 }
 

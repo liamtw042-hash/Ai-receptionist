@@ -217,7 +217,7 @@ export function OverviewPage() {
   );
 
   const doneCount = Object.values(checklist).filter(Boolean).length;
-  const allDone = doneCount === CHECKLEST_ITEMS.length;
+  const allDone = doneCount === CHECKLIST_ITEMS.length;
   const callsThisWeek = stats?.callsThisWeek ?? stats?.leadsThisWeek ?? 0;
   const jobsThisWeek = stats?.jobsThisWeek ?? stats?.bookedToday ?? 0;
   const estRevenue = jobsThisWeek * 350;

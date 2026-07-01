@@ -43,50 +43,6 @@ function useRipple(ref: React.RefObject<HTMLElement | null>) {
 }
 
 /* ──────────────────────────────────────
-   CURSOR FOLLOWER
-   ────────────────────────────────────── */
-function CursorFollower() {
-  const dot = useRef<HTMLDivElement>(null);
-  const ring = useRef<HTMLDivElement>(null);
-  const mouse = useRef({ x: 0, y: 0 });
-  const ringPos = useRef({ x: 0, y: 0 });
-
-  useEffect(() => {
-    if (window.matchMedia('(pointer: coarse)').matches) return; // no cursor on touch
-
-    const onMove = (e: MouseEvent) => {
-      mouse.current = { x: e.clientX, y: e.clientY };
-      if (dot.current) {
-        dot.current.style.left = e.clientX + 'px';
-        dot.current.style.top = e.clientY + 'px';
-      }
-    };
-    window.addEventListener('mousemove', onMove);
-
-    let raf: number;
-    const animate = () => {
-      ringPos.current.x += (mouse.current.x - ringPos.current.x) * 0.12;
-      ringPos.current.y += (mouse.current.y - ringPos.current.y) * 0.12;
-      if (ring.current) {
-        ring.current.style.left = ringPos.current.x + 'px';
-        ring.current.style.top = ringPos.current.y + 'px';
-      }
-      raf = requestAnimationFrame(animate);
-    };
-    raf = requestAnimationFrame(animate);
-
-    return () => { window.removeEventListener('mousemove', onMove); cancelAnimationFrame(raf); };
-  }, []);
-
-  return (
-    <>
-      <div ref={dot} className="cursor-dot hidden md:block" />
-      <div ref={ring} className="cursor-ring hidden md:block" />
-    </>
-  );
-}
-
-/* ──────────────────────────────────────
    SCROLL PROGRESS BAR
    ────────────────────────────────────── */
 function ScrollProgress() {
@@ -664,7 +620,6 @@ export function LandingPage() {
 
   return (
     <div className="min-h-screen bg-black text-white font-sans overflow-x-hidden">
-      <CursorFollower />
       <ScrollProgress />
       <div className="noise-overlay" aria-hidden="true" />
 
