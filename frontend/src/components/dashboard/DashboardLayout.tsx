@@ -310,7 +310,7 @@ export function DashboardLayout() {
               {notifOpen && (
                 <>
                   <div className="fixed inset-0 z-[9998]" onClick={() => setNotifOpen(false)} />
-                  <div className="absolute right-0 top-12 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-white/10 shadow-2xl shadow-black/60 z-[9999] overflow-hidden"
+                  <div className="fixed right-4 top-14 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-white/10 shadow-2xl shadow-black/60 z-[9999] overflow-hidden"
                     style={{ background: '#0d1426' }}>
                     <div className="flex items-center justify-between px-4 py-3 border-b border-white/8">
                       <span className="text-sm font-semibold text-white">Notifications</span>
