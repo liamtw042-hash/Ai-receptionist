@@ -43,7 +43,7 @@ interface RecentCall {
   createdAt: string;
 }
 
-/* ââ Animated counter âââââââââââââââââââââââââââââââ */
+/* ── Animated counter ─────────────────────────────── */
 function useCountUp(target: number, duration = 900) {
   const [value, setValue] = useState(0);
   const raf = useRef<number>(0);
@@ -61,7 +61,7 @@ function useCountUp(target: number, duration = 900) {
   return value;
 }
 
-/* ââ Real-time clock ââââââââââââââââââââââââââââââââ */
+/* ── Real-time clock ──────────────────────────────── */
 function useRealTimeClock() {
   const [time, setTime] = useState(new Date());
   useEffect(() => {
@@ -71,7 +71,7 @@ function useRealTimeClock() {
   return time;
 }
 
-/* ââ Sparkline ââââââââââââââââââââââââââââââââââââââ */
+/* ── Sparkline ────────────────────────────────────── */
 function Sparkline({ data, color = '#60a5fa' }: { data: number[]; color?: string }) {
   if (!data || data.length < 2) return null;
   const max = Math.max(...data, 1);
@@ -92,7 +92,7 @@ function Sparkline({ data, color = '#60a5fa' }: { data: number[]; color?: string
   );
 }
 
-/* ââ Premium Stat Card ââââââââââââââââââââââââââââââ */
+/* ── Premium Stat Card ────────────────────────────── */
 type CardColor = 'blue' | 'green' | 'purple' | 'amber';
 const COLOR_MAP: Record<CardColor, {
   iconBg: string; iconText: string; border: string; glow: string; change: string; sparkColor: string;
@@ -150,7 +150,7 @@ function StatCard({
   );
 }
 
-/* ââ Helpers ââââââââââââââââââââââââââââââââââââââââ */
+/* ── Helpers ──────────────────────────────────────── */
 function getGreeting() {
   const h = new Date().getHours();
   if (h < 12) return { text: 'Good morning', icon: Sun };
@@ -166,12 +166,12 @@ function formatPhone(num: string): string {
 }
 
 const CHECKLIST_ITEMS = [
-  { key: 'hasBusinessDetails', label: 'Add business details', hint: 'Settings â Business profile', action: '/dashboard/settings' },
+  { key: 'hasBusinessDetails', label: 'Add business details', hint: 'Settings → Business profile', action: '/dashboard/settings' },
   { key: 'hasForwardingSetup', label: 'Set up call forwarding', hint: 'Forward missed calls to your TradeDesk number', action: '/dashboard/settings' },
   { key: 'hasMadeTestCall', label: 'Make a test call', hint: 'Call your number and hear your AI', action: '/dashboard/settings' },
 ];
 
-/* ââ Main ââââââââââââââââââââââââââââââââââââââââââââ */
+/* ── Main ──────────────────────────────────────────── */
 export function OverviewPage() {
   useEffect(() => { document.title = 'Overview | TradeDesk'; }, []);
   const { user } = useAuth();
@@ -225,7 +225,7 @@ export function OverviewPage() {
   return (
     <div className="space-y-5 animate-slide-up">
 
-      {/* ââ AI Status Banner ââ */}
+      {/* ── AI Status Banner ── */}
       <div className={`flex items-center gap-3 rounded-xl px-4 py-2.5 border text-sm font-medium transition-all ${
         allDone
           ? 'bg-green-500/6 border-green-500/20 text-green-400'
@@ -233,12 +233,12 @@ export function OverviewPage() {
       }`}>
         <span className={`w-2 h-2 rounded-full flex-shrink-0 animate-pulse ${allDone ? 'bg-green-400' : 'bg-amber-400'}`} />
         <span className="flex-1">
-          {allDone ? 'Your AI is live and answering calls' : `Setup incomplete â ${CHECKLIST_ITEMS.length - doneCount} step${CHECKLIST_ITEMS.length - doneCount > 1 ? 's' : ''} remaining`}
+          {allDone ? 'Your AI is live and answering calls' : `Setup incomplete — ${CHECKLIST_ITEMS.length - doneCount} step${CHECKLIST_ITEMS.length - doneCount > 1 ? 's' : ''} remaining`}
         </span>
-        {!allDone && <Link to="/dashboard/settings" className="text-xs underline underline-offset-2 flex-shrink-0">Finish â</Link>}
+        {!allDone && <Link to="/dashboard/settings" className="text-xs underline underline-offset-2 flex-shrink-0">Finish →</Link>}
       </div>
 
-      {/* ââ Greeting row ââ */}
+      {/* ── Greeting row ── */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2.5">
           <GreetIcon size={20} className="text-blue-400 flex-shrink-0" />
@@ -252,7 +252,7 @@ export function OverviewPage() {
         </div>
       </div>
 
-      {/* ââ Stat cards ââ */}
+      {/* ── Stat cards ── */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 lg:gap-4">
         <StatCard icon={Phone} label="Calls today" value={stats?.callsToday ?? 0} color="blue"
           trend={[1, 3, 2, 5, 4, 7, stats?.callsToday ?? 0]} change={12} changeLabel="this week" />
@@ -264,18 +264,18 @@ export function OverviewPage() {
           trend={[5, 8, 10, 12, 15, 18, stats?.totalContacts ?? 0]} change={5} changeLabel="this month" />
       </div>
 
-      {/* ââ Emergency alert ââ */}
+      {/* ── Emergency alert ── */}
       {(stats?.emergenciesToday ?? 0) > 0 && (
         <div className="flex items-center gap-3 rounded-xl px-4 py-3 border bg-red-500/6 border-red-500/25">
           <AlertTriangle size={16} className="text-red-400 flex-shrink-0" />
           <p className="text-sm text-red-300">
-            <strong>{stats!.emergenciesToday} emergency call{stats!.emergenciesToday > 1 ? 's' : ''}</strong> flagged â check your phone.
+            <strong>{stats!.emergenciesToday} emergency call{stats!.emergenciesToday > 1 ? 's' : ''}</strong> flagged — check your phone.
           </p>
-          <Link to="/dashboard/calls" className="ml-auto text-xs text-red-400 hover:text-red-300 flex-shrink-0">View â</Link>
+          <Link to="/dashboard/calls" className="ml-auto text-xs text-red-400 hover:text-red-300 flex-shrink-0">View →</Link>
         </div>
       )}
 
-      {/* ââ Quick actions ââ */}
+      {/* ── Quick actions ── */}
       <div className="flex gap-2 flex-wrap">
         {[
           { to: '/dashboard/sms', icon: MessageSquare, label: 'Send test SMS', color: 'text-blue-400' },
@@ -289,10 +289,10 @@ export function OverviewPage() {
         ))}
       </div>
 
-      {/* ââ Two-column content ââ */}
+      {/* ── Two-column content ── */}
       <div className="grid lg:grid-cols-2 gap-4">
 
-        {/* LEFT â Recent calls feed */}
+        {/* LEFT — Recent calls feed */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-white flex items-center gap-2">
@@ -342,7 +342,7 @@ export function OverviewPage() {
           )}
         </div>
 
-        {/* RIGHT â Checklist + Weekly summary stacked */}
+        {/* RIGHT — Checklist + Weekly summary stacked */}
         <div className="space-y-3">
           {/* Getting started checklist */}
           {!allDone && (
@@ -374,7 +374,7 @@ export function OverviewPage() {
                         {!done && (
                           <div className="flex items-center gap-2 mt-0.5">
                             <p className="text-xs text-gray-600">{hint}</p>
-                            <Link to={action} className="text-xs text-blue-400 hover:text-blue-300 flex-shrink-0">Go â</Link>
+                            <Link to={action} className="text-xs text-blue-400 hover:text-blue-300 flex-shrink-0">Go →</Link>
                           </div>
                         )}
                       </div>
@@ -390,7 +390,7 @@ export function OverviewPage() {
             style={{ background: 'rgba(13,20,38,0.5)', borderLeft: '3px solid rgba(59,130,246,0.5)' }}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold text-white">This week</h2>
-              <span className="text-xs text-gray-600">Mon â today</span>
+              <span className="text-xs text-gray-600">Mon – today</span>
             </div>
             <div className="space-y-3">
               {[
@@ -439,7 +439,7 @@ export function OverviewPage() {
                 ].map(({ Icon, connected, label, color, bg }) => (
                   <div key={label} className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border ${connected ? bg : 'bg-white/3 border-white/8 text-gray-600'}`}>
                     <Icon size={11} className={connected ? color : 'text-gray-600'} />
-                    <span className={connected ? color : 'text-gray-600'}>{label} {connected ? 'Â· Active' : 'Â· Off'}</span>
+                    <span className={connected ? color : 'text-gray-600'}>{label} {connected ? '· Active' : '· Off'}</span>
                   </div>
                 ))}
               </div>

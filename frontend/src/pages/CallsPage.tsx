@@ -115,7 +115,7 @@ export function CallsPage() {
       <div className="flex items-center gap-3">
         <div className="flex-1">
           <h1 className="text-lg font-bold text-white tracking-tight">Calls</h1>
-          <p className="text-xs text-gray-600 mt-0.5">{calls.length} total Â· AI-handled</p>
+          <p className="text-xs text-gray-600 mt-0.5">{calls.length} total · AI-handled</p>
         </div>
         <button onClick={() => load(true)} disabled={refreshing}
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs text-gray-500 hover:text-white bg-white/4 hover:bg-white/8 border border-white/7 transition-all min-h-[38px]">
@@ -129,7 +129,7 @@ export function CallsPage() {
         <div className="relative flex-1">
           <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
           <input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Search number or summaryâ¦"
+            placeholder="Search number or summary…"
             className="w-full bg-white/4 border border-white/7 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-700 focus:outline-none focus:border-blue-500/50 transition-colors min-h-[42px]" />
           {search && (
             <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-white">
@@ -225,7 +225,7 @@ export function CallsPage() {
                       {call.createdAt && (
                         <span className="flex items-center gap-1">
                           <Clock size={10} />
-                          {format(new Date(call.createdAt), 'dd MMM yyyy Â· HH:mm')}
+                          {format(new Date(call.createdAt), 'dd MMM yyyy · HH:mm')}
                         </span>
                       )}
                       {call.durationSeconds && (
@@ -246,7 +246,7 @@ export function CallsPage() {
                     {call.summary && (
                       <div className="mb-3 px-3.5 py-2.5 rounded-xl text-xs text-gray-300 border border-white/6"
                         style={{ background: 'rgba(59,130,246,0.06)' }}>
-                        <span className="text-blue-400 font-semibold text-[10px] uppercase tracking-wider">AI Summary Â· </span>
+                        <span className="text-blue-400 font-semibold text-[10px] uppercase tracking-wider">AI Summary · </span>
                         {call.summary}
                       </div>
                     )}

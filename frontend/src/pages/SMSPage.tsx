@@ -142,7 +142,7 @@ export function SMSPage() {
     <div className="flex h-[calc(100vh-8rem)] rounded-2xl border border-white/7 overflow-hidden animate-slide-up"
       style={{ background: 'rgba(13,20,38,0.5)' }}>
 
-      {/* ââ Conversation list ââ */}
+      {/* ── Conversation list ── */}
       <aside className={clsx(
         'flex-shrink-0 border-r border-white/6 flex flex-col',
         'w-full sm:w-72 lg:w-80',
@@ -160,7 +160,7 @@ export function SMSPage() {
           <div className="relative">
             <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
             <input value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Search conversationsâ¦"
+              placeholder="Search conversations…"
               className="w-full bg-white/5 border border-white/8 rounded-xl pl-8 pr-3 py-2 text-xs text-white placeholder-gray-700 focus:outline-none focus:border-blue-500/40 transition-colors" />
           </div>
         </div>
@@ -206,7 +206,7 @@ export function SMSPage() {
         </div>
       </aside>
 
-      {/* ââ Thread ââ */}
+      {/* ── Thread ── */}
       <main className={clsx(
         'flex-1 flex flex-col min-w-0',
         mobileView === 'list' && 'hidden sm:flex',
@@ -257,7 +257,7 @@ export function SMSPage() {
                         <span className="text-[10px] text-gray-600 bg-white/4 px-3 py-1 rounded-full border border-white/5">
                           {isToday(new Date(msg.createdAt)) ? `Today ${fmtMsgTime(msg.createdAt)}`
                             : isYesterday(new Date(msg.createdAt)) ? `Yesterday ${fmtMsgTime(msg.createdAt)}`
-                            : format(new Date(msg.createdAt), 'd MMM Â· HH:mm')}
+                            : format(new Date(msg.createdAt), 'd MMM · HH:mm')}
                         </span>
                       </div>
                     )}
@@ -266,8 +266,7 @@ export function SMSPage() {
                         'max-w-[72%] px-3.5 py-2.5 text-sm leading-relaxed',
                         isOut
                           ? 'bg-blue-600 text-white rounded-2xl rounded-br-md'
-                          : 'text-gray-100 rounded-2xl rounded-bl-md border border-white/8',
-                        !isOut && { background: 'rgba(255,255,255,0.08)' }
+                          : 'text-gray-100 rounded-2xl rounded-bl-md border border-white/8'
                       )} style={!isOut ? { background: 'rgba(255,255,255,0.08)' } : undefined}>
                         {msg.body}
                       </div>
@@ -292,7 +291,7 @@ export function SMSPage() {
                   value={draft}
                   onChange={e => setDraft(e.target.value)}
                   onKeyDown={onKeyDown}
-                  placeholder="Messageâ¦"
+                  placeholder="Message…"
                   rows={1}
                   className="flex-1 bg-transparent text-sm text-white placeholder-gray-600 focus:outline-none resize-none max-h-32 overflow-y-auto py-1 leading-relaxed"
                   style={{ minHeight: '22px' }}
@@ -309,7 +308,7 @@ export function SMSPage() {
                   <Send size={13} className={draft.trim() ? 'translate-x-px -translate-y-px' : ''} />
                 </button>
               </div>
-              <p className="text-[10px] text-gray-700 text-center mt-2">Enter to send Â· Shift+Enter for new line</p>
+              <p className="text-[10px] text-gray-700 text-center mt-2">Enter to send · Shift+Enter for new line</p>
             </div>
           </>
         ) : (

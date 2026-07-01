@@ -54,7 +54,7 @@ const AVATAR_GRADIENTS = [
 ];
 
 function fmtPhone(num: string): string {
-  if (!num) return 'â';
+  if (!num) return '—';
   const clean = num.replace(/\D/g, '');
   if (clean.startsWith('61') && clean.length === 11) return `0${clean.slice(2, 5)} ${clean.slice(5, 8)} ${clean.slice(8)}`;
   if (clean.length === 10 && clean.startsWith('0')) return `${clean.slice(0, 4)} ${clean.slice(4, 7)} ${clean.slice(7)}`;
@@ -131,7 +131,7 @@ export function ContactsPage() {
       <div className="relative">
         <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
         <input value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Search name, phone, or tradeâ¦"
+          placeholder="Search name, phone, or trade…"
           className="w-full bg-white/4 border border-white/7 rounded-xl pl-9 pr-9 py-2.5 text-sm text-white placeholder-gray-700 focus:outline-none focus:border-blue-500/50 transition-colors min-h-[42px]" />
         {search && (
           <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-white">
@@ -149,7 +149,7 @@ export function ContactsPage() {
             <Users size={24} className="text-blue-400/30" />
           </div>
           <p className="text-sm font-semibold text-gray-400 mb-1">No contacts yet</p>
-          <p className="text-xs text-gray-600 max-w[200px] mx-auto">Callers are automatically added when your AI handles a call.</p>
+          <p className="text-xs text-gray-600 max-w-[200px] mx-auto">Callers are automatically added when your AI handles a call.</p>
         </div>
       ) : (
         <div className="rounded-2xl border border-white/7 overflow-hidden" style={{ background: 'rgba(13,20,38,0.5)' }}>
@@ -160,13 +160,13 @@ export function ContactsPage() {
             <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Trade</span>
             <SortBtn col="lastContact" label="Last call" />
             <SortBtn col="totalCalls" label="Total calls" />
-            <span className="w8" />
+            <span className="w-8" />
           </div>
 
           {/* Rows */}
           <div className="divide-y divide-white/5">
             {sorted.map((contact, idx) => {
-              const grad = AVATAK_GRADIENTS[idx % AVATAR_GRADIENTS.length];
+              const grad = AVATAR_GRADIENTS[idx % AVATAR_GRADIENTS.length];
               const tc = getTradeColors(contact.trade);
               const calls = contact.totalCalls ?? contact.callCount ?? 0;
               const isMenuOpen = activeMenu === contact.id;
@@ -194,7 +194,7 @@ export function ContactsPage() {
                         {contact.trade}
                       </span>
                     ) : (
-                      <span className="text-xs text-gray-700">â</span>
+                      <span className="text-xs text-gray-700">—</span>
                     )}
                   </div>
 
@@ -202,7 +202,7 @@ export function ContactsPage() {
                   <div className="hidden sm:block text-xs text-gray-500">
                     {contact.lastContact
                       ? formatDistanceToNow(new Date(contact.lastContact), { addSuffix: true })
-                      : 'â'}
+                      : '—'}
                   </div>
 
                   {/* Call count */}
