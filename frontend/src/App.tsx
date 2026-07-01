@@ -80,34 +80,36 @@ function FadeIn({ children }: { children: React.ReactNode }) {
 function AppRoutes() {
   const location = useLocation();
   return (
-    <Routes location={location} key={location.pathname}>
-      <Route path="/" element={<FadeIn><LandingPage /></FadeIn>} />
-      <Route path="/privacy" element={<FadeIn><PrivacyPage /></FadeIn>} />
-      <Route path="/terms" element={<FadeIn><TermsPage /></FadeIn>} />
-      <Route path="/contact" element={<FadeIn><ContactPage /></FadeIn>} />
-      <Route path="/demo" element={<FadeIn><DemoPage /></FadeIn>} />
-      <Route path="/login" element={<PublicOnlyRoute><FadeIn><LoginPage /></FadeIn></PublicOnlyRoute>} />
-      <Route path="/signup" element={<PublicOnlyRoute><FadeIn><SignupPage /></FadeIn></PublicOnlyRoute>} />
-      <Route path="/welcome" element={<ProtectedRoute><FadeIn><WelcomePage /></FadeIn></ProtectedRoute>} />
-      <Route path="/onboarding" element={<ProtectedRoute><FadeIn><OnboardingPage /></FadeIn></ProtectedRoute>} />
-      <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
-        <Route index element={<OverviewPage />} />
-        <Route path="calls" element={<CallsPage />} />
-        <Route path="sms" element={<SMSPage />} />
-        <Route path="contacts" element={<ContactsPage />} />
-        <Route path="settings" element={<SettingsPage />} />
-      </Route>
-      <Route path="/about" element={<FadeIn><AboutPage /></FadeIn>} />
-      <Route path="/blog" element={<FadeIn><BlogPage /></FadeIn>} />
-      <Route path="/compare/talkmate" element={<FadeIn><CompareTalkmatePage /></FadeIn>} />
-      <Route path="/help" element={<FadeIn><HelpPage /></FadeIn>} />
-      <Route path="/changelog" element={<FadeIn><ChangelogPage /></FadeIn>} />
-      <Route path="/status" element={<FadeIn><StatusPage /></FadeIn>} />
-      <Route path="/industries/plumbers" element={<FadeIn><IndustryPlumbersPage /></FadeIn>} />
-      <Route path="/industries/electricians" element={<FadeIn><IndustryElectriciansPage /></FadeIn>} />
-      <Route path="/industries/builders" element={<FadeIn><IndustryBuildersPage /></FadeIn>} />
-      <Route path="*" element={<FadeIn><NotFoundPage /></FadeIn>} />
-    </Routes>
+    <Suspense fallback={<Spinner />}>
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={<FadeIn><LandingPage /></FadeIn>} />
+        <Route path="/privacy" element={<FadeIn><PrivacyPage /></FadeIn>} />
+        <Route path="/terms" element={<FadeIn><TermsPage /></FadeIn>} />
+        <Route path="/contact" element={<FadeIn><ContactPage /></FadeIn>} />
+        <Route path="/demo" element={<FadeIn><DemoPage /></FadeIn>} />
+        <Route path="/login" element={<PublicOnlyRoute><FadeIn><LoginPage /></FadeIn></PublicOnlyRoute>} />
+        <Route path="/signup" element={<PublicOnlyRoute><FadeIn><SignupPage /></FadeIn></PublicOnlyRoute>} />
+        <Route path="/welcome" element={<ProtectedRoute><FadeIn><WelcomePage /></FadeIn></ProtectedRoute>} />
+        <Route path="/onboarding" element={<ProtectedRoute><FadeIn><OnboardingPage /></FadeIn></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+          <Route index element={<OverviewPage />} />
+          <Route path="calls" element={<CallsPage />} />
+          <Route path="sms" element={<SMSPage />} />
+          <Route path="contacts" element={<ContactsPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+        </Route>
+        <Route path="/about" element={<FadeIn><AboutPage /></FadeIn>} />
+        <Route path="/blog" element={<FadeIn><BlogPage /></FadeIn>} />
+        <Route path="/compare/talkmate" element={<FadeIn><CompareTalkmatePage /></FadeIn>} />
+        <Route path="/help" element={<FadeIn><HelpPage /></FadeIn>} />
+        <Route path="/changelog" element={<FadeIn><ChangelogPage /></FadeIn>} />
+        <Route path="/status" element={<FadeIn><StatusPage /></FadeIn>} />
+        <Route path="/industries/plumbers" element={<FadeIn><IndustryPlumbersPage /></FadeIn>} />
+        <Route path="/industries/electricians" element={<FadeIn><IndustryElectriciansPage /></FadeIn>} />
+        <Route path="/industries/builders" element={<FadeIn><IndustryBuildersPage /></FadeIn>} />
+        <Route path="*" element={<FadeIn><NotFoundPage /></FadeIn>} />
+      </Routes>
+    </Suspense>
   );
 }
 
