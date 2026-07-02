@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useEffect } from 'react';
-import { Zap, ArrowRight, Clock } from 'lucide-react';
+import { Zap, Clock } from 'lucide-react';
 
 const POSTS = [
   {
@@ -61,12 +61,9 @@ export function BlogPage() {
                   </div>
                   <h2 className="text-lg sm:text-xl font-bold text-white mb-2 group-hover:text-blue-300 transition-colors">{post.title}</h2>
                   <p className="text-sm text-gray-400 leading-relaxed mb-4">{post.excerpt}</p>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-gradient-to-br from-blue-500/40 to-purple-500/40 rounded-full flex items-center justify-center text-xs font-bold text-white">{post.author[0]}</div>
-                      <span className="text-xs text-gray-500">{post.author} · {post.date}</span>
-                    </div>
-                    <span className="text-xs text-blue-400 flex items-center gap-1 group-hover:gap-2 transition-all">Read more <ArrowRight size={12} /></span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 bg-gradient-to-br from-blue-500/40 to-purple-500/40 rounded-full flex items-center justify-center text-xs font-bold text-white">{post.author[0]}</div>
+                    <span className="text-xs text-gray-500">{post.author} · {post.date}</span>
                   </div>
                 </div>
               </div>

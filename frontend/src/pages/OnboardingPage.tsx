@@ -48,6 +48,7 @@ export function OnboardingPage() {
   const [errors, setErrors] = useState<Record<string,string>>({});
   const [confetti, setConfetti] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [copied, setCopied] = useState(false);
   const tradeskNumber = '+61 2 8320 5000';
   const navigate = useNavigate();
@@ -116,6 +117,7 @@ export function OnboardingPage() {
   const handleFinish = async () => {
     if (!validateStep(1)) return;
     setLoading(true);
+    setSaveError('');
     try {
       await api.put('/settings', {
         traderName: form.traderName,
@@ -129,13 +131,17 @@ export function OnboardingPage() {
         onboardingComplete: true,
       });
       localStorage.removeItem('td_onboard');
-    } catch {
-      // Settings can be updated later in dashboard
-    } finally {
-      setLoading(false);
       setStep(3);
       setConfetti(true);
       setTimeout(() => setConfetti(false), 3500);
+    } catch (err: any) {
+      // Don't advance to the success screen on a failed save — the AI
+      // wouldn't actually have the business details it needs to answer
+      // calls correctly, so silently proceeding would leave the account
+      // half-configured with no indication anything went wrong.
+      setSaveError(err?.message || 'Failed to save your details. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -306,6 +312,10 @@ export function OnboardingPage() {
                   <span className="text-blue-400 font-medium">💡 Tip:</span> The AI will always say prices are estimates and that they should confirm when you call back. You can update this any time in Settings.
                 </p>
               </div>
+
+              {saveError && (
+                <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm px-4 py-3 rounded-lg">{saveError}</div>
+              )}
 
               <div className="flex gap-3 pt-1">
                 <Button variant="secondary" onClick={() => setStep(0)} size="lg" className="flex-1">Back</Button>

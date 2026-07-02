@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { Zap, ChevronDown, Search, Phone, Settings, MessageSquare, CreditCard } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Zap, ChevronDown, Search, Phone, Settings, MessageSquare, CreditCard, SearchX } from 'lucide-react';
 
 const SECTIONS = [
   {
@@ -42,7 +42,7 @@ const SECTIONS = [
   },
 ];
 
-function HelpSection({ section }: { section: typeof SECTIONS[0] }) {
+function HelpSection({ section, searchActive }: { section: { icon: typeof Phone; title: string; articles: { q: string; a: string }[] }; searchActive: boolean }) {
   const [open, setOpen] = useState<number | null>(null);
   const Icon = section.icon;
   return (
@@ -52,18 +52,21 @@ function HelpSection({ section }: { section: typeof SECTIONS[0] }) {
         <h2 className="font-bold text-white">{section.title}</h2>
       </div>
       <div className="space-y-2">
-        {section.articles.map((a, i) => (
-          <div key={i} className="rounded-xl overflow-hidden border border-white/6">
-            <button onClick={() => setOpen(open === i ? null : i)}
-              className="w-full flex items-start justify-between gap-3 px-4 py-3.5 text-left hover:bg-white/3 transition-colors">
-              <span className="text-sm font-medium text-white">{a.q}</span>
-              <ChevronDown size={14} className={`text-gray-500 flex-shrink-0 mt-0.5 transition-transform ${open === i ? 'rotate-180' : ''}`} />
-            </button>
-            <div className={`overflow-hidden transition-all duration-300 ${open === i ? 'max-h-48' : 'max-h-0'}`}>
-              <p className="px-4 pb-4 text-sm text-gray-400 leading-relaxed border-t border-white/5 pt-3">{a.a}</p>
+        {section.articles.map((a, i) => {
+          const isOpen = searchActive || open === i;
+          return (
+            <div key={i} className="rounded-xl overflow-hidden border border-white/6">
+              <button onClick={() => setOpen(open === i ? null : i)}
+                className="w-full flex items-start justify-between gap-3 px-4 py-3.5 text-left hover:bg-white/3 transition-colors">
+                <span className="text-sm font-medium text-white">{a.q}</span>
+                <ChevronDown size={14} className={`text-gray-500 flex-shrink-0 mt-0.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+              </button>
+              <div className={`overflow-hidden transition-all duration-300 ${isOpen ? 'max-h-48' : 'max-h-0'}`}>
+                <p className="px-4 pb-4 text-sm text-gray-400 leading-relaxed border-t border-white/5 pt-3">{a.a}</p>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -72,6 +75,15 @@ function HelpSection({ section }: { section: typeof SECTIONS[0] }) {
 export function HelpPage() {
   useEffect(() => { document.title = 'Help | TradeDesk'; }, []);
   const [search, setSearch] = useState('');
+
+  const filteredSections = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return SECTIONS;
+    return SECTIONS
+      .map(s => ({ ...s, articles: s.articles.filter(a => a.q.toLowerCase().includes(q) || a.a.toLowerCase().includes(q)) }))
+      .filter(s => s.articles.length > 0);
+  }, [search]);
+
   return (
     <div className="min-h-screen bg-black text-white">
       <nav className="border-b border-white/8 px-4 h-16 flex items-center max-w-7xl mx-auto justify-between">
@@ -88,9 +100,17 @@ export function HelpPage() {
               className="glass w-full rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/60" />
           </div>
         </div>
-        <div className="grid sm:grid-cols-2 gap-5 mb-12">
-          {SECTIONS.map(s => <HelpSection key={s.title} section={s} />)}
-        </div>
+        {filteredSections.length > 0 ? (
+          <div className="grid sm:grid-cols-2 gap-5 mb-12">
+            {filteredSections.map(s => <HelpSection key={s.title} section={s} searchActive={search.trim().length > 0} />)}
+          </div>
+        ) : (
+          <div className="glass rounded-2xl p-10 border border-white/8 text-center mb-12">
+            <SearchX size={28} className="text-gray-700 mx-auto mb-3" />
+            <p className="text-sm font-semibold text-gray-400">No articles match "{search}"</p>
+            <p className="text-xs text-gray-600 mt-1">Try a different search, or email us below.</p>
+          </div>
+        )}
         <div className="glass rounded-2xl p-8 border border-white/8 text-center">
           <h2 className="text-xl font-bold mb-2">Still stuck?</h2>
           <p className="text-gray-400 text-sm mb-5">Our Australian support team replies within 2 hours on weekdays.</p>

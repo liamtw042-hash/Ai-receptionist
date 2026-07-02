@@ -7,6 +7,8 @@ import {
   CheckCircle, PhoneIncoming, AlertTriangle, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { api } from '../../lib/api';
+import { formatDistanceToNowStrict } from 'date-fns';
 import { clsx } from 'clsx';
 
 const navItems = [
@@ -27,12 +29,19 @@ const PAGE_TITLES: Record<string, string> = {
   '/dashboard/settings': 'Settings',
 };
 
-const MOCK_NOTIFS = [
-  { id: 1, icon: PhoneIncoming, color: 'text-blue-400', bg: 'bg-blue-500/15', title: 'New call — 0412 345 678', desc: 'Burst pipe emergency · urgent', time: '2m ago' },
-  { id: 2, icon: CheckCircle, color: 'text-green-400', bg: 'bg-green-500/15', title: 'Job booked!', desc: 'Hot water replacement — Tue 9am', time: '18m ago' },
-  { id: 3, icon: AlertTriangle, color: 'text-red-400', bg: 'bg-red-500/15', title: 'Emergency call flagged', desc: '0438 123 456 — gas leak suspected', time: '1h ago' },
-  { id: 4, icon: PhoneIncoming, color: 'text-blue-400', bg: 'bg-blue-500/15', title: 'New call — 0421 987 654', desc: 'Quote request — hot water system', time: '2h ago' },
-];
+interface RecentCall {
+  id: string;
+  callerNumber: string;
+  outcome: string;
+  summary: string;
+  createdAt: string;
+}
+
+function notifMeta(outcome: string) {
+  if (outcome === 'emergency') return { icon: AlertTriangle, color: 'text-red-400', bg: 'bg-red-500/15', title: 'Emergency call flagged' };
+  if (outcome === 'job_booked') return { icon: CheckCircle, color: 'text-green-400', bg: 'bg-green-500/15', title: 'Job booked!' };
+  return { icon: PhoneIncoming, color: 'text-blue-400', bg: 'bg-blue-500/15', title: 'New call' };
+}
 
 // ── Command Palette ──────────────────────────────────────────────────────────
 function CommandSearch({ onClose }: { onClose: () => void }) {
@@ -100,13 +109,24 @@ export function DashboardLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('td_sidebar') === '1');
   const [notifOpen, setNotifOpen] = useState(false);
-  const [unread, setUnread] = useState(2);
+  const [unread, setUnread] = useState(0);
+  const [recentCalls, setRecentCalls] = useState<RecentCall[]>([]);
   const [cmdOpen, setCmdOpen] = useState(false);
   const bellRef = useRef<HTMLButtonElement>(null);
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
   const { logOut, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    api.get<RecentCall[]>('/dashboard/recent-calls')
+      .then(calls => {
+        const notifs = calls.slice(0, 4);
+        setRecentCalls(notifs);
+        setUnread(notifs.length);
+      })
+      .catch(() => {});
+  }, []);
 
   const initials = user?.displayName
     ? user.displayName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
@@ -331,18 +351,29 @@ export function DashboardLayout() {
                       <button onClick={() => setNotifOpen(false)} className="text-gray-600 hover:text-white p-1"><X size={13} /></button>
                     </div>
                     <div className="divide-y divide-white/5 max-h-64 overflow-y-auto">
-                      {MOCK_NOTIFS.map(n => (
-                        <div key={n.id} className="flex items-start gap-3 px-4 py-3 hover:bg-white/4 cursor-pointer transition-colors">
-                          <div className={`w-7 h-7 rounded-lg ${n.bg} flex items-center justify-center flex-shrink-0 mt-0.5`}>
-                            <n.icon size={13} className={n.color} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium text-white">{n.title}</p>
-                            <p className="text-xs text-gray-500 truncate">{n.desc}</p>
-                          </div>
-                          <span className="text-[10px] text-gray-600 whitespace-nowrap flex-shrink-0">{n.time}</span>
+                      {recentCalls.length === 0 ? (
+                        <div className="px-4 py-8 text-center">
+                          <PhoneIncoming size={20} className="text-gray-700 mx-auto mb-2" />
+                          <p className="text-xs text-gray-600">No calls yet — they'll show up here</p>
                         </div>
-                      ))}
+                      ) : recentCalls.map(call => {
+                        const meta = notifMeta(call.outcome);
+                        return (
+                          <NavLink key={call.id} to="/dashboard/calls" onClick={() => setNotifOpen(false)}
+                            className="flex items-start gap-3 px-4 py-3 hover:bg-white/4 cursor-pointer transition-colors">
+                            <div className={`w-7 h-7 rounded-lg ${meta.bg} flex items-center justify-center flex-shrink-0 mt-0.5`}>
+                              <meta.icon size={13} className={meta.color} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium text-white">{meta.title} — {call.callerNumber}</p>
+                              <p className="text-xs text-gray-500 truncate">{call.summary || 'No summary available'}</p>
+                            </div>
+                            <span className="text-[10px] text-gray-600 whitespace-nowrap flex-shrink-0">
+                              {formatDistanceToNowStrict(new Date(call.createdAt), { addSuffix: true })}
+                            </span>
+                          </NavLink>
+                        );
+                      })}
                     </div>
                     <div className="px-4 py-2.5 border-t border-white/8">
                       <NavLink to="/dashboard/calls" onClick={() => setNotifOpen(false)} className="text-xs text-blue-400 hover:text-blue-300 transition-colors">

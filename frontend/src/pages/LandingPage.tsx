@@ -840,19 +840,23 @@ export function LandingPage() {
         <div className="max-w-5xl mx-auto">
           <p className="text-center text-xs text-gray-600 font-semibold uppercase tracking-widest mb-8">Built for every trade on the tools</p>
           <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
-            {INDUSTRIES.map(({ icon, label, benefit, href }, idx) => (
-              <div key={label}
-                className="group relative flex flex-col items-center gap-2 cursor-default"
-                data-reveal data-reveal-delay={`${Math.min((idx % 6) * 50, 300)}` as any}>
-                <Link to={href} className="w-10 h-10 sm:w-12 sm:h-12 glass rounded-xl flex items-center justify-center text-xl sm:text-2xl group-hover:scale-110 group-hover:bg-blue-500/10 transition-all duration-200 border border-white/8">
-                  {icon}
-                </Link>
-                <span className="text-[10px] sm:text-xs text-gray-500 group-hover:text-gray-300 transition-colors text-center leading-tight">{label}</span>
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-40 glass rounded-lg px-3 py-2 text-xs text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 border border-white/10 text-center hidden sm:block">
-                  {benefit}
+            {INDUSTRIES.map(({ icon, label, benefit, href }, idx) => {
+              const hasPage = href !== '#';
+              const iconClass = `w-10 h-10 sm:w-12 sm:h-12 glass rounded-xl flex items-center justify-center text-xl sm:text-2xl transition-all duration-200 border border-white/8 ${hasPage ? 'group-hover:scale-110 group-hover:bg-blue-500/10' : ''}`;
+              return (
+                <div key={label}
+                  className="group relative flex flex-col items-center gap-2 cursor-default"
+                  data-reveal data-reveal-delay={`${Math.min((idx % 6) * 50, 300)}` as any}>
+                  {hasPage
+                    ? <Link to={href} className={iconClass}>{icon}</Link>
+                    : <div className={iconClass}>{icon}</div>}
+                  <span className="text-[10px] sm:text-xs text-gray-500 group-hover:text-gray-300 transition-colors text-center leading-tight">{label}</span>
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-40 glass rounded-lg px-3 py-2 text-xs text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 border border-white/10 text-center hidden sm:block">
+                    {benefit}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
@@ -1179,15 +1183,6 @@ export function LandingPage() {
               <p className="text-xs text-gray-600 leading-relaxed mb-3">AI receptionist for Australian tradies. Never miss a lead.</p>
               <p className="text-xs text-gray-700">Made in Newcastle, NSW 🇦🇺</p>
               <a href="mailto:hello@tradedesk.com.au" className="text-xs text-gray-600 hover:text-blue-400 transition-colors mt-2 block">hello@tradedesk.com.au</a>
-              <div className="flex gap-3 mt-4">
-                {[
-                  { label: 'Instagram', href: '#', icon: '📸' },
-                  { label: 'Facebook', href: '#', icon: '📘' },
-                  { label: 'LinkedIn', href: '#', icon: '💼' },
-                ].map(s => (
-                  <a key={s.label} href={s.href} aria-label={s.label} className="w-8 h-8 glass rounded-lg flex items-center justify-center text-sm hover:bg-white/10 transition-colors border border-white/8">{s.icon}</a>
-                ))}
-              </div>
             </div>
             <div>
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Product</p>
@@ -1218,7 +1213,7 @@ export function LandingPage() {
             </div>
           </div>
           <div className="border-t border-white/6 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <p className="text-xs text-gray-700">© 2026 TradeDesk · ABN 00 000 000 000 · Newcastle NSW 2300</p>
+            <p className="text-xs text-gray-700">© 2026 TradeDesk · Newcastle NSW 2300</p>
             <div className="flex gap-4">
               <Link to="/privacy" className="text-xs text-gray-700 hover:text-white transition-colors">Privacy</Link>
               <Link to="/terms" className="text-xs text-gray-700 hover:text-white transition-colors">Terms</Link>

@@ -28,14 +28,14 @@ router.delete('/', async (req: AuthRequest, res: Response) => {
     }
 
     // Delete Firestore data across every collection keyed by userId.
-    const collectionsWithUserId = ['calls', 'contacts', 'sms_messages'];
+    const collectionsWithUserId = ['calls', 'contacts', 'sms_messages', 'jobs'];
     for (const name of collectionsWithUserId) {
       const snap = await db.collection(name).where('userId', '==', userId).get();
       const batchDeletes = snap.docs.map(d => d.ref.delete());
       await Promise.all(batchDeletes);
     }
 
-    const docsKeyedByUserId = ['settings', 'googleTokens', 'gmail_tokens', 'billing'];
+    const docsKeyedByUserId = ['settings', 'googleTokens', 'billing'];
     await Promise.all(docsKeyedByUserId.map(name => db.collection(name).doc(userId).delete().catch(() => null)));
 
     // Finally, delete the Firebase Auth account itself.

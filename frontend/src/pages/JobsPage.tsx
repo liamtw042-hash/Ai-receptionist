@@ -218,16 +218,18 @@ function MonthGrid({ anchorDate, jobs, onSelectJob, onSelectDay }: {
                 {visible.map(job => (
                   <button key={job.id} type="button"
                     onClick={e => { e.stopPropagation(); onSelectJob(job); }}
+                    title={job.customerName}
                     className={clsx(
-                      'flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium truncate border text-left',
+                      'flex items-center gap-1 sm:px-1.5 py-0.5 rounded text-[10px] font-medium truncate border text-left justify-center sm:justify-start',
                       STATUS_META[job.status].badge
                     )}>
-                    <span className={clsx('w-1 h-1 rounded-full flex-shrink-0', STATUS_META[job.status].dot)} />
-                    <span className="truncate">{job.customerName}</span>
+                    <span className={clsx('w-1.5 h-1.5 sm:w-1 sm:h-1 rounded-full flex-shrink-0', STATUS_META[job.status].dot)} />
+                    {/* Full name on wider cells; too cramped to be legible below sm, so just the dot there */}
+                    <span className="truncate hidden sm:inline">{job.customerName}</span>
                   </button>
                 ))}
                 {overflow > 0 && (
-                  <span className="text-[10px] text-gray-600 px-1.5">+{overflow} more</span>
+                  <span className="text-[10px] text-gray-600 px-1.5 text-center sm:text-left">+{overflow}</span>
                 )}
               </div>
             </div>
@@ -270,62 +272,72 @@ function WeekGrid({ anchorDate, jobs, onSelectJob }: { anchorDate: Date; jobs: J
   const topFor = (d: Date) => Math.max(0, (d.getHours() - GRID_START_HOUR) * HOUR_HEIGHT + (d.getMinutes() / 60) * HOUR_HEIGHT);
   const heightFor = (s: Date, e: Date) => Math.max(28, ((e.getTime() - s.getTime()) / 60000 / 60) * HOUR_HEIGHT);
 
+  // Below sm, 7 equal-width day columns get crushed into ~40px each — too
+  // narrow for a customer name + job type to be legible. Instead give each
+  // day a sane minimum width and let the whole grid scroll horizontally, the
+  // way mobile calendar apps handle a week view.
+  const gridTemplate = '48px repeat(7, minmax(84px, 1fr))';
+
   return (
     <div className="glass rounded-2xl border border-white/8 overflow-hidden">
-      {/* Day headers */}
-      <div className="grid border-b border-white/8" style={{ gridTemplateColumns: '48px repeat(7, 1fr)', background: 'rgba(255,255,255,0.02)' }}>
-        <div />
-        {weekDays.map(d => (
-          <div key={d.toISOString()} className="py-2.5 text-center border-l border-white/5">
-            <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">{format(d, 'EEE')}</p>
-            <p className={clsx(
-              'text-sm font-bold mt-0.5 w-6 h-6 mx-auto flex items-center justify-center rounded-full',
-              isToday(d) ? 'bg-blue-500 text-white' : 'text-white'
-            )}>
-              {format(d, 'd')}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      {/* Time grid */}
-      <div className="overflow-y-auto" style={{ maxHeight: '640px' }}>
-        <div className="grid relative" style={{ gridTemplateColumns: '48px repeat(7, 1fr)' }}>
-          {/* Hour labels column */}
-          <div className="relative">
-            {hours.map(h => (
-              <div key={h} style={{ height: HOUR_HEIGHT }} className="text-right pr-2 -mt-2">
-                <span className="text-[10px] text-gray-600">{format(new Date(2000, 0, 1, h), 'ha')}</span>
+      <div className="overflow-x-auto">
+        <div style={{ minWidth: 48 + 7 * 84 }}>
+          {/* Day headers */}
+          <div className="grid border-b border-white/8" style={{ gridTemplateColumns: gridTemplate, background: 'rgba(255,255,255,0.02)' }}>
+            <div />
+            {weekDays.map(d => (
+              <div key={d.toISOString()} className="py-2.5 text-center border-l border-white/5">
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">{format(d, 'EEE')}</p>
+                <p className={clsx(
+                  'text-sm font-bold mt-0.5 w-6 h-6 mx-auto flex items-center justify-center rounded-full',
+                  isToday(d) ? 'bg-blue-500 text-white' : 'text-white'
+                )}>
+                  {format(d, 'd')}
+                </p>
               </div>
             ))}
           </div>
 
-          {/* Day columns */}
-          {weekDays.map(d => {
-            const key = format(d, 'yyyy-MM-dd');
-            const dayJobs = jobsByDay.get(key) || [];
-            return (
-              <div key={key} className="relative border-l border-white/5" style={{ height: gridHeight }}>
-                {hours.map((h, idx) => (
-                  <div key={h} className="absolute inset-x-0 border-t border-white/4" style={{ top: idx * HOUR_HEIGHT }} />
+          {/* Time grid */}
+          <div className="overflow-y-auto" style={{ maxHeight: '640px' }}>
+            <div className="grid relative" style={{ gridTemplateColumns: gridTemplate }}>
+              {/* Hour labels column */}
+              <div className="relative">
+                {hours.map(h => (
+                  <div key={h} style={{ height: HOUR_HEIGHT }} className="text-right pr-2 -mt-2">
+                    <span className="text-[10px] text-gray-600">{format(new Date(2000, 0, 1, h), 'ha')}</span>
+                  </div>
                 ))}
-                {dayJobs.map(job => {
-                  const s = new Date(job.scheduledStart), e = new Date(job.scheduledEnd);
-                  return (
-                    <button key={job.id} onClick={() => onSelectJob(job)}
-                      style={{ top: topFor(s), height: heightFor(s, e) }}
-                      className={clsx(
-                        'absolute inset-x-0.5 rounded-md px-1.5 py-1 text-left overflow-hidden border text-[10px] leading-tight transition-transform hover:scale-[1.02] hover:z-10',
-                        STATUS_META[job.status].badge
-                      )}>
-                      <p className="font-semibold truncate">{job.customerName}</p>
-                      <p className="truncate opacity-80">{job.jobType}</p>
-                    </button>
-                  );
-                })}
               </div>
-            );
-          })}
+
+              {/* Day columns */}
+              {weekDays.map(d => {
+                const key = format(d, 'yyyy-MM-dd');
+                const dayJobs = jobsByDay.get(key) || [];
+                return (
+                  <div key={key} className="relative border-l border-white/5" style={{ height: gridHeight }}>
+                    {hours.map((h, idx) => (
+                      <div key={h} className="absolute inset-x-0 border-t border-white/4" style={{ top: idx * HOUR_HEIGHT }} />
+                    ))}
+                    {dayJobs.map(job => {
+                      const s = new Date(job.scheduledStart), e = new Date(job.scheduledEnd);
+                      return (
+                        <button key={job.id} onClick={() => onSelectJob(job)}
+                          style={{ top: topFor(s), height: heightFor(s, e) }}
+                          className={clsx(
+                            'absolute inset-x-0.5 rounded-md px-1.5 py-1 text-left overflow-hidden border text-[10px] leading-tight transition-transform hover:scale-[1.02] hover:z-10',
+                            STATUS_META[job.status].badge
+                          )}>
+                          <p className="font-semibold truncate">{job.customerName}</p>
+                          <p className="truncate opacity-80">{job.jobType}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -387,13 +399,13 @@ function NewJobModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
         </div>
         <div className="p-5 space-y-4">
           {error && <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm px-4 py-2.5 rounded-lg">{error}</div>}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input label="Customer name" value={form.customerName} onChange={e => update('customerName', e.target.value)} placeholder="Dave Smith" required />
             <Input label="Phone" type="tel" value={form.customerPhone} onChange={e => update('customerPhone', e.target.value)} placeholder="0400 000 000" required />
           </div>
           <Input label="Job type" value={form.jobType} onChange={e => update('jobType', e.target.value)} placeholder="Hot water system replacement" required />
           <Input label="Address" value={form.address} onChange={e => update('address', e.target.value)} placeholder="123 Example St, Newcastle NSW" />
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Input label="Date" type="date" value={form.date} onChange={e => update('date', e.target.value)} />
             <Input label="Start" type="time" value={form.startTime} onChange={e => update('startTime', e.target.value)} />
             <Input label="End" type="time" value={form.endTime} onChange={e => update('endTime', e.target.value)} />

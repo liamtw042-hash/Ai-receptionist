@@ -254,14 +254,10 @@ export function OverviewPage() {
 
       {/* ── Stat cards ── */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 lg:gap-4">
-        <StatCard icon={Phone} label="Calls today" value={stats?.callsToday ?? 0} color="blue"
-          trend={[1, 3, 2, 5, 4, 7, stats?.callsToday ?? 0]} change={12} changeLabel="this week" />
-        <StatCard icon={Calendar} label="Jobs booked" value={stats?.bookedToday ?? 0} color="green"
-          trend={[0, 1, 1, 2, 1, 3, stats?.bookedToday ?? 0]} change={8} changeLabel="this week" />
-        <StatCard icon={TrendingUp} label="Leads this week" value={stats?.leadsThisWeek ?? 0} color="purple"
-          trend={[2, 4, 3, 6, 5, 8, stats?.leadsThisWeek ?? 0]} change={15} changeLabel="vs last week" />
-        <StatCard icon={Users} label="Total contacts" value={stats?.totalContacts ?? 0} color="amber"
-          trend={[5, 8, 10, 12, 15, 18, stats?.totalContacts ?? 0]} change={5} changeLabel="this month" />
+        <StatCard icon={Phone} label="Calls today" value={stats?.callsToday ?? 0} color="blue" />
+        <StatCard icon={Calendar} label="Jobs booked" value={stats?.bookedToday ?? 0} color="green" />
+        <StatCard icon={TrendingUp} label="Leads this week" value={stats?.leadsThisWeek ?? 0} color="purple" />
+        <StatCard icon={Users} label="Total contacts" value={stats?.totalContacts ?? 0} color="amber" />
       </div>
 
       {/* ── Emergency alert ── */}
