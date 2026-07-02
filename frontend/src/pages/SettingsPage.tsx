@@ -42,6 +42,7 @@ interface GoogleStatus {
   spreadsheetUrl?: string;
   calendarConnected: boolean;
   calendarId?: string;
+  gmailConnected: boolean;
 }
 
 function Section({ icon: Icon, title, description, children, iconColor = 'text-blue-400', iconBg = 'bg-blue-500/15' }: {
@@ -91,15 +92,17 @@ function GoogleIntegrationsCard() {
   const [creatingSheet, setCreatingSheet] = useState(false);
   const [testingSheet, setTestingSheet] = useState(false);
   const [testingCal, setTestingCal] = useState(false);
+  const [processingEmail, setProcessingEmail] = useState(false);
   const [sheetMsg, setSheetMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [calMsg, setCalMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [emailMsg, setEmailMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const fetchStatus = async () => {
     try {
       const s = await api.get<GoogleStatus>('/google/status');
       setStatus(s);
     } catch {
-      setStatus({ connected: false, sheetsConnected: false, calendarConnected: false });
+      setStatus({ connected: false, sheetsConnected: false, calendarConnected: false, gmailConnected: false });
     } finally {
       setLoadingStatus(false);
     }
@@ -118,13 +121,26 @@ function GoogleIntegrationsCard() {
   };
 
   const handleDisconnect = async () => {
-    if (!confirm('Disconnect your Google account? Calls will no longer be logged to Sheets or Calendar.')) return;
+    if (!confirm('Disconnect your Google account? Calls will no longer be logged to Sheets or Calendar, and the AI will stop auto-replying to emails.')) return;
     setDisconnecting(true);
     try {
       await api.post('/google/disconnect', {});
-      setStatus({ connected: false, sheetsConnected: false, calendarConnected: false });
+      setStatus({ connected: false, sheetsConnected: false, calendarConnected: false, gmailConnected: false });
     } catch { /* ignore */ } finally {
       setDisconnecting(false);
+    }
+  };
+
+  const handleProcessEmail = async () => {
+    setProcessingEmail(true);
+    setEmailMsg(null);
+    try {
+      const result = await api.post<{ processed: number }>('/email/process', {});
+      setEmailMsg({ ok: true, text: result.processed > 0 ? `Replied to ${result.processed} email(s) ✓` : 'No unread emails to reply to right now.' });
+    } catch (err: any) {
+      setEmailMsg({ ok: false, text: err?.message || 'Failed to process emails' });
+    } finally {
+      setProcessingEmail(false);
     }
   };
 
@@ -171,7 +187,7 @@ function GoogleIntegrationsCard() {
 
   return (
     <Card>
-      <Section icon={Link2} title="Integrations" description="Auto-log calls to Google Sheets and create Calendar jobs" iconColor="text-emerald-400" iconBg="bg-emerald-500/15">
+      <Section icon={Link2} title="Google Integrations" description="Auto-log calls, create Calendar jobs, and auto-reply to enquiry emails" iconColor="text-emerald-400" iconBg="bg-emerald-500/15">
 
         {/* Connect / Connected header */}
         {loadingStatus ? (
@@ -179,7 +195,7 @@ function GoogleIntegrationsCard() {
         ) : !status?.connected ? (
           <div className="mb-5">
             <p className="text-sm text-gray-400 mb-4">
-              Connect your Google account to automatically log every call to a spreadsheet and create calendar jobs when a booking is made.
+              Connect your Google account to automatically log every call to a spreadsheet, create calendar jobs when a booking is made, and let the AI auto-reply to enquiry emails.
             </p>
             <Button variant="secondary" onClick={handleConnect} loading={connecting} type="button">
               <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-4 h-4" alt="" />
@@ -298,10 +314,57 @@ function GoogleIntegrationsCard() {
               )}
             </div>
 
+            {/* Gmail auto-reply card */}
+            <div className="glass rounded-xl p-4 border border-white/8">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-red-500/15 flex items-center justify-center flex-shrink-0">
+                  <Mail size={15} className="text-red-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white">Gmail Auto-Reply</p>
+                  <p className="text-xs text-gray-500">AI replies to enquiry emails automatically</p>
+                </div>
+                {status.gmailConnected && (
+                  <span className="flex items-center gap-1 text-xs text-red-400 font-semibold flex-shrink-0">
+                    <CheckCircle size={12} /> Active
+                  </span>
+                )}
+              </div>
+
+              {status.gmailConnected ? (
+                <div className="space-y-3">
+                  <p className="text-xs text-gray-500">
+                    Checked automatically every couple of minutes. You can also trigger a check right now.
+                  </p>
+                  {emailMsg && (
+                    <p className={`text-xs ${emailMsg.ok ? 'text-emerald-400' : 'text-red-400'}`}>{emailMsg.text}</p>
+                  )}
+                  <div className="flex gap-2 flex-wrap">
+                    <button type="button" onClick={handleProcessEmail} disabled={processingEmail}
+                      className="flex items-center gap-1.5 text-xs px-3 py-1.5 glass rounded-lg text-gray-300 hover:text-white hover:border-white/20 transition-all disabled:opacity-50">
+                      {processingEmail ? <Loader2 size={11} className="animate-spin" /> : null}
+                      {processingEmail ? 'Checking…' : 'Process unread now'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs text-gray-500">
+                    Your Google connection doesn't include Gmail access yet — reconnect and grant Gmail permission to turn this on.
+                  </p>
+                  <button type="button" onClick={handleConnect} disabled={connecting}
+                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-400 rounded-lg transition-all disabled:opacity-50">
+                    {connecting ? <Loader2 size={11} className="animate-spin" /> : <Mail size={11} />}
+                    {connecting ? 'Redirecting…' : 'Grant Gmail access'}
+                  </button>
+                </div>
+              )}
+            </div>
+
             {/* How it works note */}
             <div className="glass rounded-lg px-3 py-2.5 border border-white/5 bg-white/[0.02]">
               <p className="text-xs text-gray-500 leading-relaxed">
-                <span className="text-gray-400 font-medium">How it works:</span> After every call, TradeDesk logs a row to your sheet with the date, caller details, job type, quote and outcome. If the call results in a booking, a Calendar event is automatically created for the next business day at 9am.
+                <span className="text-gray-400 font-medium">How it works:</span> After every call, TradeDesk logs a row to your sheet with the date, caller details, job type, quote and outcome. If the call results in a booking, a Calendar event is automatically created for the next business day at 9am. New enquiry emails get an AI-drafted reply using the same business details and pricing as your phone AI, and show up in your Messages inbox.
               </p>
             </div>
           </div>
@@ -407,12 +470,10 @@ export function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [gmailLoading, setGmailLoading] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ greeting: string; sampleQuestion?: string; sampleReply?: string; warning?: string } | null>(null);
   const [testError, setTestError] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
-  const gmailStatus = searchParams.get('gmail');
   const googleStatus = searchParams.get('google');
   const billingStatus = searchParams.get('billing');
   const [deletingAccount, setDeletingAccount] = useState(false);
@@ -475,25 +536,6 @@ export function SettingsPage() {
     }
   };
 
-  const connectGmail = async () => {
-    setGmailLoading(true);
-    try {
-      const { url } = await api.get<{ url: string }>('/email/auth-url');
-      window.location.href = url;
-    } catch {
-      setGmailLoading(false);
-    }
-  };
-
-  const processEmails = async () => {
-    try {
-      const result = await api.post<{ processed: number }>('/email/process', {});
-      alert(`Processed ${result.processed} email(s).`);
-    } catch {
-      alert('Failed to process emails. Make sure Gmail is connected.');
-    }
-  };
-
   const handleDeleteAccount = async () => {
     if (!confirm('Are you sure you want to delete your account? This cancels your subscription and permanently deletes all your data. This cannot be undone.')) return;
     setDeletingAccount(true);
@@ -529,16 +571,6 @@ export function SettingsPage() {
         <p className="text-gray-500 text-sm mt-0.5">Configure your AI receptionist</p>
       </div>
 
-      {gmailStatus === 'connected' && (
-        <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/30 text-green-400 text-sm px-4 py-3 rounded-lg mb-4">
-          <CheckCircle size={16} /> Gmail connected successfully
-        </div>
-      )}
-      {gmailStatus === 'error' && (
-        <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/30 text-red-400 text-sm px-4 py-3 rounded-lg mb-4">
-          <AlertCircle size={16} /> Gmail connection failed — try again
-        </div>
-      )}
       {googleStatus === 'connected' && (
         <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm px-4 py-3 rounded-lg mb-4">
           <CheckCircle size={16} /> Google account connected — set up your sheet below
@@ -645,36 +677,6 @@ export function SettingsPage() {
                 checked={!!settings.hasForwardingSetup}
                 onChange={v => update('hasForwardingSetup', v)}
               />
-            </div>
-          </Section>
-        </Card>
-
-        {/* 6. Gmail */}
-        <Card>
-          <Section icon={Mail} title="Gmail Integration" description="AI auto-replies to enquiry emails" iconColor="text-red-400" iconBg="bg-red-500/15">
-            <div className="flex items-center justify-between gap-4 mb-4">
-              <p className="text-sm text-gray-400">
-                {settings.gmailConnected
-                  ? '✅ Gmail connected — AI will auto-reply to new emails.'
-                  : 'Connect Gmail to let the AI reply to email enquiries automatically.'}
-              </p>
-              {settings.gmailConnected && (
-                <span className="text-xs text-green-400 font-medium flex items-center gap-1 flex-shrink-0">
-                  <CheckCircle size={13} /> Active
-                </span>
-              )}
-            </div>
-            <div className="flex gap-3">
-              {!settings.gmailConnected ? (
-                <Button variant="secondary" loading={gmailLoading} onClick={connectGmail} type="button">
-                  <Mail size={15} /> Connect Gmail
-                </Button>
-              ) : (
-                <>
-                  <Button variant="secondary" onClick={processEmails} type="button">Process unread now</Button>
-                  <Button variant="ghost" onClick={connectGmail} type="button">Reconnect</Button>
-                </>
-              )}
             </div>
           </Section>
         </Card>

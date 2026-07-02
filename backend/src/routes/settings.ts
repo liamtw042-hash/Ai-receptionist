@@ -25,8 +25,11 @@ router.put('/', async (req: AuthRequest, res: Response) => {
   const allowed = [
     'businessName', 'traderName', 'tradeType', 'suburb', 'pricingGuide',
     'availability', 'mobileNumber', 'services', 'emergencyCallbackMinutes',
-    'twilioNumber', 'gmailConnected', 'onboardingComplete', 'hasForwardingSetup',
+    'twilioNumber', 'onboardingComplete', 'hasForwardingSetup',
     'smsAlertsEnabled', 'emailSummaryEnabled', 'weeklySummaryEnabled',
+    // Deliberately NOT client-settable: gmailConnected. It's derived from
+    // actual Google OAuth scope grants (see routes/google.ts) so a client
+    // can't just PUT it to true without ever connecting.
   ];
 
   const updates: Record<string, unknown> = {};

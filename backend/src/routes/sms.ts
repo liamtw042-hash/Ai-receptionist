@@ -90,7 +90,9 @@ router.get('/conversations', requireAuth, async (req: AuthRequest, res: Response
       id: string;
       phoneNumber: string;
       contactName?: string;
-      messages: Array<{ id: string; direction: 'inbound' | 'outbound'; body: string; createdAt: string; status?: string }>;
+      channel: 'sms' | 'email';
+      subject?: string;
+      messages: Array<{ id: string; direction: 'inbound' | 'outbound'; body: string; createdAt: string; status?: string; subject?: string }>;
       lastMessage?: string;
       lastMessageAt?: string;
       unread: number;
@@ -101,11 +103,13 @@ router.get('/conversations', requireAuth, async (req: AuthRequest, res: Response
     msgSnap.docs.forEach(d => {
       const data = d.data();
       const num = data.contactNumber;
+      const channel: 'sms' | 'email' = data.channel === 'email' ? 'email' : 'sms';
       if (!grouped[num]) {
         grouped[num] = {
           id: num,
           phoneNumber: num,
           contactName: nameByNumber[num] || undefined,
+          channel,
           messages: [],
           unread: 0,
         };
@@ -117,9 +121,13 @@ router.get('/conversations', requireAuth, async (req: AuthRequest, res: Response
         body: data.body,
         createdAt,
         status: data.direction === 'outbound' ? (data.status || 'delivered') : undefined,
+        subject: data.subject || undefined,
       });
       grouped[num].lastMessage = data.body;
       grouped[num].lastMessageAt = createdAt;
+      // Most recent message's channel/subject wins for conversation-level display.
+      grouped[num].channel = channel;
+      if (data.subject) grouped[num].subject = data.subject;
       if (data.direction === 'inbound' && !data.read) grouped[num].unread += 1;
     });
 
@@ -146,7 +154,12 @@ router.get('/messages/:contactNumber', requireAuth, async (req: AuthRequest, res
 
     const messages = snap.docs.map(d => {
       const data = d.data();
-      return { id: d.id, body: data.body, direction: data.direction, timestamp: data.timestamp.toDate().toISOString(), read: data.read };
+      return {
+        id: d.id, body: data.body, direction: data.direction,
+        timestamp: data.timestamp.toDate().toISOString(), read: data.read,
+        channel: data.channel === 'email' ? 'email' : 'sms',
+        subject: data.subject || undefined,
+      };
     });
 
     res.json(messages);

@@ -14,5 +14,11 @@
   "routes": [
     { "src": "/api/(.*)", "dest": "backend/src/index.ts" },
     { "src": "/(.*)", "dest": "frontend/$1" }
+  ],
+  "crons": [
+    {
+      "path": "/api/email/poll",
+      "schedule": "*/2 * * * *"
+    }
   ]
 }

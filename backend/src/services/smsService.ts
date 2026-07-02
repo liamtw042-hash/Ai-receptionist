@@ -45,13 +45,20 @@ export async function storeSMSMessage(
   userId: string,
   contactNumber: string,
   body: string,
-  direction: 'inbound' | 'outbound'
+  direction: 'inbound' | 'outbound',
+  // Optional extras so other channels (e.g. email auto-reply) can reuse this
+  // same collection/shape and show up in the one unified Messages UI.
+  extra?: { channel?: 'sms' | 'email'; subject?: string; gmailMessageId?: string; threadId?: string }
 ): Promise<void> {
   await db.collection('sms_messages').add({
     userId,
     contactNumber,
     body,
     direction,
+    channel: extra?.channel || 'sms',
+    ...(extra?.subject ? { subject: extra.subject } : {}),
+    ...(extra?.gmailMessageId ? { gmailMessageId: extra.gmailMessageId } : {}),
+    ...(extra?.threadId ? { threadId: extra.threadId } : {}),
     timestamp: new Date(),
     read: direction === 'outbound',
   });

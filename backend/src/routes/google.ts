@@ -3,120 +3,9 @@ import { google } from 'googleapis';
 import { db } from '../lib/firebase';
 import { requireAuth, AuthRequest } from '../middleware/authMiddleware';
 import { getBusinessSettings } from '../services/businessContext';
+import { getOAuthClient, SCOPES, getAuthedClient, appendToSheet, createCalendarEvent } from '../lib/googleAuth';
 
 const router = Router();
-
-// ── OAuth client factory ──────────────────────────────────────────────────────
-function getOAuthClient() {
-  return new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-    process.env.GOOGLE_REDIRECT_URI || `${process.env.BACKEND_URL}/api/google/callback`
-  );
-}
-
-const SCOPES = [
-  'https://www.googleapis.com/auth/spreadsheets',
-  'https://www.googleapis.com/auth/calendar',
-  'https://www.googleapis.com/auth/userinfo.email',
-];
-
-// ── Helper: load + refresh tokens for a user ─────────────────────────────────
-export async function getAuthedClient(userId: string) {
-  const tokenDoc = await db.collection('googleTokens').doc(userId).get();
-  if (!tokenDoc.exists) return null;
-
-  const tokens = tokenDoc.data()!;
-  const oauth2 = getOAuthClient();
-  oauth2.setCredentials({
-    access_token: tokens.access_token,
-    refresh_token: tokens.refresh_token,
-    expiry_date: tokens.expiry_date,
-  });
-
-  // Auto-refresh if expired
-  if (tokens.expiry_date && Date.now() > tokens.expiry_date - 60_000) {
-    try {
-      const { credentials } = await oauth2.refreshAccessToken();
-      await db.collection('googleTokens').doc(userId).set({
-        ...tokens,
-        access_token: credentials.access_token,
-        expiry_date: credentials.expiry_date,
-      }, { merge: true });
-      oauth2.setCredentials(credentials);
-    } catch (err) {
-      console.error('Google token refresh failed:', err);
-      return null;
-    }
-  }
-
-  return oauth2;
-}
-
-// ── Helper: append a row to the user's Google Sheet ──────────────────────────
-export async function appendToSheet(
-  userId: string,
-  rowData: Record<string, string>
-): Promise<void> {
-  const tokenDoc = await db.collection('googleTokens').doc(userId).get();
-  if (!tokenDoc.exists) return;
-  const { spreadsheetId } = tokenDoc.data()!;
-  if (!spreadsheetId) return;
-
-  const auth = await getAuthedClient(userId);
-  if (!auth) return;
-
-  const sheets = google.sheets({ version: 'v4', auth });
-  const values = [
-    rowData.date || '',
-    rowData.time || '',
-    rowData.callerName || '',
-    rowData.callerNumber || '',
-    rowData.jobType || '',
-    rowData.address || '',
-    rowData.quoteGiven || '',
-    rowData.outcome || '',
-    rowData.notes || '',
-  ];
-
-  await sheets.spreadsheets.values.append({
-    spreadsheetId,
-    range: 'Calls!A:I',
-    valueInputOption: 'USER_ENTERED',
-    requestBody: { values: [values] },
-  });
-}
-
-// ── Helper: create a Google Calendar event ───────────────────────────────────
-export async function createCalendarEvent(
-  userId: string,
-  eventData: {
-    title: string;
-    description: string;
-    startTime: string;
-    endTime: string;
-    location?: string;
-  }
-): Promise<void> {
-  const tokenDoc = await db.collection('googleTokens').doc(userId).get();
-  if (!tokenDoc.exists) return;
-  const { calendarId } = tokenDoc.data()!;
-
-  const auth = await getAuthedClient(userId);
-  if (!auth) return;
-
-  const calendar = google.calendar({ version: 'v3', auth });
-  await calendar.events.insert({
-    calendarId: calendarId || 'primary',
-    requestBody: {
-      summary: eventData.title,
-      description: eventData.description,
-      location: eventData.location,
-      start: { dateTime: eventData.startTime, timeZone: 'Australia/Sydney' },
-      end: { dateTime: eventData.endTime, timeZone: 'Australia/Sydney' },
-    },
-  });
-}
 
 // GET /api/google/callback — OAuth callback from Google (must be BEFORE requireAuth)
 router.get('/callback', async (req: AuthRequest, res: Response) => {
@@ -136,13 +25,30 @@ router.get('/callback', async (req: AuthRequest, res: Response) => {
     const oauth2Api = google.oauth2({ version: 'v2', auth: oauth2 });
     const userInfo = await oauth2Api.userinfo.get();
 
+    // tokens.scope is a space-separated list of every scope the user actually
+    // granted — Google can silently drop scopes the user unchecks on the
+    // consent screen, so we store it and derive per-feature "connected"
+    // flags from it rather than assuming every scope we asked for was granted.
     await db.collection('googleTokens').doc(userId).set({
       access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token,
+      // Google only issues a refresh_token on the FIRST consent (or when
+      // prompt=consent forces re-consent, which we always pass) — but if for
+      // any reason this response omits it, don't clobber a previously stored
+      // one.
+      ...(tokens.refresh_token ? { refresh_token: tokens.refresh_token } : {}),
       expiry_date: tokens.expiry_date,
+      scope: tokens.scope || '',
       email: userInfo.data.email,
       connectedAt: new Date().toISOString(),
     }, { merge: true });
+
+    // Keep settings.gmailConnected in sync so the dashboard onboarding
+    // checklist / other reads of that field stay accurate without needing
+    // to call /google/status.
+    const grantedGmail = (tokens.scope || '').includes('gmail');
+    if (grantedGmail) {
+      await db.collection('settings').doc(userId).set({ gmailConnected: true }, { merge: true });
+    }
 
     // Redirect to frontend settings page
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -162,10 +68,15 @@ router.get('/status', async (req: AuthRequest, res: Response) => {
   try {
     const tokenDoc = await db.collection('googleTokens').doc(req.userId!).get();
     if (!tokenDoc.exists) {
-      res.json({ connected: false, sheetsConnected: false, calendarConnected: false });
+      res.json({ connected: false, sheetsConnected: false, calendarConnected: false, gmailConnected: false });
       return;
     }
     const data = tokenDoc.data()!;
+    // Users who connected before Gmail auto-reply existed only granted
+    // Sheets/Calendar scopes — gmailConnected reflects what was ACTUALLY
+    // granted, not just whether they've connected Google at all, so we
+    // correctly prompt those users to reconnect for Gmail specifically.
+    const gmailConnected = (data.scope || '').includes('gmail');
     res.json({
       connected: true,
       email: data.email || null,
@@ -176,6 +87,7 @@ router.get('/status', async (req: AuthRequest, res: Response) => {
         : null,
       calendarConnected: true,
       calendarId: data.calendarId || 'primary',
+      gmailConnected,
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to get Google status' });

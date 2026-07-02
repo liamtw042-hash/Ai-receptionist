@@ -12,7 +12,7 @@ import {
 } from '../services/smsService';
 import { upsertContact } from '../services/contactService';
 import { resolveTwilioUser } from '../middleware/authMiddleware';
-import { appendToSheet, createCalendarEvent } from './google';
+import { appendToSheet, createCalendarEvent } from '../lib/googleAuth';
 
 const router = Router();
 const VoiceResponse = twilio.twiml.VoiceResponse;

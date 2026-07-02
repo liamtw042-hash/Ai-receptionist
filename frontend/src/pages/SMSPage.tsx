@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import {
   Send, ChevronLeft, Phone, MessageSquare, Search, MoreHorizontal,
-  CheckCheck, Check, Clock, X, Plus,
+  CheckCheck, Check, Clock, X, Plus, Mail,
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { SkeletonRow } from '../components/ui/Skeleton';
@@ -15,12 +15,15 @@ interface SMSMessage {
   body: string;
   createdAt: string;
   status?: 'sending' | 'delivered' | 'read' | 'failed';
+  subject?: string;
 }
 
 interface Conversation {
   id: string;
   phoneNumber: string;
   contactName?: string;
+  channel?: 'sms' | 'email';
+  subject?: string;
   messages: SMSMessage[];
   lastMessage?: string;
   lastMessageAt?: string;
@@ -29,6 +32,7 @@ interface Conversation {
 
 function fmtPhone(num: string): string {
   if (!num) return 'Unknown';
+  if (num.includes('@')) return num; // email address — leave as-is
   const clean = num.replace(/\D/g, '');
   if (clean.startsWith('61') && clean.length === 11) return `0${clean.slice(2, 5)} ${clean.slice(5, 8)} ${clean.slice(8)}`;
   if (clean.length === 10 && clean.startsWith('0')) return `${clean.slice(0, 4)} ${clean.slice(4, 7)} ${clean.slice(7)}`;
@@ -49,6 +53,7 @@ function fmtMsgTime(dateStr: string): string {
 
 function avatarInitials(convo: Conversation): string {
   if (convo.contactName) return convo.contactName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  if (convo.phoneNumber.includes('@')) return convo.phoneNumber.slice(0, 2).toUpperCase();
   const clean = convo.phoneNumber.replace(/\D/g, '');
   return clean.slice(-2);
 }
@@ -185,6 +190,11 @@ export function SMSPage() {
                 )}>
                 <div className={`relative w-10 h-10 rounded-full bg-gradient-to-br ${grad} flex items-center justify-center text-xs font-bold text-white flex-shrink-0`}>
                   {avatarInitials(c)}
+                  {c.channel === 'email' && (
+                    <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-gray-900 border border-white/20 rounded-full flex items-center justify-center">
+                      <Mail size={9} className="text-blue-300" />
+                    </span>
+                  )}
                   {(c.unread ?? 0) > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-blue-500 rounded-full text-[9px] font-bold flex items-center justify-center">{c.unread}</span>
                   )}
@@ -197,7 +207,7 @@ export function SMSPage() {
                     <span className="text-[10px] text-gray-600 flex-shrink-0">{fmtConvoTime(c.lastMessageAt)}</span>
                   </div>
                   <p className={clsx('text-xs truncate mt-0.5', (c.unread ?? 0) > 0 ? 'text-gray-300 font-medium' : 'text-gray-600')}>
-                    {c.lastMessage ?? 'No messages yet'}
+                    {c.channel === 'email' && c.subject ? `${c.subject} — ` : ''}{c.lastMessage ?? 'No messages yet'}
                   </p>
                 </div>
               </button>
@@ -224,8 +234,18 @@ export function SMSPage() {
                 {avatarInitials(selected)}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-white">{selected.contactName ?? fmtPhone(selected.phoneNumber)}</p>
-                {selected.contactName && <p className="text-xs text-gray-600">{fmtPhone(selected.phoneNumber)}</p>}
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-bold text-white truncate">{selected.contactName ?? fmtPhone(selected.phoneNumber)}</p>
+                  {selected.channel === 'email' && (
+                    <span className="flex items-center gap-1 text-[10px] font-semibold text-blue-300 bg-blue-500/15 border border-blue-500/25 rounded-full px-1.5 py-0.5 flex-shrink-0">
+                      <Mail size={9} /> Email
+                    </span>
+                  )}
+                </div>
+                {selected.contactName && <p className="text-xs text-gray-600 truncate">{fmtPhone(selected.phoneNumber)}</p>}
+                {selected.channel === 'email' && selected.subject && (
+                  <p className="text-xs text-gray-600 truncate">{selected.subject}</p>
+                )}
               </div>
               <div className="flex items-center gap-1.5">
                 <button onClick={() => navigate('/dashboard/calls')} title="View call history"
@@ -283,33 +303,40 @@ export function SMSPage() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input bar */}
-            <div className="px-4 pb-4 pt-2 flex-shrink-0 border-t border-white/6" style={{ background: 'rgba(0,0,0,0.15)' }}>
-              <div className="flex items-end gap-2 bg-white/6 border border-white/10 rounded-2xl px-3 py-2 focus-within:border-blue-500/40 transition-colors">
-                <textarea
-                  ref={inputRef}
-                  value={draft}
-                  onChange={e => setDraft(e.target.value)}
-                  onKeyDown={onKeyDown}
-                  placeholder="Message…"
-                  rows={1}
-                  className="flex-1 bg-transparent text-sm text-white placeholder-gray-600 focus:outline-none resize-none max-h-32 overflow-y-auto py-1 leading-relaxed"
-                  style={{ minHeight: '22px' }}
-                />
-                <button
-                  onClick={sendMessage}
-                  disabled={!draft.trim() || sending}
-                  className={clsx(
-                    'flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all',
-                    draft.trim() && !sending
-                      ? 'bg-blue-500 hover:bg-blue-400 text-white shadow-lg shadow-blue-500/30'
-                      : 'bg-white/8 text-gray-600 cursor-not-allowed'
-                  )}>
-                  <Send size={13} className={draft.trim() ? 'translate-x-px -translate-y-px' : ''} />
-                </button>
+            {/* Input bar — email threads are handled by the AI auto-reply, not a manual SMS box */}
+            {selected.channel === 'email' ? (
+              <div className="px-4 pb-4 pt-3 flex-shrink-0 border-t border-white/6 flex items-center gap-2 justify-center" style={{ background: 'rgba(0,0,0,0.15)' }}>
+                <Mail size={13} className="text-gray-600" />
+                <p className="text-xs text-gray-600">Your AI auto-replies to this email thread — no manual reply needed here.</p>
               </div>
-              <p className="text-[10px] text-gray-700 text-center mt-2">Enter to send · Shift+Enter for new line</p>
-            </div>
+            ) : (
+              <div className="px-4 pb-4 pt-2 flex-shrink-0 border-t border-white/6" style={{ background: 'rgba(0,0,0,0.15)' }}>
+                <div className="flex items-end gap-2 bg-white/6 border border-white/10 rounded-2xl px-3 py-2 focus-within:border-blue-500/40 transition-colors">
+                  <textarea
+                    ref={inputRef}
+                    value={draft}
+                    onChange={e => setDraft(e.target.value)}
+                    onKeyDown={onKeyDown}
+                    placeholder="Message…"
+                    rows={1}
+                    className="flex-1 bg-transparent text-sm text-white placeholder-gray-600 focus:outline-none resize-none max-h-32 overflow-y-auto py-1 leading-relaxed"
+                    style={{ minHeight: '22px' }}
+                  />
+                  <button
+                    onClick={sendMessage}
+                    disabled={!draft.trim() || sending}
+                    className={clsx(
+                      'flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all',
+                      draft.trim() && !sending
+                        ? 'bg-blue-500 hover:bg-blue-400 text-white shadow-lg shadow-blue-500/30'
+                        : 'bg-white/8 text-gray-600 cursor-not-allowed'
+                    )}>
+                    <Send size={13} className={draft.trim() ? 'translate-x-px -translate-y-px' : ''} />
+                  </button>
+                </div>
+                <p className="text-[10px] text-gray-700 text-center mt-2">Enter to send · Shift+Enter for new line</p>
+              </div>
+            )}
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
