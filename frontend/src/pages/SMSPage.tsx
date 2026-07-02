@@ -58,13 +58,13 @@ function avatarInitials(convo: Conversation): string {
   return clean.slice(-2);
 }
 
-const GRADIENTS = [
-  'from-blue-500 to-indigo-500',
-  'from-green-500 to-emerald-500',
-  'from-orange-500 to-red-500',
-  'from-purple-500 to-pink-500',
-  'from-cyan-500 to-blue-500',
-];
+// Restrained monochrome avatar tiles (killed the multi-colour gradient rainbow
+// — the same AI-SaaS tell the landing redesign removed). Initials do the work.
+function avatarClasses(convo: Conversation): string {
+  return convo.channel === 'email'
+    ? 'bg-white/[0.06] border border-white/12 text-gray-300'
+    : 'bg-orange-500/12 border border-orange-500/25 text-orange-300';
+}
 
 /* Shows a timestamp divider if there's a large gap between messages */
 function shouldShowTimestamp(msgs: SMSMessage[], idx: number): boolean {
@@ -75,11 +75,11 @@ function shouldShowTimestamp(msgs: SMSMessage[], idx: number): boolean {
 }
 
 function MsgStatusIcon({ status }: { status?: string }) {
-  if (status === 'delivered') return <CheckCheck size={10} className="text-blue-300" />;
-  if (status === 'read')      return <CheckCheck size={10} className="text-blue-400" />;
+  if (status === 'delivered') return <CheckCheck size={10} className="text-gray-500" />;
+  if (status === 'read')      return <CheckCheck size={10} className="text-orange-400" />;
   if (status === 'failed')    return <X size={10} className="text-red-400" />;
-  if (status === 'sending')   return <Clock size={10} className="text-white/40 animate-pulse" />;
-  return <Check size={10} className="text-white/40" />;
+  if (status === 'sending')   return <Clock size={10} className="text-gray-600 animate-pulse" />;
+  return <Check size={10} className="text-gray-600" />;
 }
 
 export function SMSPage() {
@@ -157,8 +157,8 @@ export function SMSPage() {
         {/* Header */}
         <div className="px-4 py-3.5 border-b border-white/6 flex-shrink-0" style={{ background: 'rgba(0,0,0,0.2)' }}>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold text-white">Messages</h2>
-            <button className="w-7 h-7 rounded-lg bg-white/5 hover:bg-blue-500/15 flex items-center justify-center text-gray-500 hover:text-blue-400 transition-all border border-white/5 hover:border-blue-500/25">
+            <h2 className="text-sm font-bold text-white tracking-tight">Messages</h2>
+            <button className="w-7 h-7 rounded-lg bg-white/5 hover:bg-orange-500/15 flex items-center justify-center text-gray-500 hover:text-orange-400 transition-all border border-white/5 hover:border-orange-500/25">
               <Plus size={13} />
             </button>
           </div>
@@ -166,7 +166,7 @@ export function SMSPage() {
             <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
             <input value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search conversations…"
-              className="w-full bg-white/5 border border-white/8 rounded-xl pl-8 pr-3 py-2 text-xs text-white placeholder-gray-700 focus:outline-none focus:border-blue-500/40 transition-colors" />
+              className="w-full bg-white/5 border border-white/8 rounded-xl pl-8 pr-3 py-2 text-xs text-white placeholder-gray-700 focus:outline-none focus:border-orange-500/40 transition-colors" />
           </div>
         </div>
 
@@ -175,28 +175,32 @@ export function SMSPage() {
           {loading ? (
             <div className="p-3 space-y-2">{[...Array(5)].map((_, i) => <SkeletonRow key={i} />)}</div>
           ) : filtered.length === 0 ? (
-            <div className="py-12 text-center">
-              <MessageSquare size={28} className="text-gray-700 mx-auto mb-2" />
-              <p className="text-xs text-gray-600">No conversations yet</p>
+            <div className="py-12 px-5 text-center">
+              <div className="w-11 h-11 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mx-auto mb-3">
+                <MessageSquare size={20} className="text-orange-400/60" />
+              </div>
+              <p className="text-sm font-semibold text-gray-300">{search ? 'No matches' : 'No conversations yet'}</p>
+              <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                {search ? 'Try a different name or number.' : 'When a caller texts your number or the AI replies to an enquiry, the thread shows up here.'}
+              </p>
             </div>
-          ) : filtered.map((c, idx) => {
+          ) : filtered.map((c) => {
             const isActive = selected?.id === c.id;
-            const grad = GRADIENTS[idx % GRADIENTS.length];
             return (
               <button key={c.id} onClick={() => selectConvo(c)}
                 className={clsx(
-                  'w-full flex items-center gap-3 px-4 py-3.5 text-left transition-all border-b border-white/4',
-                  isActive ? 'bg-blue-500/12 border-l-2 border-l-blue-500/60' : 'hover:bg-white/4'
+                  'w-full flex items-center gap-3 px-4 py-3.5 text-left transition-all border-b border-white/4 border-l-2',
+                  isActive ? 'bg-orange-500/[0.10] border-l-orange-500' : 'hover:bg-white/4 border-l-transparent'
                 )}>
-                <div className={`relative w-10 h-10 rounded-full bg-gradient-to-br ${grad} flex items-center justify-center text-xs font-bold text-white flex-shrink-0`}>
+                <div className={clsx('relative w-10 h-10 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0', avatarClasses(c))}>
                   {avatarInitials(c)}
                   {c.channel === 'email' && (
                     <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-gray-900 border border-white/20 rounded-full flex items-center justify-center">
-                      <Mail size={9} className="text-blue-300" />
+                      <Mail size={9} className="text-gray-300" />
                     </span>
                   )}
                   {(c.unread ?? 0) > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-blue-500 rounded-full text-[9px] font-bold flex items-center justify-center">{c.unread}</span>
+                    <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-orange-500 text-black rounded-full text-[9px] font-black flex items-center justify-center">{c.unread}</span>
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -230,7 +234,7 @@ export function SMSPage() {
                 className="sm:hidden w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/8 transition-all -ml-1">
                 <ChevronLeft size={18} />
               </button>
-              <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${GRADIENTS[conversations.findIndex(c => c.id === selected.id) % GRADIENTS.length]} flex items-center justify-center text-xs font-bold text-white flex-shrink-0`}>
+              <div className={clsx('w-9 h-9 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0', avatarClasses(selected))}>
                 {avatarInitials(selected)}
               </div>
               <div className="flex-1 min-w-0">
@@ -249,7 +253,7 @@ export function SMSPage() {
               </div>
               <div className="flex items-center gap-1.5">
                 <button onClick={() => navigate('/dashboard/calls')} title="View call history"
-                  className="w-8 h-8 rounded-lg bg-white/5 hover:bg-blue-500/15 flex items-center justify-center text-gray-500 hover:text-blue-400 transition-all border border-white/6">
+                  className="w-8 h-8 rounded-lg bg-white/5 hover:bg-orange-500/15 flex items-center justify-center text-gray-500 hover:text-orange-400 transition-all border border-white/6">
                   <Phone size={13} />
                 </button>
                 <button className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-500 hover:text-gray-300 transition-all border border-white/6">
@@ -261,10 +265,14 @@ export function SMSPage() {
             {/* Messages */}
             <div className="flex-1 overflow-y-auto px-4 py-5 space-y-1">
               {selected.messages.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center">
-                  <MessageSquare size={32} className="text-gray-700 mb-3" />
-                  <p className="text-sm text-gray-600">No messages yet</p>
-                  <p className="text-xs text-gray-700 mt-1">Send a message to start the conversation.</p>
+                <div className="h-full flex flex-col items-center justify-center px-6 text-center">
+                  <div className="w-12 h-12 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mb-3">
+                    <MessageSquare size={22} className="text-orange-400/60" />
+                  </div>
+                  <p className="text-sm font-semibold text-gray-300">No messages yet</p>
+                  <p className="text-xs text-gray-600 mt-1">
+                    {selected.channel === 'email' ? 'Your AI will reply here automatically.' : 'Send the first message to kick off the thread.'}
+                  </p>
                 </div>
               ) : selected.messages.map((msg, i) => {
                 const isOut = msg.direction === 'outbound';
@@ -285,7 +293,7 @@ export function SMSPage() {
                       <div className={clsx(
                         'max-w-[72%] px-3.5 py-2.5 text-sm leading-relaxed',
                         isOut
-                          ? 'bg-blue-600 text-white rounded-2xl rounded-br-md'
+                          ? 'bg-orange-500 text-black font-medium rounded-2xl rounded-br-md'
                           : 'text-gray-100 rounded-2xl rounded-bl-md border border-white/8'
                       )} style={!isOut ? { background: 'rgba(255,255,255,0.08)' } : undefined}>
                         {msg.body}
@@ -311,7 +319,7 @@ export function SMSPage() {
               </div>
             ) : (
               <div className="px-4 pb-4 pt-2 flex-shrink-0 border-t border-white/6" style={{ background: 'rgba(0,0,0,0.15)' }}>
-                <div className="flex items-end gap-2 bg-white/6 border border-white/10 rounded-2xl px-3 py-2 focus-within:border-blue-500/40 transition-colors">
+                <div className="flex items-end gap-2 bg-white/6 border border-white/10 rounded-2xl px-3 py-2 focus-within:border-orange-500/40 transition-colors">
                   <textarea
                     ref={inputRef}
                     value={draft}
@@ -328,7 +336,7 @@ export function SMSPage() {
                     className={clsx(
                       'flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all',
                       draft.trim() && !sending
-                        ? 'bg-blue-500 hover:bg-blue-400 text-white shadow-lg shadow-blue-500/30'
+                        ? 'bg-orange-500 hover:bg-orange-400 text-black shadow-lg shadow-orange-500/30'
                         : 'bg-white/8 text-gray-600 cursor-not-allowed'
                     )}>
                     <Send size={13} className={draft.trim() ? 'translate-x-px -translate-y-px' : ''} />
@@ -340,11 +348,11 @@ export function SMSPage() {
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
-            <div className="w-16 h-16 bg-blue-500/8 rounded-2xl flex items-center justify-center">
-              <MessageSquare size={28} className="text-blue-400/30" />
+            <div className="w-16 h-16 bg-orange-500/8 border border-orange-500/15 rounded-2xl flex items-center justify-center">
+              <MessageSquare size={28} className="text-orange-400/40" />
             </div>
-            <p className="text-sm font-semibold text-gray-400">Select a conversation</p>
-            <p className="text-xs text-gray-700 max-w-[200px]">Choose from the list to view messages.</p>
+            <p className="text-sm font-semibold text-gray-300">Pick a conversation</p>
+            <p className="text-xs text-gray-600 max-w-[220px]">Choose a thread on the left to read the full back-and-forth.</p>
           </div>
         )}
       </main>

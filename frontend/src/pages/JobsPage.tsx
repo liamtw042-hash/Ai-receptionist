@@ -100,7 +100,7 @@ function JobCard({ job, onClick }: { job: Job; onClick: () => void }) {
   return (
     <motion.button variants={reduce ? instantItem : staggerItem} onClick={onClick}
       className={clsx(
-        'group relative w-full text-left glass rounded-xl p-4 pl-5 border border-white/8 hover:border-blue-500/30 hover:bg-white/[0.03] transition-all duration-150 overflow-hidden hover:-translate-y-px',
+        'group relative w-full text-left glass rounded-xl p-4 pl-5 border border-white/8 hover:border-orange-500/30 hover:bg-white/[0.03] transition-all duration-150 overflow-hidden hover:-translate-y-px',
         isTerminal && 'opacity-60 hover:opacity-90'
       )}>
       {/* Status colour rail */}
@@ -114,9 +114,9 @@ function JobCard({ job, onClick }: { job: Job; onClick: () => void }) {
         </div>
         <StatusPill status={job.status} />
       </div>
-      <div className="flex items-center gap-1.5 text-sm text-gray-300 mb-1.5">
-        <Briefcase size={13} className="text-blue-400 flex-shrink-0" />
-        <span className="truncate">{job.jobType}</span>
+      <div className="flex items-center gap-1.5 text-sm text-gray-200 mb-1.5">
+        <Briefcase size={13} className="text-gray-500 flex-shrink-0" />
+        <span className="truncate font-medium">{job.jobType}</span>
       </div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
         <span className="flex items-center gap-1.5"><Clock size={11} />{fmtTimeRange(job.scheduledStart, job.scheduledEnd)}</span>
@@ -156,9 +156,9 @@ function ListView({ jobs, onSelect, filtered, onNewJob, reduceMotion }: {
       </div>
     ) : (
       <div className="relative overflow-hidden rounded-2xl border border-white/8 py-14 px-6 text-center"
-        style={{ background: 'radial-gradient(ellipse 90% 70% at 50% 0%,rgba(59,130,246,0.06),transparent 70%)' }}>
-        <div className="w-16 h-16 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <CalendarClock size={30} className="text-blue-400" />
+        style={{ background: 'radial-gradient(ellipse 90% 70% at 50% 0%,rgba(249,115,22,0.07),transparent 70%)' }}>
+        <div className="w-16 h-16 bg-orange-500/10 border border-orange-500/25 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <CalendarClock size={30} className="text-orange-400" />
         </div>
         <p className="text-base font-bold text-white">No jobs on the board yet</p>
         <p className="text-sm text-gray-500 mt-1.5 max-w-sm mx-auto leading-relaxed">
@@ -235,8 +235,8 @@ function MonthGrid({ anchorDate, jobs, onSelectJob, onSelectDay }: {
                 !inMonth && 'opacity-35'
               )}>
               <span className={clsx(
-                'text-xs font-semibold w-5 h-5 flex items-center justify-center rounded-full flex-shrink-0',
-                today ? 'bg-blue-500 text-white' : 'text-gray-400'
+                'text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full flex-shrink-0',
+                today ? 'bg-orange-500 text-black' : 'text-gray-400'
               )}>
                 {format(d, 'd')}
               </span>
@@ -318,7 +318,7 @@ function WeekGrid({ anchorDate, jobs, onSelectJob }: { anchorDate: Date; jobs: J
                 <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">{format(d, 'EEE')}</p>
                 <p className={clsx(
                   'text-sm font-bold mt-0.5 w-6 h-6 mx-auto flex items-center justify-center rounded-full',
-                  isToday(d) ? 'bg-blue-500 text-white' : 'text-white'
+                  isToday(d) ? 'bg-orange-500 text-black' : 'text-white'
                 )}>
                   {format(d, 'd')}
                 </p>
@@ -428,7 +428,7 @@ function NewJobModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
     <div className="fixed inset-0 z-[9990] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
       <div className="w-full max-w-lg bg-[#0d1426] rounded-2xl border border-white/12 shadow-2xl shadow-black/60 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/8 sticky top-0 bg-[#0d1426] z-10">
-          <h3 className="text-base font-bold text-white flex items-center gap-2"><Plus size={16} className="text-blue-400" /> New Job</h3>
+          <h3 className="text-base font-bold text-white flex items-center gap-2"><Plus size={16} className="text-orange-400" /> New Job</h3>
           <button onClick={onClose} className="text-gray-500 hover:text-white p-1"><X size={16} /></button>
         </div>
         <div className="p-5 space-y-4">
@@ -543,22 +543,22 @@ function JobDetailPanel({ job, onClose, onUpdated, onDeleted }: {
 
           <div className="space-y-3">
             <div className="flex items-center gap-3 text-sm text-gray-200">
-              <Phone size={15} className="text-blue-400 flex-shrink-0" />
-              <a href={`tel:${job.customerPhone}`} className="hover:text-blue-400 transition-colors">{fmtPhone(job.customerPhone)}</a>
+              <Phone size={15} className="text-orange-400 flex-shrink-0" />
+              <a href={`tel:${job.customerPhone}`} className="font-medium hover:text-orange-400 transition-colors">{fmtPhone(job.customerPhone)}</a>
             </div>
             <div className="flex items-center gap-3 text-sm text-gray-200">
-              <Briefcase size={15} className="text-blue-400 flex-shrink-0" />
+              <Briefcase size={15} className="text-gray-500 flex-shrink-0" />
               <span>{job.jobType}</span>
             </div>
             {job.address && (
               <div className="flex items-center gap-3 text-sm text-gray-200">
-                <MapPin size={15} className="text-blue-400 flex-shrink-0" />
+                <MapPin size={15} className="text-gray-500 flex-shrink-0" />
                 <span>{job.address}</span>
               </div>
             )}
             {job.quoteGiven && (
               <div className="flex items-center gap-3 text-sm text-gray-200">
-                <DollarSign size={15} className="text-blue-400 flex-shrink-0" />
+                <DollarSign size={15} className="text-gray-500 flex-shrink-0" />
                 <span>{job.quoteGiven}</span>
               </div>
             )}
@@ -569,7 +569,7 @@ function JobDetailPanel({ job, onClose, onUpdated, onDeleted }: {
             <div className="flex items-center justify-between mb-1">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Scheduled</p>
               {!rescheduling && !isTerminal && (
-                <button onClick={() => setRescheduling(true)} className="text-xs text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1">
+                <button onClick={() => setRescheduling(true)} className="text-xs font-medium text-orange-400 hover:text-orange-300 transition-colors flex items-center gap-1">
                   <CalendarClock size={11} /> Reschedule
                 </button>
               )}
@@ -684,21 +684,24 @@ export function JobsPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div>
-          <h1 className="text-2xl font-bold text-white">Jobs</h1>
-          <p className="text-gray-500 text-sm mt-0.5">Every booked job in one place</p>
+          <h1 className="text-2xl font-black text-white tracking-tight leading-none">Jobs</h1>
+          <p className="text-gray-500 text-sm mt-1.5">Every booked job in one place</p>
         </div>
-        <Button onClick={() => setShowNewJob(true)}><Plus size={15} /> New Job</Button>
+        <button onClick={() => setShowNewJob(true)}
+          className="inline-flex items-center gap-1.5 bg-orange-500 hover:bg-orange-400 text-black font-bold text-sm px-4 py-2 rounded-lg shadow-lg shadow-orange-500/20 transition-all active:scale-[0.97] min-h-[38px]">
+          <Plus size={15} /> New Job
+        </button>
       </div>
 
       {/* View toggle + calendar nav */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div className="flex items-center gap-1.5 glass rounded-xl p-1 border border-white/8 w-fit">
           <button onClick={() => setView('list')}
-            className={clsx('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all', view === 'list' ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-500 hover:text-gray-300')}>
+            className={clsx('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all', view === 'list' ? 'bg-orange-500 text-black shadow-sm' : 'text-gray-500 hover:text-gray-300')}>
             <List size={13} /> List
           </button>
           <button onClick={() => setView('calendar')}
-            className={clsx('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all', view === 'calendar' ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-500 hover:text-gray-300')}>
+            className={clsx('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all', view === 'calendar' ? 'bg-orange-500 text-black shadow-sm' : 'text-gray-500 hover:text-gray-300')}>
             <Calendar size={13} /> Calendar
           </button>
         </div>
@@ -725,7 +728,7 @@ export function JobsPage() {
             <div className="relative">
               <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search jobs…"
-                className="w-48 bg-white/5 border border-white/8 rounded-xl pl-8 pr-3 py-2 text-xs text-white placeholder-gray-700 focus:outline-none focus:border-blue-500/40 transition-colors" />
+                className="w-48 bg-white/5 border border-white/8 rounded-xl pl-8 pr-3 py-2 text-xs text-white placeholder-gray-700 focus:outline-none focus:border-orange-500/40 transition-colors" />
             </div>
             <div className="flex items-center gap-1 glass rounded-xl p-1 border border-white/8">
               {STATUS_FILTERS.map(f => (

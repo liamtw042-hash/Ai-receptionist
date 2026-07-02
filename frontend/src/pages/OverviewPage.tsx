@@ -72,58 +72,76 @@ function useRealTimeClock() {
   return time;
 }
 
-/* ── Premium Stat Card ─────────────────────────────────────────────────────
-   Deliberately shows the REAL count only (animated up on first load). No
-   fabricated trend sparklines or "+X% this week" indicators — there's no real
-   historical series behind them, so we don't imply one. */
-type CardColor = 'blue' | 'green' | 'purple' | 'amber';
-const COLOR_MAP: Record<CardColor, {
-  iconBg: string; iconText: string; border: string; glow: string; bar: string;
-}> = {
-  blue:   { iconBg: 'bg-blue-500/15',   iconText: 'text-blue-400',   border: 'rgba(59,130,246,0.28)', glow: 'rgba(59,130,246,0.07)',  bar: 'linear-gradient(90deg,#60a5fa,#3b82f6)' },
-  green:  { iconBg: 'bg-green-500/15',  iconText: 'text-green-400',  border: 'rgba(34,197,94,0.28)',  glow: 'rgba(34,197,94,0.07)',   bar: 'linear-gradient(90deg,#4ade80,#22c55e)' },
-  purple: { iconBg: 'bg-purple-500/15', iconText: 'text-purple-400', border: 'rgba(168,85,247,0.28)', glow: 'rgba(168,85,247,0.07)',  bar: 'linear-gradient(90deg,#c084fc,#a855f7)' },
-  amber:  { iconBg: 'bg-amber-500/15',  iconText: 'text-amber-400',  border: 'rgba(245,158,11,0.30)', glow: 'rgba(245,158,11,0.08)',  bar: 'linear-gradient(90deg,#fbbf24,#f59e0b)' },
-};
+/* ── Stat displays ──────────────────────────────────────────────────────────
+   Real counts only (animated up on first load). No fabricated trends / "+X%"
+   indicators — there's no historical series behind them. Hierarchy comes from
+   size, placement and weight, not colour: ONE dominant hero number (what a
+   tradie checks first — calls their AI caught today) plus quieter supporting
+   metrics. This kills the "four identical candy-coloured cards" template. */
 
-function StatCard({
-  icon: Icon, label, value, color, hint, suffix = '',
-}: {
-  icon: typeof Phone; label: string; value: number; color: CardColor;
-  hint?: string; suffix?: string;
+// The hero metric: calls the AI answered today. Big, monospaced, unmissable.
+function HeroMetric({ value, booked }: { value: number; booked: number }) {
+  const calls = useCountUp(value);
+  const jobs = useCountUp(booked);
+  const empty = value === 0;
+  const reduce = useReducedMotion();
+  return (
+    <motion.div variants={reduce ? instantItem : staggerItem}
+      className="relative overflow-hidden rounded-2xl p-5 sm:p-6"
+      style={{
+        background: 'linear-gradient(135deg,rgba(38,22,8,0.55) 0%,rgba(13,20,38,0.9) 45%,rgba(8,12,20,0.92) 100%)',
+        border: '1px solid rgba(249,115,22,0.28)',
+        boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 8px 40px rgba(249,115,22,0.08)',
+      }}>
+      <div className="absolute top-0 right-0 w-56 h-56 rounded-full pointer-events-none"
+        style={{ background: 'radial-gradient(circle,rgba(249,115,22,0.12) 0%,transparent 70%)', transform: 'translate(30%,-35%)' }} />
+      <div className="absolute top-0 left-5 right-5 h-px" style={{ background: 'linear-gradient(90deg,#fb923c,transparent)' }} />
+
+      <div className="relative flex items-start justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="w-7 h-7 rounded-lg bg-orange-500/15 border border-orange-500/25 flex items-center justify-center flex-shrink-0">
+              <PhoneCall size={14} className="text-orange-400" />
+            </span>
+            <p className="text-[11px] font-bold text-orange-400/90 uppercase tracking-[0.14em]">Calls caught today</p>
+          </div>
+          <div className={`mt-3 font-black tabular-nums tracking-tighter leading-none text-5xl sm:text-6xl ${empty ? 'text-gray-600' : 'text-white'}`}>
+            {calls}
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            {empty ? 'No calls yet today — your AI is standing by.' : 'Answered by your AI while you worked.'}
+          </p>
+        </div>
+
+        {/* Jobs booked — the payoff, sits alongside as a strong secondary */}
+        <div className="text-right flex-shrink-0 pl-4 border-l border-white/8 self-stretch flex flex-col justify-center min-w-[92px]">
+          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Booked</p>
+          <div className={`text-3xl font-black tabular-nums tracking-tight mt-1 ${booked === 0 ? 'text-gray-600' : 'text-green-400'}`}>{jobs}</div>
+          <p className="text-[10px] text-gray-600 mt-0.5">jobs today</p>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// Supporting metrics: quieter, monochrome, equal to each other but clearly
+// subordinate to the hero. Value dominant, label small and grey.
+function MiniStat({ icon: Icon, label, value, hint }: {
+  icon: typeof Phone; label: string; value: number; hint: string;
 }) {
-  const c = COLOR_MAP[color];
   const display = useCountUp(value);
   const empty = value === 0;
   const reduce = useReducedMotion();
-
   return (
     <motion.div variants={reduce ? instantItem : staggerItem}
-      className="group relative rounded-2xl p-4 sm:p-5 overflow-hidden cursor-default transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl"
-      style={{
-        background: 'linear-gradient(135deg,rgba(13,20,38,0.9) 0%,rgba(8,12,20,0.9) 100%)',
-        border: `1px solid ${c.border}`,
-        boxShadow: `0 0 0 1px rgba(255,255,255,0.04), 0 4px 24px ${c.glow}`,
-      }}>
-      {/* Corner glow */}
-      <div className="absolute top-0 right-0 w-32 h-32 rounded-full pointer-events-none opacity-70 group-hover:opacity-100 transition-opacity"
-        style={{ background: `radial-gradient(circle, ${c.glow} 0%, transparent 70%)`, transform: 'translate(30%, -30%)' }} />
-      {/* Top accent line */}
-      <div className="absolute top-0 left-4 right-4 h-px opacity-60" style={{ background: c.bar }} />
-
-      <div className="relative flex items-start justify-between gap-2 mb-3">
-        <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">{label}</p>
-        <div className={`w-8 h-8 ${c.iconBg} rounded-lg flex items-center justify-center flex-shrink-0`}>
-          <Icon size={15} className={c.iconText} />
-        </div>
+      className="group relative rounded-xl p-4 overflow-hidden transition-all duration-200 hover:-translate-y-0.5"
+      style={{ background: 'rgba(13,20,38,0.6)', border: '1px solid rgba(255,255,255,0.07)' }}>
+      <div className="flex items-center gap-2 mb-2.5">
+        <Icon size={13} className="text-gray-500 group-hover:text-orange-400/80 transition-colors flex-shrink-0" />
+        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider truncate">{label}</p>
       </div>
-
-      <div className="relative">
-        <div className={`text-3xl font-black tabular-nums tracking-tight ${empty ? 'text-gray-600' : 'text-white'}`}>
-          {display}{suffix}
-        </div>
-        <p className="text-[11px] text-gray-600 mt-1 truncate">{empty ? (hint ?? '—') : hint}</p>
-      </div>
+      <div className={`text-2xl font-black tabular-nums tracking-tight ${empty ? 'text-gray-600' : 'text-white'}`}>{display}</div>
+      <p className="text-[10px] text-gray-600 mt-0.5 truncate">{hint}</p>
     </motion.div>
   );
 }
@@ -226,10 +244,10 @@ export function OverviewPage() {
       {/* ── Greeting row ── */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2.5">
-          <GreetIcon size={20} className="text-blue-400 flex-shrink-0" />
+          <GreetIcon size={20} className="text-orange-400 flex-shrink-0" />
           <div>
-            <h1 className="text-xl font-bold text-white tracking-tight">{greeting.text}, {firstName}</h1>
-            <p className="text-xs text-gray-600 mt-0.5">{format(new Date(), 'EEEE d MMMM')}</p>
+            <h1 className="text-2xl font-black text-white tracking-tight leading-none">{greeting.text}, {firstName}</h1>
+            <p className="text-xs text-gray-500 mt-1">{format(new Date(), 'EEEE d MMMM')}</p>
           </div>
         </div>
         <div className="hidden sm:block text-right flex-shrink-0">
@@ -239,13 +257,13 @@ export function OverviewPage() {
 
       {/* ── First-run welcome (brand-new account) ── */}
       {freshUser && (
-        <div className="relative overflow-hidden rounded-2xl border border-blue-500/20 p-5 sm:p-6"
-          style={{ background: 'linear-gradient(135deg,rgba(59,130,246,0.10) 0%,rgba(13,20,38,0.6) 55%,rgba(8,12,20,0.6) 100%)' }}>
+        <div className="relative overflow-hidden rounded-2xl border border-orange-500/25 p-5 sm:p-6"
+          style={{ background: 'linear-gradient(135deg,rgba(249,115,22,0.12) 0%,rgba(13,20,38,0.6) 55%,rgba(8,12,20,0.6) 100%)' }}>
           <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full pointer-events-none"
-            style={{ background: 'radial-gradient(circle,rgba(245,158,11,0.10) 0%,transparent 70%)' }} />
+            style={{ background: 'radial-gradient(circle,rgba(249,115,22,0.14) 0%,transparent 70%)' }} />
           <div className="relative flex items-start gap-4">
-            <div className="w-11 h-11 rounded-xl bg-blue-500/15 border border-blue-500/25 flex items-center justify-center flex-shrink-0">
-              <Sparkles size={20} className="text-blue-400" />
+            <div className="w-11 h-11 rounded-xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center flex-shrink-0">
+              <Sparkles size={20} className="text-orange-400" />
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-lg font-bold text-white tracking-tight">Let's get your AI answering calls</h2>
@@ -256,7 +274,7 @@ export function OverviewPage() {
               </p>
               <div className="flex flex-wrap items-center gap-2.5 mt-4">
                 <Link to="/dashboard/settings"
-                  className="inline-flex items-center gap-1.5 bg-blue-500 hover:bg-blue-400 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all shadow-lg shadow-blue-500/20">
+                  className="inline-flex items-center gap-1.5 bg-orange-500 hover:bg-orange-400 text-black text-sm font-bold px-4 py-2 rounded-xl transition-all shadow-lg shadow-orange-500/20">
                   Finish setup <ArrowRight size={14} />
                 </Link>
                 <span className="text-xs text-gray-600">Takes about 10 minutes · no hardware needed</span>
@@ -266,14 +284,16 @@ export function OverviewPage() {
         </div>
       )}
 
-      {/* ── Stat cards ── */}
-      <motion.div className="grid grid-cols-2 xl:grid-cols-4 gap-3 lg:gap-4"
+      {/* ── Stats — deliberate hierarchy: one dominant hero, three quiet supports ── */}
+      <motion.div className="grid gap-3 lg:gap-4 lg:grid-cols-[1.35fr_1fr]"
         variants={reduceMotion ? instantContainer : staggerContainer(0.06)}
         initial="hidden" animate="show">
-        <StatCard icon={Phone} label="Calls today" value={stats?.callsToday ?? 0} color="blue" hint="Answered by your AI" />
-        <StatCard icon={Calendar} label="Jobs booked" value={stats?.bookedToday ?? 0} color="green" hint="Today" />
-        <StatCard icon={TrendingUp} label="Leads this week" value={stats?.leadsThisWeek ?? 0} color="purple" hint="New enquiries" />
-        <StatCard icon={Users} label="Total contacts" value={stats?.totalContacts ?? 0} color="amber" hint="In your CRM" />
+        <HeroMetric value={stats?.callsToday ?? 0} booked={stats?.bookedToday ?? 0} />
+        <div className="grid grid-cols-3 gap-3">
+          <MiniStat icon={TrendingUp} label="Leads" value={stats?.leadsThisWeek ?? 0} hint="this week" />
+          <MiniStat icon={Users} label="Contacts" value={stats?.totalContacts ?? 0} hint="in your CRM" />
+          <MiniStat icon={Calendar} label="Jobs" value={jobsThisWeek} hint="this week" />
+        </div>
       </motion.div>
 
       {/* ── Emergency alert ── */}
@@ -290,13 +310,13 @@ export function OverviewPage() {
       {/* ── Quick actions ── */}
       <div className="flex gap-2 flex-wrap">
         {[
-          { to: '/dashboard/sms', icon: MessageSquare, label: 'Send test SMS', color: 'text-blue-400' },
-          { to: '/dashboard/calls', icon: Phone, label: 'View last call', color: 'text-purple-400' },
-          { to: '/dashboard/settings', icon: Settings, label: 'AI settings', color: 'text-green-400' },
-        ].map(({ to, icon: Icon, label, color }) => (
+          { to: '/dashboard/sms', icon: MessageSquare, label: 'Send test SMS' },
+          { to: '/dashboard/calls', icon: Phone, label: 'View last call' },
+          { to: '/dashboard/settings', icon: Settings, label: 'AI settings' },
+        ].map(({ to, icon: Icon, label }) => (
           <Link key={to} to={to}
-            className="flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-medium text-gray-400 hover:text-white transition-all border border-white/7 hover:border-white/15 bg-white/3 hover:bg-white/6 min-h-[38px]">
-            <Icon size={12} className={color} />{label}
+            className="group flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-medium text-gray-400 hover:text-white transition-all border border-white/7 hover:border-orange-500/30 bg-white/3 hover:bg-white/6 min-h-[38px]">
+            <Icon size={12} className="text-gray-500 group-hover:text-orange-400 transition-colors" />{label}
           </Link>
         ))}
       </div>
@@ -307,10 +327,10 @@ export function OverviewPage() {
         {/* LEFT — Recent calls feed */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-white flex items-center gap-2">
-              <Activity size={14} className="text-blue-400" /> Recent calls
+            <h2 className="text-sm font-bold text-white flex items-center gap-2">
+              <Activity size={14} className="text-orange-400" /> Recent calls
             </h2>
-            <Link to="/dashboard/calls" className="text-xs text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1">
+            <Link to="/dashboard/calls" className="text-xs font-medium text-gray-500 hover:text-orange-400 transition-colors flex items-center gap-1">
               View all <ArrowRight size={11} />
             </Link>
           </div>
@@ -318,13 +338,13 @@ export function OverviewPage() {
           {recentCalls.length === 0 ? (
             <div className="rounded-2xl border border-white/7 py-10 text-center"
               style={{ background: 'rgba(13,20,38,0.5)' }}>
-              <div className="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                <PhoneCall size={22} className="text-blue-400/40" />
+              <div className="w-12 h-12 bg-orange-500/10 border border-orange-500/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <PhoneCall size={22} className="text-orange-400/50" />
               </div>
-              <p className="text-sm font-semibold text-gray-400 mb-1">No calls yet</p>
-              <p className="text-xs text-gray-600 max-w-[200px] mx-auto">Your AI's first call will appear here in real time.</p>
+              <p className="text-sm font-semibold text-gray-300 mb-1">No calls yet — but you're covered</p>
+              <p className="text-xs text-gray-600 max-w-[220px] mx-auto">The next call you can't pick up, your AI answers it. It'll show up here the second it happens.</p>
               <Link to="/dashboard/settings"
-                className="inline-flex items-center gap-1.5 mt-4 text-xs text-blue-400 hover:text-blue-300 transition-colors">
+                className="inline-flex items-center gap-1.5 mt-4 text-xs font-semibold text-orange-400 hover:text-orange-300 transition-colors">
                 Set up call forwarding <ArrowRight size={11} />
               </Link>
             </div>
@@ -335,8 +355,8 @@ export function OverviewPage() {
                 <div key={call.id}
                   className="flex items-center gap-3 px-4 py-3 hover:bg-white/3 transition-colors cursor-pointer group"
                   onClick={() => navigate('/dashboard/calls')}>
-                  <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Phone size={13} className="text-blue-400" />
+                  <div className="w-8 h-8 bg-white/5 group-hover:bg-orange-500/10 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors">
+                    <Phone size={13} className="text-gray-400 group-hover:text-orange-400 transition-colors" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
@@ -361,13 +381,13 @@ export function OverviewPage() {
             <div className="rounded-2xl border border-white/7 p-5"
               style={{ background: 'rgba(13,20,38,0.5)' }}>
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-semibold text-white">Getting started</h2>
-                <span className="text-xs font-semibold text-blue-400 bg-blue-500/10 border border-blue-500/15 px-2 py-0.5 rounded-full">
+                <h2 className="text-sm font-bold text-white">Getting started</h2>
+                <span className="text-xs font-bold text-orange-400 bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded-full tabular-nums">
                   {doneCount}/{CHECKLIST_ITEMS.length}
                 </span>
               </div>
               <div className="h-1 bg-white/6 rounded-full mb-4 overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full transition-all duration-500"
+                <div className="h-full bg-gradient-to-r from-orange-500 to-orange-400 rounded-full transition-all duration-500"
                   style={{ width: `${(doneCount / CHECKLIST_ITEMS.length) * 100}%` }} />
               </div>
               <ul className="space-y-3">
@@ -377,7 +397,7 @@ export function OverviewPage() {
                     <li key={key} className="flex items-start gap-3">
                       <button onClick={() => toggleCheck(key)}
                         className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-                          done ? 'bg-green-500 border-green-500' : 'border-gray-600 hover:border-blue-400'
+                          done ? 'bg-green-500 border-green-500' : 'border-gray-600 hover:border-orange-400'
                         }`}>
                         {done && <CheckCircle2 size={12} className="text-white" />}
                       </button>
@@ -386,7 +406,7 @@ export function OverviewPage() {
                         {!done && (
                           <div className="flex items-center gap-2 mt-0.5">
                             <p className="text-xs text-gray-600">{hint}</p>
-                            <Link to={action} className="text-xs text-blue-400 hover:text-blue-300 flex-shrink-0">Go →</Link>
+                            <Link to={action} className="text-xs font-semibold text-orange-400 hover:text-orange-300 flex-shrink-0">Go →</Link>
                           </div>
                         )}
                       </div>
@@ -399,12 +419,12 @@ export function OverviewPage() {
 
           {/* Weekly summary */}
           <div className="rounded-2xl border border-white/7 p-5"
-            style={{ background: 'rgba(13,20,38,0.5)', borderLeft: '3px solid rgba(59,130,246,0.5)' }}>
+            style={{ background: 'rgba(13,20,38,0.5)', borderLeft: '3px solid rgba(249,115,22,0.55)' }}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-white">This week</h2>
+              <h2 className="text-sm font-bold text-white">This week</h2>
               <div className="flex items-center gap-2.5 flex-shrink-0">
                 <span className="text-xs text-gray-600">Mon – today</span>
-                <Link to="/dashboard/jobs" className="text-xs text-blue-400 hover:text-blue-300 transition-colors">View jobs →</Link>
+                <Link to="/dashboard/jobs" className="text-xs font-medium text-gray-500 hover:text-orange-400 transition-colors">View jobs →</Link>
               </div>
             </div>
             <div className="space-y-3">

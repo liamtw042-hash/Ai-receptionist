@@ -13,14 +13,29 @@ import { api } from '../../lib/api';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { clsx } from 'clsx';
 
-const navItems = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Overview', end: true },
-  { to: '/dashboard/calls', icon: Phone, label: 'Calls' },
-  { to: '/dashboard/jobs', icon: Calendar, label: 'Jobs' },
-  { to: '/dashboard/sms', icon: MessageSquare, label: 'SMS' },
-  { to: '/dashboard/contacts', icon: Users, label: 'Contacts' },
-  { to: '/dashboard/settings', icon: Settings, label: 'Settings' },
+// Grouped nav — "the work" (what the AI does for you) vs "your setup".
+// Grouping gives the sidebar structure instead of a flat equal-weight icon list.
+const navGroups: { heading: string; items: { to: string; icon: typeof Phone; label: string; end?: boolean }[] }[] = [
+  {
+    heading: 'The work',
+    items: [
+      { to: '/dashboard', icon: LayoutDashboard, label: 'Overview', end: true },
+      { to: '/dashboard/calls', icon: Phone, label: 'Calls' },
+      { to: '/dashboard/jobs', icon: Calendar, label: 'Jobs' },
+      { to: '/dashboard/sms', icon: MessageSquare, label: 'SMS' },
+    ],
+  },
+  {
+    heading: 'Your desk',
+    items: [
+      { to: '/dashboard/contacts', icon: Users, label: 'Contacts' },
+      { to: '/dashboard/settings', icon: Settings, label: 'Settings' },
+    ],
+  },
 ];
+
+// Flat list kept for the mobile bottom-nav bar (space-constrained, no grouping).
+const navItems = navGroups.flatMap(g => g.items);
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Overview',
@@ -87,8 +102,8 @@ function CommandSearch({ onClose }: { onClose: () => void }) {
             <button key={item.href}
               onClick={() => { navigate(item.href); onClose(); }}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/6 transition-colors text-left group">
-              <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-500/15 transition-colors">
-                <item.icon size={14} className="text-gray-400 group-hover:text-blue-400 transition-colors" />
+              <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0 group-hover:bg-orange-500/15 transition-colors">
+                <item.icon size={14} className="text-gray-400 group-hover:text-orange-400 transition-colors" />
               </div>
               <div>
                 <p className="text-sm font-medium text-white">{item.label}</p>
@@ -157,37 +172,54 @@ export function DashboardLayout() {
 
   const handleLogout = async () => { await logOut(); navigate('/login'); };
 
-  const SidebarNav = ({ isMobile = false }: { isMobile?: boolean }) => (
-    <nav className={clsx('flex-1 py-3 space-y-0.5 overflow-y-auto', !isMobile && collapsed ? 'px-2' : 'px-2')}>
-      {navItems.map(({ to, icon: Icon, label, end }) => (
-        <NavLink key={to} to={to} end={end} title={collapsed && !isMobile ? label : undefined}
-          className={({ isActive }) => clsx(
-            'relative flex items-center rounded-xl text-sm font-medium transition-all duration-200 group overflow-hidden',
-            !isMobile && collapsed ? 'justify-center px-2 py-3' : 'gap-3 px-3 py-2.5',
-            isMobile && 'min-h-[52px]',
-            isActive
-              ? 'text-white bg-blue-500/[0.14] border border-blue-500/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]'
-              : 'text-gray-500 hover:text-gray-200 hover:bg-white/[0.055] border border-transparent'
-          )}>
-          {({ isActive }) => (
-            <>
-              {/* Left accent bar — the single, deliberate active marker */}
-              {isActive && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[62%] rounded-r-full"
-                  style={{ background: 'linear-gradient(180deg,#60a5fa,#3b82f6)', boxShadow: '0 0 10px rgba(96,165,250,0.7)' }} />
-              )}
-              <Icon size={18} className={clsx(
-                'transition-all duration-200 flex-shrink-0',
-                isActive
-                  ? 'text-blue-400'
-                  : 'text-gray-500 group-hover:text-gray-200 group-hover:translate-x-0.5'
-              )} />
-              {(!collapsed || isMobile) && (
-                <span className={clsx('transition-transform duration-200', isActive ? 'text-white font-semibold' : 'group-hover:translate-x-0.5')}>{label}</span>
-              )}
-            </>
+  const showLabels = (isMobile: boolean) => !collapsed || isMobile;
+
+  const NavRow = ({ to, Icon, label, end, isMobile }: {
+    to: string; Icon: typeof Phone; label: string; end?: boolean; isMobile: boolean;
+  }) => (
+    <NavLink to={to} end={end} title={collapsed && !isMobile ? label : undefined}
+      className={({ isActive }) => clsx(
+        'relative flex items-center rounded-xl text-sm transition-all duration-200 group overflow-hidden',
+        !isMobile && collapsed ? 'justify-center px-2 py-3' : 'gap-3 px-3 py-2.5',
+        isMobile && 'min-h-[52px]',
+        isActive
+          ? 'text-white bg-orange-500/[0.12] border border-orange-500/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]'
+          : 'text-gray-500 hover:text-gray-100 hover:bg-white/[0.055] border border-transparent'
+      )}>
+      {({ isActive }) => (
+        <>
+          {/* Left hi-vis rail — the single, deliberate active marker (orange = tradie accent) */}
+          {isActive && (
+            <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[60%] rounded-r-full"
+              style={{ background: 'linear-gradient(180deg,#fb923c,#f97316)', boxShadow: '0 0 10px rgba(249,115,22,0.65)' }} />
           )}
-        </NavLink>
+          <Icon size={18} className={clsx(
+            'transition-all duration-200 flex-shrink-0',
+            isActive ? 'text-orange-400' : 'text-gray-500 group-hover:text-gray-200 group-hover:translate-x-0.5'
+          )} />
+          {showLabels(isMobile) && (
+            <span className={clsx('transition-transform duration-200', isActive ? 'text-white font-semibold tracking-tight' : 'font-medium group-hover:translate-x-0.5')}>{label}</span>
+          )}
+        </>
+      )}
+    </NavLink>
+  );
+
+  const SidebarNav = ({ isMobile = false }: { isMobile?: boolean }) => (
+    <nav className="flex-1 py-3 px-2 overflow-y-auto">
+      {navGroups.map((group, gi) => (
+        <div key={group.heading} className={clsx(gi > 0 && (showLabels(isMobile) ? 'mt-5' : 'mt-3'))}>
+          {showLabels(isMobile) ? (
+            <p className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-gray-700">{group.heading}</p>
+          ) : gi > 0 ? (
+            <div className="mx-3 mb-2 h-px bg-white/6" />
+          ) : null}
+          <div className="space-y-0.5">
+            {group.items.map(item => (
+              <NavRow key={item.to} to={item.to} Icon={item.icon} label={item.label} end={item.end} isMobile={isMobile} />
+            ))}
+          </div>
+        </div>
       ))}
     </nav>
   );
@@ -197,7 +229,7 @@ export function DashboardLayout() {
       {(!collapsed || isMobile) ? (
         <>
           <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/4 border border-white/6 mb-1.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-xs font-bold text-white flex-shrink-0 shadow-sm">{initials}</div>
+            <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center text-xs font-black text-black flex-shrink-0 shadow-sm">{initials}</div>
             <div className="min-w-0 flex-1">
               <p className="text-xs font-medium text-white truncate">{user?.email}</p>
               <p className="text-[10px] text-green-400 flex items-center gap-1 mt-0.5">
@@ -242,15 +274,15 @@ export function DashboardLayout() {
         !isMobile && collapsed ? 'justify-center px-2' : 'px-4 gap-2.5'
       )}>
         <div className="relative flex-shrink-0">
-          <div className="absolute inset-0 bg-blue-500/30 rounded-xl blur-md" />
-          <div className="relative w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/25">
-            <Zap size={15} className="text-white" />
+          <div className="absolute inset-0 bg-orange-500/25 rounded-xl blur-md" />
+          <div className="relative w-8 h-8 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/25 ring-1 ring-orange-400/40">
+            <Zap size={15} className="text-black" fill="currentColor" />
           </div>
         </div>
         {(!collapsed || isMobile) && (
-          <div className="overflow-hidden">
-            <span className="font-bold text-white text-base tracking-tight whitespace-nowrap">TradeDesk</span>
-            <p className="text-[9px] text-blue-400/60 font-semibold tracking-widest uppercase whitespace-nowrap">AI Receptionist</p>
+          <div className="overflow-hidden leading-none">
+            <span className="font-black text-white text-base tracking-tight whitespace-nowrap">TradeDesk</span>
+            <p className="text-[9px] text-orange-400/70 font-bold tracking-[0.18em] uppercase whitespace-nowrap mt-0.5">AI Receptionist</p>
           </div>
         )}
         {isMobile && (
@@ -311,7 +343,7 @@ export function DashboardLayout() {
 
           {/* Page title */}
           <div className="flex-1 min-w-0">
-            <h2 className="text-sm font-semibold text-white tracking-tight">{currentPage}</h2>
+            <h2 className="text-sm font-bold text-white tracking-tight">{currentPage}</h2>
           </div>
 
           {/* Right controls */}
@@ -319,7 +351,7 @@ export function DashboardLayout() {
             {/* Search / command palette trigger */}
             <button onClick={() => setCmdOpen(true)}
               className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-gray-600 hover:text-gray-300 bg-white/4 hover:bg-white/7 border border-white/7 transition-all group min-h-[34px]">
-              <Search size={12} className="group-hover:text-blue-400 transition-colors" />
+              <Search size={12} className="group-hover:text-orange-400 transition-colors" />
               <span className="hidden md:block">Search</span>
               <kbd className="hidden md:block text-[10px] font-mono bg-white/8 px-1.5 py-0.5 rounded text-gray-600">⌘K</kbd>
             </button>
@@ -361,8 +393,11 @@ export function DashboardLayout() {
                     <div className="divide-y divide-white/5 max-h-64 overflow-y-auto">
                       {recentCalls.length === 0 ? (
                         <div className="px-4 py-8 text-center">
-                          <PhoneIncoming size={20} className="text-gray-700 mx-auto mb-2" />
-                          <p className="text-xs text-gray-600">No calls yet — they'll show up here</p>
+                          <div className="w-9 h-9 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mx-auto mb-2.5">
+                            <PhoneIncoming size={16} className="text-orange-400/70" />
+                          </div>
+                          <p className="text-xs font-semibold text-gray-300">All quiet for now</p>
+                          <p className="text-[11px] text-gray-600 mt-0.5">The moment your AI answers a call, it'll land here.</p>
                         </div>
                       ) : recentCalls.map(call => {
                         const meta = notifMeta(call.outcome);
@@ -384,7 +419,7 @@ export function DashboardLayout() {
                       })}
                     </div>
                     <div className="px-4 py-2.5 border-t border-white/8">
-                      <NavLink to="/dashboard/calls" onClick={() => setNotifOpen(false)} className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
+                      <NavLink to="/dashboard/calls" onClick={() => setNotifOpen(false)} className="text-xs font-medium text-orange-400 hover:text-orange-300 transition-colors">
                         View all calls →
                       </NavLink>
                     </div>
@@ -397,7 +432,7 @@ export function DashboardLayout() {
             </div>
 
             {/* Avatar */}
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-xs font-bold text-white shadow-sm cursor-pointer hover:ring-2 hover:ring-blue-500/40 transition-all">
+            <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center text-xs font-black text-black shadow-sm cursor-pointer hover:ring-2 hover:ring-orange-500/40 transition-all">
               {initials}
             </div>
           </div>
@@ -406,7 +441,7 @@ export function DashboardLayout() {
         {/* Page content */}
         <main className="flex-1 overflow-auto p-4 lg:p-6 pb-24 lg:pb-6"
           style={{
-            backgroundImage: 'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(59,130,246,0.04) 0%, transparent 70%)',
+            backgroundImage: 'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(249,115,22,0.035) 0%, transparent 70%)',
           }}>
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
@@ -429,18 +464,18 @@ export function DashboardLayout() {
           <NavLink key={to} to={to} end={end}
             className={({ isActive }) => clsx(
               'flex-1 flex flex-col items-center justify-center gap-0.5 transition-all',
-              isActive ? 'text-blue-400' : 'text-gray-600'
+              isActive ? 'text-orange-400' : 'text-gray-600'
             )}>
             {({ isActive }) => (
               <>
                 <div className={clsx(
                   'flex items-center justify-center w-10 h-6 rounded-lg transition-all',
-                  isActive ? 'bg-blue-500/15' : ''
+                  isActive ? 'bg-orange-500/15' : ''
                 )}>
-                  <Icon size={18} className={clsx(isActive ? 'text-blue-400' : 'text-gray-600')}
-                    style={isActive ? { filter: 'drop-shadow(0 0 6px rgba(96,165,250,0.7))' } : undefined} />
+                  <Icon size={18} className={clsx(isActive ? 'text-orange-400' : 'text-gray-600')}
+                    style={isActive ? { filter: 'drop-shadow(0 0 6px rgba(251,146,60,0.7))' } : undefined} />
                 </div>
-                <span className={clsx('text-[9px] font-semibold tracking-wide', isActive ? 'text-blue-400' : 'text-gray-700')}>
+                <span className={clsx('text-[9px] font-semibold tracking-wide', isActive ? 'text-orange-400' : 'text-gray-700')}>
                   {label}
                 </span>
               </>

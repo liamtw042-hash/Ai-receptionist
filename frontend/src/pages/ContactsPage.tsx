@@ -44,15 +44,6 @@ function avatarInitials(contact: Contact): string {
   return clean.slice(-2);
 }
 
-const AVATAR_GRADIENTS = [
-  'from-blue-500 to-purple-500',
-  'from-green-500 to-teal-500',
-  'from-orange-500 to-red-500',
-  'from-pink-500 to-rose-500',
-  'from-indigo-500 to-blue-500',
-  'from-emerald-500 to-green-500',
-];
-
 function fmtPhone(num: string): string {
   if (!num) return '—';
   const clean = num.replace(/\D/g, '');
@@ -106,7 +97,7 @@ export function ContactsPage() {
     <button onClick={() => toggleSort(col)}
       className={clsx(
         'flex items-center gap-1 text-xs font-semibold uppercase tracking-wider transition-colors',
-        sortKey === col ? 'text-blue-400' : 'text-gray-600 hover:text-gray-300'
+        sortKey === col ? 'text-orange-400' : 'text-gray-600 hover:text-gray-300'
       )}>
       {label}
       {sortKey === col ? (
@@ -122,8 +113,8 @@ export function ContactsPage() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="flex-1">
-          <h1 className="text-lg font-bold text-white tracking-tight">Contacts</h1>
-          <p className="text-xs text-gray-600 mt-0.5">{contacts.length} callers in your CRM</p>
+          <h1 className="text-2xl font-black text-white tracking-tight leading-none">Contacts</h1>
+          <p className="text-xs text-gray-500 mt-1.5">{contacts.length} callers in your CRM</p>
         </div>
       </div>
 
@@ -132,7 +123,7 @@ export function ContactsPage() {
         <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
         <input value={search} onChange={e => setSearch(e.target.value)}
           placeholder="Search name, phone, or trade…"
-          className="w-full bg-white/4 border border-white/7 rounded-xl pl-9 pr-9 py-2.5 text-sm text-white placeholder-gray-700 focus:outline-none focus:border-blue-500/50 transition-colors min-h-[42px]" />
+          className="w-full bg-white/4 border border-white/7 rounded-xl pl-9 pr-9 py-2.5 text-sm text-white placeholder-gray-700 focus:outline-none focus:border-orange-500/50 transition-colors min-h-[42px]" />
         {search && (
           <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-white">
             <X size={12} />
@@ -145,11 +136,15 @@ export function ContactsPage() {
         <div className="space-y-2">{[...Array(6)].map((_, i) => <SkeletonRow key={i} />)}</div>
       ) : sorted.length === 0 ? (
         <div className="rounded-2xl border border-white/7 py-14 text-center" style={{ background: 'rgba(13,20,38,0.5)' }}>
-          <div className="w-14 h-14 bg-blue-500/8 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Users size={24} className="text-blue-400/30" />
+          <div className="w-14 h-14 bg-orange-500/8 border border-orange-500/15 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Users size={24} className="text-orange-400/40" />
           </div>
-          <p className="text-sm font-semibold text-gray-400 mb-1">No contacts yet</p>
-          <p className="text-xs text-gray-600 max-w-[200px] mx-auto">Callers are automatically added when your AI handles a call.</p>
+          <p className="text-sm font-semibold text-gray-300 mb-1">
+            {search ? 'No contacts match that' : 'No contacts yet'}
+          </p>
+          <p className="text-xs text-gray-600 max-w-[240px] mx-auto">
+            {search ? 'Try a different name, number or trade.' : 'Every caller your AI speaks to gets saved here automatically — name, trade and call history included.'}
+          </p>
         </div>
       ) : (
         <div className="rounded-2xl border border-white/7 overflow-hidden" style={{ background: 'rgba(13,20,38,0.5)' }}>
@@ -165,8 +160,7 @@ export function ContactsPage() {
 
           {/* Rows */}
           <div className="divide-y divide-white/5">
-            {sorted.map((contact, idx) => {
-              const grad = AVATAR_GRADIENTS[idx % AVATAR_GRADIENTS.length];
+            {sorted.map((contact) => {
               const tc = getTradeColors(contact.trade);
               const calls = contact.totalCalls ?? contact.callCount ?? 0;
               const isMenuOpen = activeMenu === contact.id;
@@ -174,9 +168,9 @@ export function ContactsPage() {
               return (
                 <div key={contact.id}
                   className="flex sm:grid sm:grid-cols-[2fr_1fr_1fr_1fr_auto] gap-3 sm:gap-4 items-center px-4 py-3.5 hover:bg-white/3 transition-colors group">
-                  {/* Avatar + name */}
+                  {/* Avatar + name — monochrome tile (no rainbow gradient) */}
                   <div className="flex items-center gap-3 min-w-0 flex-1 sm:flex-none">
-                    <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${grad} flex items-center justify-center text-xs font-bold text-white flex-shrink-0 shadow-sm`}>
+                    <div className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/10 group-hover:border-orange-500/25 flex items-center justify-center text-xs font-black text-gray-300 flex-shrink-0 transition-colors">
                       {avatarInitials(contact)}
                     </div>
                     <div className="min-w-0">
@@ -205,15 +199,10 @@ export function ContactsPage() {
                       : '—'}
                   </div>
 
-                  {/* Call count */}
-                  <div className="hidden sm:flex items-center gap-2">
-                    <div className="flex gap-0.5">
-                      {[...Array(Math.min(calls, 5))].map((_, i) => (
-                        <div key={i} className="w-1.5 h-1.5 rounded-full bg-blue-500/60" />
-                      ))}
-                      {calls > 5 && <span className="text-[10px] text-gray-600 ml-1">+{calls - 5}</span>}
-                    </div>
-                    <span className="text-sm font-semibold text-white tabular-nums">{calls}</span>
+                  {/* Call count — honest number, no decorative fake bar */}
+                  <div className="hidden sm:flex items-center gap-1.5">
+                    <span className="text-sm font-bold text-white tabular-nums">{calls}</span>
+                    <span className="text-[11px] text-gray-600">{calls === 1 ? 'call' : 'calls'}</span>
                   </div>
 
                   {/* Actions */}
@@ -224,7 +213,7 @@ export function ContactsPage() {
                     <button
                       onClick={e => { e.stopPropagation(); navigate('/dashboard/calls'); }}
                       title="View calls"
-                      className="w-7 h-7 rounded-lg bg-white/5 hover:bg-blue-500/15 flex items-center justify-center text-gray-500 hover:text-blue-400 transition-all border border-white/5 hover:border-blue-500/25">
+                      className="w-7 h-7 rounded-lg bg-white/5 hover:bg-orange-500/15 flex items-center justify-center text-gray-500 hover:text-orange-400 transition-all border border-white/5 hover:border-orange-500/25">
                       <Phone size={12} />
                     </button>
                     <button

@@ -75,7 +75,7 @@ function Toggle({ label, hint, checked, onChange }: { label: string; hint?: stri
       <button
         type="button"
         onClick={() => onChange(!checked)}
-        className={`relative w-11 h-6 rounded-full transition-all duration-200 flex-shrink-0 ${checked ? 'bg-blue-500' : 'bg-white/15'}`}
+        className={`relative w-11 h-6 rounded-full transition-all duration-200 flex-shrink-0 ${checked ? 'bg-orange-500' : 'bg-white/15'}`}
       >
         <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-200 ${checked ? 'left-[22px]' : 'left-0.5'}`} />
       </button>
@@ -567,8 +567,8 @@ export function SettingsPage() {
   return (
     <div className="max-w-2xl animate-slide-up">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">Settings</h1>
-        <p className="text-gray-500 text-sm mt-0.5">Configure your AI receptionist</p>
+        <h1 className="text-2xl font-black text-white tracking-tight leading-none">Settings</h1>
+        <p className="text-gray-500 text-sm mt-1.5">Configure your AI receptionist</p>
       </div>
 
       {googleStatus === 'connected' && (
@@ -705,10 +705,10 @@ export function SettingsPage() {
             type="button"
             onClick={handleTestAI}
             disabled={testing}
-            className="flex items-center gap-2 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-400 text-sm font-medium px-4 py-2.5 rounded-lg transition-all duration-200 disabled:opacity-50"
+            className="flex items-center gap-2 bg-orange-500/15 hover:bg-orange-500/25 border border-orange-500/30 text-orange-400 text-sm font-semibold px-4 py-2.5 rounded-lg transition-all duration-200 disabled:opacity-50"
           >
             {testing ? (
-              <><span className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin inline-block" />Simulating call...</>
+              <><span className="w-4 h-4 border-2 border-orange-400 border-t-transparent rounded-full animate-spin inline-block" />Simulating call...</>
             ) : (
               <><Play size={15} />Simulate a call</>
             )}
@@ -718,10 +718,10 @@ export function SettingsPage() {
           )}
           {testResult && (
             <div className="mt-4 space-y-3 animate-fade-in">
-              <div className="glass rounded-xl p-4 border border-blue-500/20 bg-blue-500/5">
+              <div className="glass rounded-xl p-4 border border-orange-500/20 bg-orange-500/[0.06]">
                 <div className="flex items-center gap-2 mb-2">
-                  <Mic size={14} className="text-blue-400" />
-                  <p className="text-xs text-blue-400 font-semibold">Your AI says when it picks up:</p>
+                  <Mic size={14} className="text-orange-400" />
+                  <p className="text-xs text-orange-400 font-semibold">Your AI says when it picks up:</p>
                 </div>
                 <p className="text-sm text-white leading-relaxed italic">"{testResult.greeting}"</p>
               </div>
@@ -731,8 +731,8 @@ export function SettingsPage() {
                     Caller asks: <span className="text-gray-300">"{testResult.sampleQuestion}"</span>
                   </p>
                   <div className="flex items-center gap-2 mb-1.5">
-                    <Mic size={14} className="text-blue-400" />
-                    <p className="text-xs text-blue-400 font-semibold">Your AI replies:</p>
+                    <Mic size={14} className="text-orange-400" />
+                    <p className="text-xs text-orange-400 font-semibold">Your AI replies:</p>
                   </div>
                   <p className="text-sm text-white leading-relaxed italic">"{testResult.sampleReply}"</p>
                 </div>

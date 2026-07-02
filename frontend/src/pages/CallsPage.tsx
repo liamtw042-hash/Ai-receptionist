@@ -59,20 +59,20 @@ function TranscriptBubble({ msg }: { msg: Message }) {
   return (
     <div className={clsx('flex gap-2.5', isAI ? 'justify-start' : 'justify-end')}>
       {isAI && (
-        <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-          <Phone size={10} className="text-blue-400" />
+        <div className="w-6 h-6 rounded-full bg-orange-500/20 border border-orange-500/25 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <Phone size={10} className="text-orange-400" />
         </div>
       )}
       <div className={clsx(
         'max-w-[78%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed',
         isAI
-          ? 'bg-white/8 text-gray-200 rounded-tl-sm border border-white/6'
-          : 'bg-blue-600/80 text-white rounded-tr-sm'
+          ? 'bg-white/[0.07] text-gray-100 rounded-tl-sm border border-white/8'
+          : 'bg-white/[0.12] text-gray-100 rounded-tr-sm border border-white/10'
       )}>
         {msg.content}
       </div>
       {!isAI && (
-        <div className="w-6 h-6 rounded-full bg-gray-600/40 flex items-center justify-center flex-shrink-0 mt-0.5">
+        <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0 mt-0.5">
           <User size={10} className="text-gray-400" />
         </div>
       )}
@@ -114,8 +114,8 @@ export function CallsPage() {
       {/* Header row */}
       <div className="flex items-center gap-3">
         <div className="flex-1">
-          <h1 className="text-lg font-bold text-white tracking-tight">Calls</h1>
-          <p className="text-xs text-gray-600 mt-0.5">{calls.length} total · AI-handled</p>
+          <h1 className="text-2xl font-black text-white tracking-tight leading-none">Calls</h1>
+          <p className="text-xs text-gray-500 mt-1.5">{calls.length} answered by your AI</p>
         </div>
         <button onClick={() => load(true)} disabled={refreshing}
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs text-gray-500 hover:text-white bg-white/4 hover:bg-white/8 border border-white/7 transition-all min-h-[38px]">
@@ -130,7 +130,7 @@ export function CallsPage() {
           <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
           <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search number or summary…"
-            className="w-full bg-white/4 border border-white/7 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-700 focus:outline-none focus:border-blue-500/50 transition-colors min-h-[42px]" />
+            className="w-full bg-white/4 border border-white/7 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-700 focus:outline-none focus:border-orange-500/50 transition-colors min-h-[42px]" />
           {search && (
             <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-white">
               <X size={12} />
@@ -144,7 +144,7 @@ export function CallsPage() {
               className={clsx(
                 'px-3 py-2 rounded-xl text-xs font-medium transition-all border min-h-[38px] whitespace-nowrap',
                 filter === f
-                  ? 'bg-blue-500/15 border-blue-500/30 text-blue-400'
+                  ? 'bg-orange-500/15 border-orange-500/30 text-orange-400'
                   : 'bg-white/3 border-white/7 text-gray-500 hover:text-gray-200 hover:border-white/15'
               )}>
               {f}
@@ -158,12 +158,16 @@ export function CallsPage() {
         <div className="space-y-2">{[...Array(6)].map((_, i) => <SkeletonRow key={i} />)}</div>
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-white/7 py-14 text-center" style={{ background: 'rgba(13,20,38,0.5)' }}>
-          <div className="w-14 h-14 bg-blue-500/8 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Phone size={24} className="text-blue-400/30" />
+          <div className="w-14 h-14 bg-orange-500/8 border border-orange-500/15 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Phone size={24} className="text-orange-400/40" />
           </div>
-          <p className="text-sm font-semibold text-gray-400 mb-1">No calls found</p>
-          <p className="text-xs text-gray-600">
-            {search || filter !== 'All' ? 'Try adjusting your filters.' : 'Calls will appear here once your AI starts answering.'}
+          <p className="text-sm font-semibold text-gray-300 mb-1">
+            {search || filter !== 'All' ? 'No calls match that' : 'No calls yet'}
+          </p>
+          <p className="text-xs text-gray-600 max-w-[240px] mx-auto">
+            {search || filter !== 'All'
+              ? 'Try clearing the search or picking a different outcome.'
+              : "The next time a caller reaches your AI, the full transcript and outcome land right here."}
           </p>
         </div>
       ) : (
@@ -212,7 +216,7 @@ export function CallsPage() {
                       </span>
                       <ChevronDown size={14} className={clsx(
                         'text-gray-600 transition-transform duration-200',
-                        isOpen && 'rotate-180 text-blue-400'
+                        isOpen && 'rotate-180 text-orange-400'
                       )} />
                     </div>
                   </div>
@@ -244,9 +248,9 @@ export function CallsPage() {
 
                     {/* Summary pill */}
                     {call.summary && (
-                      <div className="mb-3 px-3.5 py-2.5 rounded-xl text-xs text-gray-300 border border-white/6"
-                        style={{ background: 'rgba(59,130,246,0.06)' }}>
-                        <span className="text-blue-400 font-semibold text-[10px] uppercase tracking-wider">AI Summary · </span>
+                      <div className="mb-3 px-3.5 py-2.5 rounded-xl text-xs text-gray-200 border border-orange-500/15"
+                        style={{ background: 'rgba(249,115,22,0.06)' }}>
+                        <span className="text-orange-400 font-bold text-[10px] uppercase tracking-wider">AI summary · </span>
                         {call.summary}
                       </div>
                     )}
