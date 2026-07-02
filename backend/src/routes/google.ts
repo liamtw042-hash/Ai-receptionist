@@ -118,6 +118,42 @@ export async function createCalendarEvent(
   });
 }
 
+// GET /api/google/callback — OAuth callback from Google (must be BEFORE requireAuth)
+router.get('/callback', async (req: AuthRequest, res: Response) => {
+  const { code, state: userId } = req.query as { code: string; state: string };
+
+  if (!code || !userId) {
+    res.status(400).send('Missing code or state');
+    return;
+  }
+
+  try {
+    const oauth2 = getOAuthClient();
+    const { tokens } = await oauth2.getToken(code);
+    oauth2.setCredentials(tokens);
+
+    // Get user email
+    const oauth2Api = google.oauth2({ version: 'v2', auth: oauth2 });
+    const userInfo = await oauth2Api.userinfo.get();
+
+    await db.collection('googleTokens').doc(userId).set({
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+      expiry_date: tokens.expiry_date,
+      email: userInfo.data.email,
+      connectedAt: new Date().toISOString(),
+    }, { merge: true });
+
+    // Redirect to frontend settings page
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    res.redirect(`${frontendUrl}/dashboard/settings?google=connected`);
+  } catch (err) {
+    console.error('Google OAuth callback error:', err);
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    res.redirect(`${frontendUrl}/dashboard/settings?google=error`);
+  }
+});
+
 // ── All routes below require auth ─────────────────────────────────────────────
 router.use(requireAuth);
 
@@ -159,42 +195,6 @@ router.get('/connect', async (req: AuthRequest, res: Response) => {
     res.json({ url });
   } catch (err) {
     res.status(500).json({ error: 'Failed to generate OAuth URL' });
-  }
-});
-
-// GET /api/google/callback — OAuth callback from Google
-router.get('/callback', async (req: AuthRequest, res: Response) => {
-  const { code, state: userId } = req.query as { code: string; state: string };
-
-  if (!code || !userId) {
-    res.status(400).send('Missing code or state');
-    return;
-  }
-
-  try {
-    const oauth2 = getOAuthClient();
-    const { tokens } = await oauth2.getToken(code);
-    oauth2.setCredentials(tokens);
-
-    // Get user email
-    const oauth2Api = google.oauth2({ version: 'v2', auth: oauth2 });
-    const userInfo = await oauth2Api.userinfo.get();
-
-    await db.collection('googleTokens').doc(userId).set({
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token,
-      expiry_date: tokens.expiry_date,
-      email: userInfo.data.email,
-      connectedAt: new Date().toISOString(),
-    }, { merge: true });
-
-    // Redirect to frontend settings page
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    res.redirect(`${frontendUrl}/dashboard/settings?google=connected`);
-  } catch (err) {
-    console.error('Google OAuth callback error:', err);
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    res.redirect(`${frontendUrl}/dashboard/settings?google=error`);
   }
 });
 

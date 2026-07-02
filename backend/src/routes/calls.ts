@@ -23,9 +23,13 @@ router.get('/', async (req: AuthRequest, res: Response) => {
         callerNumber: data.callerNumber,
         outcome: data.outcome,
         summary: data.summary,
-        duration: data.duration,
+        durationSeconds: data.durationSeconds ?? data.duration ?? null,
         createdAt: data.createdAt,
         turns: data.turns?.length ?? 0,
+        transcript: (data.turns ?? []).map((t: { role: string; content: string }) => ({
+          role: t.role,
+          content: t.content,
+        })),
       };
     });
 

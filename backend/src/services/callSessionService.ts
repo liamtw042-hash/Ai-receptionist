@@ -45,7 +45,7 @@ export function addTurn(callSid: string, role: 'user' | 'assistant', content: st
   session.updatedAt = new Date();
 }
 
-export async function finalizeSession(callSid: string, summary: string, outcome: CallSession['outcome']): Promise<string | null> {
+export async function finalizeSession(callSid: string, summary: string, outcome: CallSession['outcome'], durationSeconds?: number): Promise<string | null> {
   const session = sessions.get(callSid);
   if (!session) return null;
 
@@ -58,6 +58,7 @@ export async function finalizeSession(callSid: string, summary: string, outcome:
     turns: session.turns.map(t => ({ ...t, timestamp: t.timestamp.toISOString() })),
     createdAt: session.createdAt.toISOString(),
     updatedAt: session.updatedAt.toISOString(),
+    durationSeconds: durationSeconds ?? null,
     googleSheetLogged: false,
   });
 

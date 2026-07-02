@@ -67,21 +67,64 @@ router.post('/send', requireAuth, async (req: AuthRequest, res: Response) => {
 // Get SMS conversations
 router.get('/conversations', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const snap = await db.collection('sms_messages')
-      .where('userId', '==', req.userId)
-      .orderBy('timestamp', 'desc')
-      .limit(200)
-      .get();
+    const [smsSnap, contactsSnap] = await Promise.all([
+      db.collection('sms_messages')
+        .where('userId', '==', req.userId)
+        .orderBy('timestamp', 'desc')
+        .limit(300)
+        .get(),
+      db.collection('contacts')
+        .where('userId', '==', req.userId)
+        .get(),
+    ]);
 
-    const grouped: Record<string, Array<{ body: string; direction: string; timestamp: string }>> = {};
-    snap.docs.forEach(d => {
+    // Build contact name lookup
+    const contactNames: Record<string, string> = {};
+    contactsSnap.docs.forEach(d => {
       const data = d.data();
-      const num = data.contactNumber;
-      if (!grouped[num]) grouped[num] = [];
-      grouped[num].push({ body: data.body, direction: data.direction, timestamp: data.timestamp.toDate().toISOString() });
+      if (data.phone && data.name) contactNames[data.phone] = data.name;
     });
 
-    res.json(grouped);
+    // Group messages by phone number (oldest-first per thread)
+    const threads: Record<string, {
+      messages: Array<{ id: string; direction: string; body: string; createdAt: string; status?: string }>;
+      lastAt: string;
+    }> = {};
+
+    // snap is newest-first, so push and reverse per thread
+    smsSnap.docs.forEach(d => {
+      const data = d.data();
+      const num: string = data.contactNumber;
+      if (!threads[num]) threads[num] = { messages: [], lastAt: '' };
+      const ts = data.timestamp?.toDate ? data.timestamp.toDate().toISOString() : (data.timestamp ?? new Date().toISOString());
+      threads[num].messages.push({
+        id: d.id,
+        direction: data.direction,
+        body: data.body,
+        createdAt: ts,
+        status: data.read === false && data.direction === 'inbound' ? 'delivered' : undefined,
+      });
+      if (!threads[num].lastAt || ts > threads[num].lastAt) threads[num].lastAt = ts;
+    });
+
+    const conversations = Object.entries(threads)
+      .sort(([, a], [, b]) => b.lastAt.localeCompare(a.lastAt))
+      .map(([phoneNumber, thread]) => {
+        const msgs = thread.messages.slice().reverse(); // oldest-first
+        const last = msgs[msgs.length - 1];
+        const unread = msgs.filter(m => m.direction === 'inbound' && !m.status).length;
+        return {
+          id: phoneNumber,
+          phoneNumber,
+          contactName: contactNames[phoneNumber] ?? undefined,
+          messages: msgs,
+          lastMessage: last?.body ?? '',
+          lastMessageAt: last?.createdAt ?? '',
+          unread,
+        };
+      });
+
+    res.json(conversations);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch conversations' });
   }

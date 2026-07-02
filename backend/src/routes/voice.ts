@@ -188,6 +188,8 @@ router.post('/status', async (req: Request, res: Response) => {
       const settings = await getBusinessSettings(userId);
       if (!settings) { res.sendStatus(200); return; }
 
+      const durationSeconds = req.body.CallDuration ? parseInt(req.body.CallDuration, 10) : undefined;
+
       const transcript = session.turns.map(t => `${t.role === 'assistant' ? 'AI' : 'Caller'}: ${t.content}`).join('\n');
       const outcome = session.outcome === 'in_progress' ? detectOutcome(transcript) : session.outcome;
 
@@ -197,7 +199,7 @@ router.post('/status', async (req: Request, res: Response) => {
         summaryPrompt
       );
 
-      const callDoc = await finalizeSession(CallSid, summary, outcome);
+      const callDoc = await finalizeSession(CallSid, summary, outcome, durationSeconds);
       await sendCallSummaryToTradie(settings.mobileNumber, From, summary, outcome.replace(/_/g, ' ').toUpperCase());
 
       if (outcome === 'job_booked') {
