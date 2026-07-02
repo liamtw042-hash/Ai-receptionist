@@ -1,5 +1,6 @@
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   LayoutDashboard, Phone, MessageSquare, Users, Settings,
   Menu, X, LogOut, Zap, Bell, Search,
@@ -98,6 +99,8 @@ export function DashboardLayout() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [unread, setUnread] = useState(2);
   const [cmdOpen, setCmdOpen] = useState(false);
+  const bellRef = useRef<HTMLButtonElement>(null);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
   const { logOut, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -298,7 +301,15 @@ export function DashboardLayout() {
 
             {/* Notification bell */}
             <div className="relative">
-              <button onClick={() => { setNotifOpen(o => !o); setUnread(0); }}
+              <button ref={bellRef}
+                onClick={() => {
+                  if (!notifOpen && bellRef.current) {
+                    const rect = bellRef.current.getBoundingClientRect();
+                    setDropdownStyle({ position: 'fixed', top: rect.bottom + 8, right: window.innerWidth - rect.right });
+                  }
+                  setNotifOpen(o => !o);
+                  setUnread(0);
+                }}
                 className="relative w-9 h-9 rounded-lg flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/7 border border-white/7 transition-all min-h-[44px] min-w-[44px]">
                 <Bell size={15} />
                 {unread > 0 && (
@@ -307,11 +318,11 @@ export function DashboardLayout() {
                   </span>
                 )}
               </button>
-              {notifOpen && (
+              {notifOpen && createPortal(
                 <>
                   <div className="fixed inset-0 z-[9998]" onClick={() => setNotifOpen(false)} />
-                  <div className="fixed right-4 top-14 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-white/10 shadow-2xl shadow-black/60 z-[9999] overflow-hidden"
-                    style={{ background: '#0d1426' }}>
+                  <div className="w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-white/10 shadow-2xl shadow-black/60 z-[9999] overflow-hidden"
+                    style={{ ...dropdownStyle, background: '#0d1426' }}>
                     <div className="flex items-center justify-between px-4 py-3 border-b border-white/8">
                       <span className="text-sm font-semibold text-white">Notifications</span>
                       <button onClick={() => setNotifOpen(false)} className="text-gray-600 hover:text-white p-1"><X size={13} /></button>
@@ -336,7 +347,8 @@ export function DashboardLayout() {
                       </NavLink>
                     </div>
                   </div>
-                </>
+                </>,
+                document.body
               )}
             </div>
 
