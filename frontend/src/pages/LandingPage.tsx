@@ -274,20 +274,23 @@ function ChatWidget() {
 function ExitIntentPopup({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-[9990] flex items-center justify-center px-4 bg-black/70 backdrop-blur-sm">
-      <div className="exit-intent glass rounded-2xl border border-blue-500/30 max-w-sm w-full p-8 text-center relative">
-        <button onClick={onClose} className="absolute top-3 right-3 text-gray-500 hover:text-white"><X size={18} /></button>
-        <div className="w-14 h-14 bg-blue-500/15 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <DollarSign size={26} className="text-blue-400" />
+      <div className="exit-intent glass rounded-2xl border border-amber-500/30 max-w-sm w-full p-8 text-center relative">
+        <button onClick={onClose} className="absolute top-3 right-3 text-gray-500 hover:text-white" aria-label="Close"><X size={18} /></button>
+        <div className="w-14 h-14 bg-amber-500/15 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <Phone size={26} className="text-amber-400" />
         </div>
-        <p className="text-xs text-blue-400 font-semibold uppercase tracking-widest mb-2">Wait — one more thing</p>
-        <h3 className="text-2xl font-black text-white mb-3">Get your first month free</h3>
-        <p className="text-sm text-gray-400 mb-6 leading-relaxed">Use code <strong className="text-white font-mono bg-white/10 px-2 py-0.5 rounded">FIRSTMONTH</strong> at signup. Normally $199 — yours free.</p>
+        <p className="text-xs text-amber-400 font-semibold uppercase tracking-widest mb-2">Before you go</p>
+        <h3 className="text-2xl font-black text-white mb-3">How many jobs walked past today?</h3>
+        <p className="text-sm text-gray-400 mb-6 leading-relaxed">
+          Every missed call while you're on the tools is a job someone else picks up.
+          Try TradeDesk free for 7 days — no card, cancel any time.
+        </p>
         <Link to="/signup" onClick={onClose}
           className="btn-shimmer flex items-center justify-center gap-2 w-full bg-blue-500 hover:bg-blue-400 text-white font-bold py-3.5 rounded-xl transition-all min-h-[52px]"
           style={{ boxShadow: '0 0 20px rgba(59,130,246,0.35)' }}>
-          Claim free month <ArrowRight size={16} />
+          Start my free trial <ArrowRight size={16} />
         </Link>
-        <button onClick={onClose} className="mt-3 text-xs text-gray-600 hover:text-gray-400 transition-colors">No thanks, I'd rather pay full price</button>
+        <button onClick={onClose} className="mt-3 text-xs text-gray-600 hover:text-gray-400 transition-colors">Not right now</button>
       </div>
     </div>
   );
@@ -391,9 +394,9 @@ function RevenueCalculator() {
           <div className="text-xs text-gray-500 mb-1">Annual revenue lost</div>
           <div className="text-2xl sm:text-3xl font-extrabold text-red-400">${(monthlyLoss * 12).toLocaleString()}</div>
         </div>
-        <div className="glass rounded-xl p-4 border border-green-500/20 text-center">
+        <div className="glass rounded-xl p-4 border border-amber-500/25 text-center" style={{ background: 'rgba(245,158,11,0.04)' }}>
           <div className="text-xs text-gray-500 mb-1">TradeDesk pays back in</div>
-          <div className="text-2xl sm:text-3xl font-extrabold text-green-400">{daysToROI <= 1 ? '< 1 day' : `${daysToROI} days`}</div>
+          <div className="text-2xl sm:text-3xl font-extrabold text-amber-400">{daysToROI <= 1 ? '< 1 day' : `${daysToROI} days`}</div>
         </div>
       </div>
       <div className="text-center">
@@ -627,7 +630,7 @@ export function LandingPage() {
       {exitIntent && <ExitIntentPopup onClose={() => setExitIntent(false)} />}
 
       {/* ── Top border ── */}
-      <div className="fixed top-0 inset-x-0 h-0.5 bg-gradient-to-r from-blue-600 via-blue-400 to-purple-500 z-[9997]" />
+      <div className="fixed top-0 inset-x-0 h-0.5 bg-gradient-to-r from-blue-600 via-blue-400 to-amber-400 z-[9997]" />
 
       {/* ── NAV ── */}
       <nav className={`fixed top-0.5 inset-x-0 z-50 transition-all duration-300 ${scrolled ? 'bg-black/90 backdrop-blur-md border-b border-white/8 shadow-xl shadow-black/20' : ''}`}>
@@ -652,7 +655,7 @@ export function LandingPage() {
             <Link to="/signup" ref={primaryCTA as any}
               className="btn-shimmer text-sm font-semibold bg-blue-500 hover:bg-blue-400 text-white px-4 py-2 rounded-lg transition-all relative overflow-hidden"
               style={{ boxShadow: '0 0 16px rgba(59,130,246,0.35)' }}>
-              Get Started Free
+              Try it free
             </Link>
           </div>
           <button className="md:hidden text-gray-400 hover:text-white p-2 -mr-1 min-h-[44px] min-w-[44px] flex items-center justify-center" onClick={() => setMenuOpen(o => !o)}>
@@ -666,7 +669,7 @@ export function LandingPage() {
             ))}
             <div className="flex gap-3 pt-3">
               <Link to="/login" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm glass rounded-lg py-3 text-gray-300 min-h-[44px] flex items-center justify-center">Log in</Link>
-              <Link to="/signup" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm bg-blue-500 hover:bg-blue-400 rounded-lg font-semibold transition-colors min-h-[44px] flex items-center justify-center">Get started</Link>
+              <Link to="/signup" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm bg-blue-500 hover:bg-blue-400 rounded-lg font-semibold transition-colors min-h-[44px] flex items-center justify-center">Try it free</Link>
             </div>
           </div>
         </div>
@@ -698,8 +701,9 @@ export function LandingPage() {
               <p className="text-base sm:text-lg lg:text-xl text-gray-400 mb-4 leading-relaxed max-w-lg mx-auto lg:mx-0">
                 TradeDesk answers in under 2 seconds, gives callers your actual quotes, books jobs — and texts you a summary. While you're on the tools.
               </p>
-              <p className="text-sm text-blue-400/80 mb-8 font-medium">
-                Average tradie recovers the cost <strong className="text-blue-400">within 1 week.</strong>
+              <p className="inline-flex items-center gap-2 text-sm text-amber-300/90 mb-8 font-medium">
+                <DollarSign size={14} className="text-amber-400 flex-shrink-0" />
+                One recovered job usually covers the <strong className="text-amber-400">whole month.</strong>
               </p>
               <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-center lg:justify-start">
                 <Link to="/signup"
@@ -778,7 +782,7 @@ export function LandingPage() {
       <section className="py-8 border-b border-white/6 px-4" data-reveal>
         <div className="max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
           {[
-            { stat: '400+', label: 'Australian tradies' },
+            { stat: '24/7', label: 'Always answering' },
             { stat: '< 2 sec', label: 'Average answer time' },
             { stat: '$0', label: 'Per-call fees' },
             { stat: '10 min', label: 'Setup time' },
@@ -966,32 +970,78 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ── FEATURES ── */}
+      {/* ── FEATURES (editorial bento) ── */}
       <section id="features" className="py-16 sm:py-24 px-4 relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.05),transparent_70%)]" />
         <div className="max-w-6xl mx-auto relative">
-          <div className="text-center mb-12 sm:mb-16" data-reveal>
+          <div className="max-w-2xl mb-12 sm:mb-16" data-reveal>
             <p className="text-blue-400 text-xs font-semibold uppercase tracking-widest mb-3">Everything included</p>
-            <h2 className="text-2xl sm:text-4xl font-bold">Your business, covered 24/7</h2>
-            <p className="text-gray-500 mt-3 text-sm max-w-md mx-auto">One flat monthly fee. No per-call charges. No setup fees. No surprises.</p>
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight leading-[1.1]">One flat fee. The whole front desk.</h2>
+            <p className="text-gray-400 mt-4 text-base leading-relaxed">No per-call charges. No setup fees. No surprises — just an AI that answers, quotes, books and follows up while you're on the tools.</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+
+          {/* Asymmetric bento grid — deliberately not six identical cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-[minmax(0,auto)]">
+
+            {/* Hero tile — spans 2 cols on desktop */}
+            <div className="sm:col-span-2 lg:col-span-2 lg:row-span-2 relative overflow-hidden rounded-2xl border border-blue-500/20 p-6 sm:p-8 flex flex-col group"
+              style={{ background: 'linear-gradient(150deg,rgba(59,130,246,0.10) 0%,rgba(10,15,30,0.6) 55%,rgba(8,12,20,0.6) 100%)' }}
+              data-reveal>
+              <div className="absolute -top-12 -right-12 w-56 h-56 rounded-full pointer-events-none opacity-70"
+                style={{ background: 'radial-gradient(circle,rgba(59,130,246,0.14) 0%,transparent 70%)' }} />
+              <div className="relative flex items-center gap-2 text-[11px] font-semibold text-blue-400 uppercase tracking-widest mb-5">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" /> The core
+              </div>
+              <div className="relative w-12 h-12 bg-blue-500/15 border border-blue-500/25 rounded-2xl flex items-center justify-center mb-5 group-hover:scale-105 transition-transform">
+                <Phone size={22} className="text-blue-400" />
+              </div>
+              <h3 className="relative text-2xl font-bold text-white mb-2.5">Answers every call in under 2 seconds</h3>
+              <p className="relative text-sm sm:text-base text-gray-400 leading-relaxed max-w-md">
+                Nights, weekends, smoko, Christmas Day — your business never sends anyone to voicemail again.
+                The AI greets callers as your business, handles the conversation naturally, and never puts anyone on hold.
+              </p>
+              <div className="relative flex flex-wrap gap-2 mt-6">
+                {['Sounds local', 'Never sleeps', 'No hold music'].map(t => (
+                  <span key={t} className="text-xs text-gray-300 bg-white/5 border border-white/10 rounded-full px-3 py-1">{t}</span>
+                ))}
+              </div>
+            </div>
+
+            {/* SMS summaries — amber accent (the "you get paid attention" moment) */}
+            <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 p-6 group hover:-translate-y-1 transition-transform duration-300"
+              style={{ background: 'linear-gradient(150deg,rgba(245,158,11,0.07) 0%,rgba(8,12,20,0.6) 60%)' }}
+              data-reveal data-reveal-delay="100">
+              <div className="w-11 h-11 bg-amber-500/15 border border-amber-500/25 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <MessageSquare size={19} className="text-amber-400" />
+              </div>
+              <h3 className="font-bold text-white mb-2 text-base">A text the second they hang up</h3>
+              <p className="text-sm text-gray-400 leading-relaxed">Caller's name, number, what they need and the quote given — in your pocket before they've walked back to their ute.</p>
+            </div>
+
+            {/* Accurate quotes */}
+            <div className="glass rounded-2xl p-6 border border-white/8 hover:border-white/15 hover:bg-white/[0.03] hover:-translate-y-1 transition-all duration-300 group cursor-default"
+              data-reveal data-reveal-delay="200">
+              <div className="w-11 h-11 bg-blue-500/12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <DollarSign size={19} className="text-blue-400" />
+              </div>
+              <h3 className="font-bold text-white mb-2 text-base">Quotes from your real prices</h3>
+              <p className="text-sm text-gray-400 leading-relaxed">The AI reads off your pricing guide — spot-on estimates, never a made-up number.</p>
+            </div>
+
+            {/* Bottom row: three lean tiles */}
             {[
-              { icon: Phone, title: 'AI answers 24/7', desc: "Picks up in under 2 seconds. Nights, weekends, Christmas — your business never closes.", color: 'text-blue-400', bg: 'bg-blue-500/15' },
-              { icon: MessageSquare, title: 'SMS summaries', desc: "After every call: caller name, number (e.g. 0412 345 678), what they need, and what was quoted. Instant.", color: 'text-green-400', bg: 'bg-green-500/15' },
-              { icon: Mail, title: 'Email auto-reply', desc: 'Connect Gmail and the AI answers enquiry emails with pricing and availability.', color: 'text-purple-400', bg: 'bg-purple-500/15' },
-              { icon: Clock, title: 'Missed call text-back', desc: 'If a call goes unanswered, the caller gets a text within 60 seconds re-engaging them.', color: 'text-yellow-400', bg: 'bg-yellow-500/15' },
-              { icon: FileText, title: 'Full transcripts', desc: 'Every conversation recorded and searchable in your dashboard. Know exactly what was said.', color: 'text-pink-400', bg: 'bg-pink-500/15' },
-              { icon: DollarSign, title: 'Accurate quotes', desc: "The AI uses your real pricing guide to give callers spot-on estimates — no wrong numbers.", color: 'text-orange-400', bg: 'bg-orange-500/15' },
-            ].map(({ icon: Icon, title, desc, color, bg }, idx) => (
+              { icon: Clock, title: 'Missed-call text-back', desc: 'Unanswered call? The caller gets a friendly text within 60 seconds — before they ring the next bloke.' },
+              { icon: Mail, title: 'Email auto-reply', desc: 'Connect Gmail and enquiry emails get answered with your pricing and availability, automatically.' },
+              { icon: FileText, title: 'Every word, searchable', desc: 'Full transcripts of every call, saved and searchable in your dashboard. No more "what did they say again?"' },
+            ].map(({ icon: Icon, title, desc }, idx) => (
               <div key={title}
-                className="glass rounded-xl sm:rounded-2xl p-5 transition-all duration-300 group cursor-default hover:border-white/15 hover:bg-white/[0.03] border border-white/8 hover:-translate-y-1"
-                data-reveal data-reveal-delay={`${(idx % 3) * 100}` as any}>
-                <div className={`w-10 h-10 sm:w-11 sm:h-11 ${bg} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                  <Icon size={18} className={color} />
+                className="glass rounded-2xl p-6 border border-white/8 hover:border-white/15 hover:bg-white/[0.03] hover:-translate-y-1 transition-all duration-300 group cursor-default"
+                data-reveal data-reveal-delay={`${((idx + 1) % 3) * 100}` as any}>
+                <div className="w-11 h-11 bg-blue-500/12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <Icon size={19} className="text-blue-400" />
                 </div>
-                <h3 className="font-bold text-white mb-2 text-sm sm:text-base">{title}</h3>
-                <p className="text-xs sm:text-sm text-gray-400 leading-relaxed">{desc}</p>
+                <h3 className="font-bold text-white mb-2 text-base">{title}</h3>
+                <p className="text-sm text-gray-400 leading-relaxed">{desc}</p>
               </div>
             ))}
           </div>
@@ -1067,10 +1117,10 @@ export function LandingPage() {
         <div className="max-w-6xl mx-auto relative">
           <div className="text-center mb-10 sm:mb-16" data-reveal>
             <p className="text-blue-400 text-xs font-semibold uppercase tracking-widest mb-3">Pricing</p>
-            <h2 className="text-2xl sm:text-4xl font-bold">One plan. Everything included.</h2>
-            <p className="text-gray-500 mt-3 text-sm">No per-call charges. No setup fees. Cancel any time.</p>
-            <div className="inline-flex items-center gap-2 glass border border-green-500/30 rounded-full px-4 py-2 text-sm text-green-400 font-medium mt-4">
-              <DollarSign size={14} /> Most businesses recover the cost in their first week
+            <h2 className="text-2xl sm:text-4xl font-bold">One plan. No maths required.</h2>
+            <p className="text-gray-500 mt-3 text-sm">Everything's included. No per-call charges, no setup fees, no lock-in.</p>
+            <div className="inline-flex items-center gap-2 glass border border-amber-500/30 rounded-full px-4 py-2 text-sm text-amber-400 font-medium mt-4" style={{ background: 'rgba(245,158,11,0.04)' }}>
+              <DollarSign size={14} /> Costs less than one job you'd have missed
             </div>
           </div>
           <div className="max-w-md mx-auto w-full" data-reveal>
@@ -1082,7 +1132,7 @@ export function LandingPage() {
                     <h3 className="text-xl font-bold text-white mb-1">TradeDesk Pro</h3>
                     <p className="text-sm text-gray-400">Everything you need, covered 24/7</p>
                   </div>
-                  <div className="inline-flex items-center gap-1 bg-blue-500/20 text-blue-400 text-xs font-semibold px-2.5 py-1 rounded-full border border-blue-500/30">⭐ Most popular</div>
+                  <div className="inline-flex items-center gap-1 bg-blue-500/20 text-blue-400 text-xs font-semibold px-2.5 py-1 rounded-full border border-blue-500/30">Everything in one</div>
                 </div>
                 <div className="mb-5">
                   <div className="flex items-end gap-1">
@@ -1119,11 +1169,11 @@ export function LandingPage() {
                 <p className="text-center text-xs text-gray-600 mt-3">No credit card required · cancel any time</p>
               </div>
             </div>
-            <div className="mt-4 flex items-start gap-3 glass rounded-xl px-4 py-4 border border-green-500/20">
-              <CheckCircle size={16} className="text-green-400 flex-shrink-0 mt-0.5" />
+            <div className="mt-4 flex items-start gap-3 glass rounded-xl px-4 py-4 border border-amber-500/25" style={{ background: 'rgba(245,158,11,0.04)' }}>
+              <CheckCircle size={16} className="text-amber-400 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-gray-400 leading-relaxed">
-                <span className="text-white font-semibold">30-day money-back guarantee.</span>{' '}
-                If TradeDesk doesn't pay for itself, full refund. No questions.
+                <span className="text-white font-semibold">The risk is on us.</span>{' '}
+                7 days free, then a 30-day money-back guarantee. If TradeDesk doesn't pay for itself, you get every cent back — no questions.
               </p>
             </div>
           </div>
@@ -1157,7 +1207,7 @@ export function LandingPage() {
             <Link to="/signup"
               className="btn-shimmer inline-flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-400 text-white font-semibold px-8 py-4 rounded-xl text-base transition-all min-h-[52px] relative overflow-hidden"
               style={{ boxShadow: '0 0 24px rgba(59,130,246,0.35)' }}>
-              Get Started Free <ArrowRight size={18} />
+              Get my AI answering <ArrowRight size={18} />
             </Link>
             <p className="text-sm text-gray-600 flex items-center justify-center">7-day free trial · No credit card</p>
           </div>
@@ -1233,7 +1283,7 @@ export function LandingPage() {
             <p className="text-xs text-gray-500">No credit card needed</p>
           </div>
           <Link to="/signup" className="btn-shimmer flex-shrink-0 bg-blue-500 hover:bg-blue-400 text-white font-semibold px-5 py-3 rounded-xl text-sm transition-all min-h-[44px] flex items-center relative overflow-hidden">
-            Get started
+            Try it free
           </Link>
         </div>
       </div>

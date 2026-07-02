@@ -9,12 +9,14 @@ import {
   addMonths, subMonths, addWeeks, subWeeks, isSameDay, isSameMonth, isToday,
   format,
 } from 'date-fns';
+import { motion, useReducedMotion } from 'framer-motion';
 import { api } from '../lib/api';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Textarea } from '../components/ui/Textarea';
 import { SkeletonRow } from '../components/ui/Skeleton';
 import { useToast } from '../components/ui/Toast';
+import { staggerContainer, staggerItem, instantContainer, instantItem } from '../lib/motion';
 import { clsx } from 'clsx';
 
 type JobStatus = 'booked' | 'confirmed' | 'completed' | 'cancelled';
@@ -93,12 +95,16 @@ function StatusPill({ status }: { status: JobStatus }) {
 // ── Job card (list view) ────────────────────────────────────────────────────
 function JobCard({ job, onClick }: { job: Job; onClick: () => void }) {
   const isTerminal = job.status === 'completed' || job.status === 'cancelled';
+  const accent = STATUS_META[job.status].dot; // reuse the status colour as a left rail
+  const reduce = useReducedMotion();
   return (
-    <button onClick={onClick}
+    <motion.button variants={reduce ? instantItem : staggerItem} onClick={onClick}
       className={clsx(
-        'w-full text-left glass rounded-xl p-4 border border-white/8 hover:border-blue-500/30 hover:bg-white/[0.03] transition-all duration-150',
-        isTerminal && 'opacity-60'
+        'group relative w-full text-left glass rounded-xl p-4 pl-5 border border-white/8 hover:border-blue-500/30 hover:bg-white/[0.03] transition-all duration-150 overflow-hidden hover:-translate-y-px',
+        isTerminal && 'opacity-60 hover:opacity-90'
       )}>
+      {/* Status colour rail */}
+      <span className={clsx('absolute left-0 top-3 bottom-3 w-1 rounded-r-full', accent)} />
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="min-w-0">
           <p className={clsx('text-sm font-semibold text-white truncate', job.status === 'cancelled' && 'line-through decoration-gray-600')}>
@@ -120,12 +126,14 @@ function JobCard({ job, onClick }: { job: Job; onClick: () => void }) {
       {job.notes && (
         <p className="text-xs text-gray-600 mt-2 line-clamp-2 border-t border-white/6 pt-2">{job.notes}</p>
       )}
-    </button>
+    </motion.button>
   );
 }
 
 // ── List view ────────────────────────────────────────────────────────────────
-function ListView({ jobs, onSelect }: { jobs: Job[]; onSelect: (j: Job) => void }) {
+function ListView({ jobs, onSelect, filtered, onNewJob, reduceMotion }: {
+  jobs: Job[]; onSelect: (j: Job) => void; filtered: boolean; onNewJob: () => void; reduceMotion: boolean;
+}) {
   const grouped = useMemo(() => {
     const map = new Map<string, Job[]>();
     for (const job of jobs) {
@@ -137,19 +145,37 @@ function ListView({ jobs, onSelect }: { jobs: Job[]; onSelect: (j: Job) => void 
   }, [jobs]);
 
   if (jobs.length === 0) {
-    return (
-      <div className="py-20 text-center">
-        <div className="w-16 h-16 bg-blue-500/8 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <Calendar size={28} className="text-blue-400/40" />
+    // Distinguish "your filter matched nothing" from "you have no jobs at all".
+    return filtered ? (
+      <div className="py-16 text-center">
+        <div className="w-14 h-14 bg-white/4 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-white/8">
+          <Search size={24} className="text-gray-600" />
         </div>
-        <p className="text-sm font-semibold text-gray-400">No jobs found</p>
-        <p className="text-xs text-gray-700 mt-1">Jobs booked by the AI or added manually will show up here.</p>
+        <p className="text-sm font-semibold text-gray-400">No jobs match your filters</p>
+        <p className="text-xs text-gray-600 mt-1">Try clearing the search or switching status.</p>
+      </div>
+    ) : (
+      <div className="relative overflow-hidden rounded-2xl border border-white/8 py-14 px-6 text-center"
+        style={{ background: 'radial-gradient(ellipse 90% 70% at 50% 0%,rgba(59,130,246,0.06),transparent 70%)' }}>
+        <div className="w-16 h-16 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <CalendarClock size={30} className="text-blue-400" />
+        </div>
+        <p className="text-base font-bold text-white">No jobs on the board yet</p>
+        <p className="text-sm text-gray-500 mt-1.5 max-w-sm mx-auto leading-relaxed">
+          When your AI books a caller in, the job lands here automatically — with their details, the quote given and your notes.
+          Booked one over the phone yourself? Add it manually.
+        </p>
+        <div className="flex items-center justify-center gap-2 mt-5">
+          <Button onClick={onNewJob}><Plus size={15} /> Add your first job</Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <motion.div className="space-y-6"
+      variants={reduceMotion ? instantContainer : staggerContainer(0.04)}
+      initial="hidden" animate="show">
       {grouped.map(([key, dayJobs]) => (
         <div key={key}>
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2.5">
@@ -160,7 +186,7 @@ function ListView({ jobs, onSelect }: { jobs: Job[]; onSelect: (j: Job) => void 
           </div>
         </div>
       ))}
-    </div>
+    </motion.div>
   );
 }
 
@@ -272,6 +298,8 @@ function WeekGrid({ anchorDate, jobs, onSelectJob }: { anchorDate: Date; jobs: J
   const topFor = (d: Date) => Math.max(0, (d.getHours() - GRID_START_HOUR) * HOUR_HEIGHT + (d.getMinutes() / 60) * HOUR_HEIGHT);
   const heightFor = (s: Date, e: Date) => Math.max(28, ((e.getTime() - s.getTime()) / 60000 / 60) * HOUR_HEIGHT);
 
+  const weekHasJobs = weekDays.some(d => (jobsByDay.get(format(d, 'yyyy-MM-dd')) || []).length > 0);
+
   // Below sm, 7 equal-width day columns get crushed into ~40px each — too
   // narrow for a customer name + job type to be legible. Instead give each
   // day a sane minimum width and let the whole grid scroll horizontally, the
@@ -299,7 +327,13 @@ function WeekGrid({ anchorDate, jobs, onSelectJob }: { anchorDate: Date; jobs: J
           </div>
 
           {/* Time grid */}
-          <div className="overflow-y-auto" style={{ maxHeight: '640px' }}>
+          <div className="overflow-y-auto relative" style={{ maxHeight: '640px' }}>
+            {!weekHasJobs && (
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center pointer-events-none">
+                <p className="text-sm font-medium text-gray-500">Nothing booked this week</p>
+                <p className="text-xs text-gray-700 mt-0.5">Jump to another week, or add a job</p>
+              </div>
+            )}
             <div className="grid relative" style={{ gridTemplateColumns: gridTemplate }}>
               {/* Hour labels column */}
               <div className="relative">
@@ -609,6 +643,7 @@ export function JobsPage() {
   const [showNewJob, setShowNewJob] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | JobStatus>('all');
+  const reduceMotion = !!useReducedMotion();
 
   useEffect(() => {
     api.get<Job[]>('/jobs')
@@ -708,7 +743,9 @@ export function JobsPage() {
       {loading ? (
         <div className="space-y-2.5">{[...Array(4)].map((_, i) => <SkeletonRow key={i} />)}</div>
       ) : view === 'list' ? (
-        <ListView jobs={filtered} onSelect={setSelectedJob} />
+        <ListView jobs={filtered} onSelect={setSelectedJob}
+          filtered={search.trim() !== '' || statusFilter !== 'all'}
+          onNewJob={() => setShowNewJob(true)} reduceMotion={reduceMotion} />
       ) : calendarMode === 'month' ? (
         <MonthGrid anchorDate={anchorDate} jobs={jobs} onSelectJob={setSelectedJob}
           onSelectDay={d => { setAnchorDate(d); setCalendarMode('week'); }} />

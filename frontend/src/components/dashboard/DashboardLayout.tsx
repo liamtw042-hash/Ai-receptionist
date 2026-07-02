@@ -1,6 +1,8 @@
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { pageTransition } from '../../lib/motion';
 import {
   LayoutDashboard, Phone, MessageSquare, Users, Settings, Calendar,
   Menu, X, LogOut, Zap, Bell, Search,
@@ -117,6 +119,7 @@ export function DashboardLayout() {
   const { logOut, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     api.get<RecentCall[]>('/dashboard/recent-calls')
@@ -159,29 +162,28 @@ export function DashboardLayout() {
       {navItems.map(({ to, icon: Icon, label, end }) => (
         <NavLink key={to} to={to} end={end} title={collapsed && !isMobile ? label : undefined}
           className={({ isActive }) => clsx(
-            'relative flex items-center rounded-xl text-sm font-medium transition-all duration-150 group overflow-hidden',
+            'relative flex items-center rounded-xl text-sm font-medium transition-all duration-200 group overflow-hidden',
             !isMobile && collapsed ? 'justify-center px-2 py-3' : 'gap-3 px-3 py-2.5',
             isMobile && 'min-h-[52px]',
             isActive
-              ? 'text-white bg-blue-500/12 border border-blue-500/20'
-              : 'text-gray-500 hover:text-gray-200 hover:bg-white/5 border border-transparent'
+              ? 'text-white bg-blue-500/[0.14] border border-blue-500/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]'
+              : 'text-gray-500 hover:text-gray-200 hover:bg-white/[0.055] border border-transparent'
           )}>
           {({ isActive }) => (
             <>
-              {/* Left glow bar */}
+              {/* Left accent bar — the single, deliberate active marker */}
               {isActive && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[60%] rounded-r-full"
-                  style={{ background: 'linear-gradient(180deg,#60a5fa,#3b82f6)', boxShadow: '0 0 8px rgba(96,165,250,0.8)' }} />
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[62%] rounded-r-full"
+                  style={{ background: 'linear-gradient(180deg,#60a5fa,#3b82f6)', boxShadow: '0 0 10px rgba(96,165,250,0.7)' }} />
               )}
               <Icon size={18} className={clsx(
-                'transition-colors flex-shrink-0',
-                isActive ? 'text-blue-400' : 'text-gray-500 group-hover:text-gray-300'
+                'transition-all duration-200 flex-shrink-0',
+                isActive
+                  ? 'text-blue-400'
+                  : 'text-gray-500 group-hover:text-gray-200 group-hover:translate-x-0.5'
               )} />
               {(!collapsed || isMobile) && (
-                <span className={isActive ? 'text-white font-semibold' : ''}>{label}</span>
-              )}
-              {isActive && (!collapsed || isMobile) && (
-                <span className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_6px_rgba(96,165,250,0.8)]" />
+                <span className={clsx('transition-transform duration-200', isActive ? 'text-white font-semibold' : 'group-hover:translate-x-0.5')}>{label}</span>
               )}
             </>
           )}
@@ -341,11 +343,17 @@ export function DashboardLayout() {
                   </span>
                 )}
               </button>
-              {notifOpen && createPortal(
-                <>
+              {createPortal(
+                <AnimatePresence>
+                  {notifOpen && (
+                  <>
                   <div className="fixed inset-0 z-[9998]" onClick={() => setNotifOpen(false)} />
-                  <div className="w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-white/10 shadow-2xl shadow-black/60 z-[9999] overflow-hidden"
-                    style={{ ...dropdownStyle, background: '#0d1426' }}>
+                  <motion.div className="w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-white/10 shadow-2xl shadow-black/60 z-[9999] overflow-hidden"
+                    style={{ ...dropdownStyle, background: '#0d1426', transformOrigin: 'top right' }}
+                    initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -8, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -6, scale: 0.98 }}
+                    transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}>
                     <div className="flex items-center justify-between px-4 py-3 border-b border-white/8">
                       <span className="text-sm font-semibold text-white">Notifications</span>
                       <button onClick={() => setNotifOpen(false)} className="text-gray-600 hover:text-white p-1"><X size={13} /></button>
@@ -380,8 +388,10 @@ export function DashboardLayout() {
                         View all calls →
                       </NavLink>
                     </div>
-                  </div>
-                </>,
+                  </motion.div>
+                  </>
+                  )}
+                </AnimatePresence>,
                 document.body
               )}
             </div>
@@ -398,7 +408,17 @@ export function DashboardLayout() {
           style={{
             backgroundImage: 'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(59,130,246,0.04) 0%, transparent 70%)',
           }}>
-          <Outlet />
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={location.pathname}
+              variants={reduceMotion ? undefined : pageTransition}
+              initial={reduceMotion ? false : 'hidden'}
+              animate="show"
+              exit={reduceMotion ? undefined : 'exit'}
+            >
+              <Outlet />
+            </motion.div>
+          </AnimatePresence>
         </main>
       </div>
 

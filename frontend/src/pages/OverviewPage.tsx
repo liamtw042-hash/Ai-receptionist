@@ -2,13 +2,14 @@ import { useEffect, useState, useRef } from 'react';
 import {
   Phone, AlertTriangle, TrendingUp, Users, Calendar,
   CheckCircle2, DollarSign, PhoneCall, Table2, CalendarCheck, Link2,
-  MessageSquare, Settings, ArrowRight, Activity,
-  Sun, Sunset, Moon, ArrowUpRight, ArrowDownRight,
+  MessageSquare, Settings, ArrowRight, Activity, Sparkles,
+  Sun, Sunset, Moon,
 } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { api } from '../lib/api';
-import { Card } from '../components/ui/Card';
 import { OutcomeBadge } from '../components/ui/Badge';
 import { SkeletonCard, SkeletonRow } from '../components/ui/Skeleton';
+import { staggerContainer, staggerItem, instantContainer, instantItem } from '../lib/motion';
 import { formatDistanceToNow, format } from 'date-fns';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -71,82 +72,59 @@ function useRealTimeClock() {
   return time;
 }
 
-/* ── Sparkline ────────────────────────────────────── */
-function Sparkline({ data, color = '#60a5fa' }: { data: number[]; color?: string }) {
-  if (!data || data.length < 2) return null;
-  const max = Math.max(...data, 1);
-  const min = Math.min(...data);
-  const range = max - min || 1;
-  const W = 64, H = 24;
-  const pts = data.map((v, i) => {
-    const x = (i / (data.length - 1)) * W;
-    const y = H - ((v - min) / range) * H * 0.85 - H * 0.07;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(' ');
-  const lastPt = pts.split(' ').pop()!.split(',');
-  return (
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="opacity-75">
-      <polyline fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points={pts} />
-      <circle cx={lastPt[0]} cy={lastPt[1]} r="2.5" fill={color} />
-    </svg>
-  );
-}
-
-/* ── Premium Stat Card ────────────────────────────── */
+/* ── Premium Stat Card ─────────────────────────────────────────────────────
+   Deliberately shows the REAL count only (animated up on first load). No
+   fabricated trend sparklines or "+X% this week" indicators — there's no real
+   historical series behind them, so we don't imply one. */
 type CardColor = 'blue' | 'green' | 'purple' | 'amber';
 const COLOR_MAP: Record<CardColor, {
-  iconBg: string; iconText: string; border: string; glow: string; change: string; sparkColor: string;
+  iconBg: string; iconText: string; border: string; glow: string; bar: string;
 }> = {
-  blue:   { iconBg: 'bg-blue-500/15',   iconText: 'text-blue-400',   border: 'rgba(59,130,246,0.3)',   glow: 'rgba(59,130,246,0.06)',   change: 'text-blue-400',   sparkColor: '#60a5fa' },
-  green:  { iconBg: 'bg-green-500/15',  iconText: 'text-green-400',  border: 'rgba(34,197,94,0.3)',    glow: 'rgba(34,197,94,0.06)',    change: 'text-green-400',  sparkColor: '#34d399' },
-  purple: { iconBg: 'bg-purple-500/15', iconText: 'text-purple-400', border: 'rgba(168,85,247,0.3)',   glow: 'rgba(168,85,247,0.06)',   change: 'text-purple-400', sparkColor: '#a78bfa' },
-  amber:  { iconBg: 'bg-amber-500/15',  iconText: 'text-amber-400',  border: 'rgba(245,158,11,0.3)',   glow: 'rgba(245,158,11,0.06)',   change: 'text-amber-400',  sparkColor: '#fbbf24' },
+  blue:   { iconBg: 'bg-blue-500/15',   iconText: 'text-blue-400',   border: 'rgba(59,130,246,0.28)', glow: 'rgba(59,130,246,0.07)',  bar: 'linear-gradient(90deg,#60a5fa,#3b82f6)' },
+  green:  { iconBg: 'bg-green-500/15',  iconText: 'text-green-400',  border: 'rgba(34,197,94,0.28)',  glow: 'rgba(34,197,94,0.07)',   bar: 'linear-gradient(90deg,#4ade80,#22c55e)' },
+  purple: { iconBg: 'bg-purple-500/15', iconText: 'text-purple-400', border: 'rgba(168,85,247,0.28)', glow: 'rgba(168,85,247,0.07)',  bar: 'linear-gradient(90deg,#c084fc,#a855f7)' },
+  amber:  { iconBg: 'bg-amber-500/15',  iconText: 'text-amber-400',  border: 'rgba(245,158,11,0.30)', glow: 'rgba(245,158,11,0.08)',  bar: 'linear-gradient(90deg,#fbbf24,#f59e0b)' },
 };
 
 function StatCard({
-  icon: Icon, label, value, color, trend, change, changeLabel, suffix = '',
+  icon: Icon, label, value, color, hint, suffix = '',
 }: {
   icon: typeof Phone; label: string; value: number; color: CardColor;
-  trend?: number[]; change?: number; changeLabel?: string; suffix?: string;
+  hint?: string; suffix?: string;
 }) {
   const c = COLOR_MAP[color];
   const display = useCountUp(value);
-  const positive = (change ?? 0) >= 0;
+  const empty = value === 0;
+  const reduce = useReducedMotion();
 
   return (
-    <div
-      className="relative rounded-2xl p-5 overflow-hidden cursor-default transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl"
+    <motion.div variants={reduce ? instantItem : staggerItem}
+      className="group relative rounded-2xl p-4 sm:p-5 overflow-hidden cursor-default transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl"
       style={{
         background: 'linear-gradient(135deg,rgba(13,20,38,0.9) 0%,rgba(8,12,20,0.9) 100%)',
         border: `1px solid ${c.border}`,
         boxShadow: `0 0 0 1px rgba(255,255,255,0.04), 0 4px 24px ${c.glow}`,
       }}>
-      {/* Background glow */}
-      <div className="absolute top-0 right-0 w-32 h-32 rounded-full pointer-events-none"
+      {/* Corner glow */}
+      <div className="absolute top-0 right-0 w-32 h-32 rounded-full pointer-events-none opacity-70 group-hover:opacity-100 transition-opacity"
         style={{ background: `radial-gradient(circle, ${c.glow} 0%, transparent 70%)`, transform: 'translate(30%, -30%)' }} />
+      {/* Top accent line */}
+      <div className="absolute top-0 left-4 right-4 h-px opacity-60" style={{ background: c.bar }} />
 
       <div className="relative flex items-start justify-between gap-2 mb-3">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{label}</p>
+        <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">{label}</p>
         <div className={`w-8 h-8 ${c.iconBg} rounded-lg flex items-center justify-center flex-shrink-0`}>
           <Icon size={15} className={c.iconText} />
         </div>
       </div>
 
-      <div className="relative flex items-end justify-between gap-3">
-        <div>
-          <div className="text-3xl font-black text-white tabular-nums tracking-tight">
-            {display}{suffix}
-          </div>
-          {change !== undefined && (
-            <div className={`flex items-center gap-1 mt-1.5 text-xs font-medium ${positive ? 'text-green-400' : 'text-red-400'}`}>
-              {positive ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
-              <span>{positive ? '+' : ''}{change}% {changeLabel}</span>
-            </div>
-          )}
+      <div className="relative">
+        <div className={`text-3xl font-black tabular-nums tracking-tight ${empty ? 'text-gray-600' : 'text-white'}`}>
+          {display}{suffix}
         </div>
-        {trend && <Sparkline data={trend} color={c.sparkColor} />}
+        <p className="text-[11px] text-gray-600 mt-1 truncate">{empty ? (hint ?? '—') : hint}</p>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -182,6 +160,7 @@ export function OverviewPage() {
   const [checklist, setChecklist] = useState<Record<string, boolean>>({});
   const [googleStatus, setGoogleStatus] = useState<GoogleStatus | null>(null);
   const clock = useRealTimeClock();
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     Promise.all([
@@ -221,6 +200,12 @@ export function OverviewPage() {
   const callsThisWeek = stats?.callsThisWeek ?? stats?.leadsThisWeek ?? 0;
   const jobsThisWeek = stats?.jobsThisWeek ?? stats?.bookedToday ?? 0;
   const estRevenue = jobsThisWeek * 350;
+  // A genuinely brand-new account: nothing has happened yet AND setup isn't done.
+  const freshUser =
+    !allDone &&
+    (stats?.callsToday ?? 0) === 0 &&
+    (stats?.totalContacts ?? 0) === 0 &&
+    recentCalls.length === 0;
 
   return (
     <div className="space-y-5 animate-slide-up">
@@ -252,13 +237,44 @@ export function OverviewPage() {
         </div>
       </div>
 
+      {/* ── First-run welcome (brand-new account) ── */}
+      {freshUser && (
+        <div className="relative overflow-hidden rounded-2xl border border-blue-500/20 p-5 sm:p-6"
+          style={{ background: 'linear-gradient(135deg,rgba(59,130,246,0.10) 0%,rgba(13,20,38,0.6) 55%,rgba(8,12,20,0.6) 100%)' }}>
+          <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full pointer-events-none"
+            style={{ background: 'radial-gradient(circle,rgba(245,158,11,0.10) 0%,transparent 70%)' }} />
+          <div className="relative flex items-start gap-4">
+            <div className="w-11 h-11 rounded-xl bg-blue-500/15 border border-blue-500/25 flex items-center justify-center flex-shrink-0">
+              <Sparkles size={20} className="text-blue-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg font-bold text-white tracking-tight">Let's get your AI answering calls</h2>
+              <p className="text-sm text-gray-400 mt-1 leading-relaxed max-w-xl">
+                You're a few minutes from never missing a job again. Finish these{' '}
+                {CHECKLIST_ITEMS.length - doneCount} step{CHECKLIST_ITEMS.length - doneCount > 1 ? 's' : ''} and your
+                first calls, leads and bookings will start landing right here.
+              </p>
+              <div className="flex flex-wrap items-center gap-2.5 mt-4">
+                <Link to="/dashboard/settings"
+                  className="inline-flex items-center gap-1.5 bg-blue-500 hover:bg-blue-400 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all shadow-lg shadow-blue-500/20">
+                  Finish setup <ArrowRight size={14} />
+                </Link>
+                <span className="text-xs text-gray-600">Takes about 10 minutes · no hardware needed</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Stat cards ── */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 lg:gap-4">
-        <StatCard icon={Phone} label="Calls today" value={stats?.callsToday ?? 0} color="blue" />
-        <StatCard icon={Calendar} label="Jobs booked" value={stats?.bookedToday ?? 0} color="green" />
-        <StatCard icon={TrendingUp} label="Leads this week" value={stats?.leadsThisWeek ?? 0} color="purple" />
-        <StatCard icon={Users} label="Total contacts" value={stats?.totalContacts ?? 0} color="amber" />
-      </div>
+      <motion.div className="grid grid-cols-2 xl:grid-cols-4 gap-3 lg:gap-4"
+        variants={reduceMotion ? instantContainer : staggerContainer(0.06)}
+        initial="hidden" animate="show">
+        <StatCard icon={Phone} label="Calls today" value={stats?.callsToday ?? 0} color="blue" hint="Answered by your AI" />
+        <StatCard icon={Calendar} label="Jobs booked" value={stats?.bookedToday ?? 0} color="green" hint="Today" />
+        <StatCard icon={TrendingUp} label="Leads this week" value={stats?.leadsThisWeek ?? 0} color="purple" hint="New enquiries" />
+        <StatCard icon={Users} label="Total contacts" value={stats?.totalContacts ?? 0} color="amber" hint="In your CRM" />
+      </motion.div>
 
       {/* ── Emergency alert ── */}
       {(stats?.emergenciesToday ?? 0) > 0 && (
