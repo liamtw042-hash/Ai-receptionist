@@ -23,13 +23,14 @@ router.get('/', async (req: AuthRequest, res: Response) => {
         callerNumber: data.callerNumber,
         outcome: data.outcome,
         summary: data.summary,
+        // durationSeconds is the current field name; fall back to the old
+        // `duration` field name for any calls stored before this was fixed.
         durationSeconds: data.durationSeconds ?? data.duration ?? null,
         createdAt: data.createdAt,
         turns: data.turns?.length ?? 0,
-        transcript: (data.turns ?? []).map((t: { role: string; content: string }) => ({
-          role: t.role,
-          content: t.content,
-        })),
+        transcript: Array.isArray(data.turns)
+          ? data.turns.map((t: { role: string; content: string }) => ({ role: t.role, content: t.content }))
+          : [],
       };
     });
 

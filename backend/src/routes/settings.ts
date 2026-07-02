@@ -23,7 +23,8 @@ router.put('/', async (req: AuthRequest, res: Response) => {
   const allowed = [
     'businessName', 'traderName', 'tradeType', 'suburb', 'pricingGuide',
     'availability', 'mobileNumber', 'services', 'emergencyCallbackMinutes',
-    'twilioNumber', 'gmailConnected', 'onboardingComplete',
+    'twilioNumber', 'gmailConnected', 'onboardingComplete', 'hasForwardingSetup',
+    'smsAlertsEnabled', 'emailSummaryEnabled', 'weeklySummaryEnabled',
   ];
 
   const updates: Record<string, unknown> = {};

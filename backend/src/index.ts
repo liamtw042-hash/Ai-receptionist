@@ -11,6 +11,8 @@ import { settingsRouter } from './routes/settings';
 import { emailRouter } from './routes/email';
 import { dashboardRouter } from './routes/dashboard';
 import { googleRouter } from './routes/google';
+import { billingRouter } from './routes/billing';
+import { accountRouter } from './routes/account';
 
 dotenv.config();
 
@@ -26,6 +28,8 @@ app.use(cors({
 // Twilio webhooks need raw body for signature validation
 app.use('/api/voice', express.urlencoded({ extended: false }));
 app.use('/api/voice/status', express.urlencoded({ extended: false }));
+// Stripe webhooks also need the raw, unparsed body to verify their signature
+app.use('/api/billing/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 
 const limiter = rateLimit({ windowMs: 60_000, max: 100 });
@@ -39,6 +43,8 @@ app.use('/api/settings', settingsRouter);
 app.use('/api/email', emailRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/google', googleRouter);
+app.use('/api/billing', billingRouter);
+app.use('/api/account', accountRouter);
 
 app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'TradeDesk' }));
 

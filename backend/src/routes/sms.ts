@@ -64,68 +64,72 @@ router.post('/send', requireAuth, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Get SMS conversations
+// Get SMS conversations — one entry per contact number, each with its full
+// message history, shaped to match the frontend's Conversation interface.
 router.get('/conversations', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const [smsSnap, contactsSnap] = await Promise.all([
+    const [msgSnap, contactsSnap] = await Promise.all([
       db.collection('sms_messages')
         .where('userId', '==', req.userId)
-        .orderBy('timestamp', 'desc')
-        .limit(300)
+        .orderBy('timestamp', 'asc')
+        .limit(500)
         .get(),
       db.collection('contacts')
         .where('userId', '==', req.userId)
         .get(),
     ]);
 
-    // Build contact name lookup
-    const contactNames: Record<string, string> = {};
+    // Contact docs store the number under `phoneNumber` (see contactService.ts).
+    const nameByNumber: Record<string, string> = {};
     contactsSnap.docs.forEach(d => {
       const data = d.data();
-      if (data.phone && data.name) contactNames[data.phone] = data.name;
+      if (data.name) nameByNumber[data.phoneNumber] = data.name;
     });
 
-    // Group messages by phone number (oldest-first per thread)
-    const threads: Record<string, {
-      messages: Array<{ id: string; direction: string; body: string; createdAt: string; status?: string }>;
-      lastAt: string;
-    }> = {};
+    interface ConvoAccumulator {
+      id: string;
+      phoneNumber: string;
+      contactName?: string;
+      messages: Array<{ id: string; direction: 'inbound' | 'outbound'; body: string; createdAt: string; status?: string }>;
+      lastMessage?: string;
+      lastMessageAt?: string;
+      unread: number;
+    }
 
-    // snap is newest-first, so push and reverse per thread
-    smsSnap.docs.forEach(d => {
+    const grouped: Record<string, ConvoAccumulator> = {};
+
+    msgSnap.docs.forEach(d => {
       const data = d.data();
-      const num: string = data.contactNumber;
-      if (!threads[num]) threads[num] = { messages: [], lastAt: '' };
-      const ts = data.timestamp?.toDate ? data.timestamp.toDate().toISOString() : (data.timestamp ?? new Date().toISOString());
-      threads[num].messages.push({
+      const num = data.contactNumber;
+      if (!grouped[num]) {
+        grouped[num] = {
+          id: num,
+          phoneNumber: num,
+          contactName: nameByNumber[num] || undefined,
+          messages: [],
+          unread: 0,
+        };
+      }
+      const createdAt = data.timestamp?.toDate ? data.timestamp.toDate().toISOString() : (data.timestamp ?? new Date().toISOString());
+      grouped[num].messages.push({
         id: d.id,
         direction: data.direction,
         body: data.body,
-        createdAt: ts,
-        status: data.read === false && data.direction === 'inbound' ? 'delivered' : undefined,
+        createdAt,
+        status: data.direction === 'outbound' ? (data.status || 'delivered') : undefined,
       });
-      if (!threads[num].lastAt || ts > threads[num].lastAt) threads[num].lastAt = ts;
+      grouped[num].lastMessage = data.body;
+      grouped[num].lastMessageAt = createdAt;
+      if (data.direction === 'inbound' && !data.read) grouped[num].unread += 1;
     });
 
-    const conversations = Object.entries(threads)
-      .sort(([, a], [, b]) => b.lastAt.localeCompare(a.lastAt))
-      .map(([phoneNumber, thread]) => {
-        const msgs = thread.messages.slice().reverse(); // oldest-first
-        const last = msgs[msgs.length - 1];
-        const unread = msgs.filter(m => m.direction === 'inbound' && !m.status).length;
-        return {
-          id: phoneNumber,
-          phoneNumber,
-          contactName: contactNames[phoneNumber] ?? undefined,
-          messages: msgs,
-          lastMessage: last?.body ?? '',
-          lastMessageAt: last?.createdAt ?? '',
-          unread,
-        };
-      });
+    const conversations = Object.values(grouped).sort((a, b) =>
+      (b.lastMessageAt || '').localeCompare(a.lastMessageAt || '')
+    );
 
     res.json(conversations);
   } catch (err) {
+    console.error('Fetch conversations error:', err);
     res.status(500).json({ error: 'Failed to fetch conversations' });
   }
 });

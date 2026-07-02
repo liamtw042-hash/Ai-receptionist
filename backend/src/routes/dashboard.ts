@@ -13,7 +13,7 @@ router.get('/stats', async (req: AuthRequest, res: Response) => {
     const startOfWeek = new Date(startOfDay);
     startOfWeek.setDate(startOfDay.getDate() - startOfDay.getDay());
 
-    const [callsTodaySnap, weekSnap, contactsSnap, settingsSnap] = await Promise.all([
+    const [callsTodaySnap, weekSnap, contactsSnap, settingsSnap, anyCallSnap] = await Promise.all([
       db.collection('calls')
         .where('userId', '==', req.userId)
         .where('createdAt', '>=', startOfDay.toISOString())
@@ -26,6 +26,8 @@ router.get('/stats', async (req: AuthRequest, res: Response) => {
         .where('userId', '==', req.userId)
         .get(),
       db.collection('settings').doc(req.userId!).get(),
+      // "Made a test call" = at least one call has ever come through, regardless of when.
+      db.collection('calls').where('userId', '==', req.userId).limit(1).get(),
     ]);
 
     const callsToday = callsTodaySnap.size;
@@ -38,9 +40,12 @@ router.get('/stats', async (req: AuthRequest, res: Response) => {
       ['job_booked', 'quote_given', 'callback_needed'].includes(d.data().outcome)
     ).length;
 
-    const settings = settingsSnap.exists ? settingsSnap.data() : null;
-    const hasBusinessDetails = !!(settings?.businessName && settings?.traderName);
-    const hasMadeTestCall = callsToday > 0 || weekSnap.size > 0 || contactsSnap.size > 0;
+    const settings = settingsSnap.exists ? settingsSnap.data()! : {};
+    const hasBusinessDetails = !!(settings.businessName && settings.traderName && settings.tradeType);
+    // Either an explicit "I've set this up" confirmation, or having already
+    // entered a Twilio number, counts — whichever happens first.
+    const hasForwardingSetup = !!settings.hasForwardingSetup || !!settings.twilioNumber;
+    const hasMadeTestCall = !anyCallSnap.empty;
 
     res.json({
       callsToday,
@@ -51,9 +56,9 @@ router.get('/stats', async (req: AuthRequest, res: Response) => {
       leadsThisWeek,
       totalContacts: contactsSnap.size,
       hasBusinessDetails,
-      hasForwardingSetup: !!(settings?.twilioNumber),
+      hasForwardingSetup,
       hasMadeTestCall,
-      onboardingComplete: !!(settings?.onboardingComplete),
+      onboardingComplete: !!settings.onboardingComplete,
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch stats' });

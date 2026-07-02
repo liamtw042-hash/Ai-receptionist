@@ -9,8 +9,9 @@ import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Textarea } from '../components/ui/Textarea';
 import { Button } from '../components/ui/Button';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Skeleton } from '../components/ui/Skeleton';
+import { useAuth } from '../contexts/AuthContext';
 
 const TRADES = ['Plumber', 'Electrician', 'Builder', 'Carpenter', 'Painter', 'Landscaper', 'Roofer', 'Tiler', 'Locksmith', 'HVAC', 'Other'];
 
@@ -30,6 +31,7 @@ interface Settings {
   smsAlertsEnabled?: boolean;
   emailSummaryEnabled?: boolean;
   weeklySummaryEnabled?: boolean;
+  hasForwardingSetup?: boolean;
 }
 
 interface GoogleStatus {
@@ -309,6 +311,95 @@ function GoogleIntegrationsCard() {
   );
 }
 
+// ── Billing Card (Stripe) ───────────────────────────────────────────────────
+interface BillingStatus {
+  status: 'none' | 'trialing' | 'active' | 'past_due' | 'canceled' | 'incomplete' | 'unpaid';
+  currentPeriodEnd?: string;
+  cancelAtPeriodEnd?: boolean;
+}
+
+function BillingCard() {
+  const [billing, setBilling] = useState<BillingStatus | null>(null);
+  const [loadingStatus, setLoadingStatus] = useState(true);
+  const [starting, setStarting] = useState(false);
+  const [managing, setManaging] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.get<BillingStatus>('/billing/status')
+      .then(setBilling)
+      .catch(() => setBilling({ status: 'none' }))
+      .finally(() => setLoadingStatus(false));
+  }, []);
+
+  const handleSubscribe = async () => {
+    setStarting(true);
+    setError(null);
+    try {
+      const { url } = await api.post<{ url: string }>('/billing/create-checkout-session', {});
+      window.location.href = url;
+    } catch (err: any) {
+      setError(err.message || 'Failed to start checkout');
+      setStarting(false);
+    }
+  };
+
+  const handleManage = async () => {
+    setManaging(true);
+    setError(null);
+    try {
+      const { url } = await api.post<{ url: string }>('/billing/create-portal-session', {});
+      window.location.href = url;
+    } catch (err: any) {
+      setError(err.message || 'Failed to open billing portal');
+      setManaging(false);
+    }
+  };
+
+  const isActive = !!billing && (billing.status === 'active' || billing.status === 'trialing');
+
+  return (
+    <Card>
+      <Section icon={CreditCard} title="Billing" description="Your plan and payment details" iconColor="text-blue-400" iconBg="bg-blue-500/15">
+        {loadingStatus ? (
+          <div className="flex items-center gap-2 text-sm text-gray-500"><Loader2 size={14} className="animate-spin" /> Checking subscription…</div>
+        ) : isActive ? (
+          <>
+            <div className="glass rounded-xl p-4 border border-blue-500/20 bg-blue-500/5 mb-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <p className="font-semibold text-white text-sm">TradeDesk Pro</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    $199/month AUD{billing?.status === 'trialing' ? ' · Free trial' : ''}
+                    {billing?.currentPeriodEnd && ` · ${billing.cancelAtPeriodEnd ? 'ends' : 'renews'} ${new Date(billing.currentPeriodEnd).toLocaleDateString('en-AU')}`}
+                  </p>
+                </div>
+                <span className={`text-xs px-2.5 py-1 rounded-full font-semibold border ${
+                  billing?.cancelAtPeriodEnd ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-green-500/20 text-green-400 border-green-500/30'
+                }`}>
+                  {billing?.cancelAtPeriodEnd ? 'Cancels soon' : billing?.status === 'trialing' ? 'Trialing' : 'Active'}
+                </span>
+              </div>
+            </div>
+            {error && <p className="text-xs text-red-400 mb-3">{error}</p>}
+            <Button variant="secondary" size="sm" type="button" onClick={handleManage} loading={managing}>Manage billing</Button>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-gray-400 mb-4">
+              {billing?.status === 'canceled' ? 'Your subscription has ended — resubscribe any time.' : billing?.status === 'past_due' ? 'Your last payment failed — update your card to keep TradeDesk running.' : "You're not subscribed yet."} Start your 7-day free trial, then $199/month AUD. Cancel any time. (Stripe test mode)
+            </p>
+            {error && <p className="text-xs text-red-400 mb-3">{error}</p>}
+            <Button type="button" onClick={handleSubscribe} loading={starting}>
+              <CreditCard size={15} /> Start 7-day free trial
+            </Button>
+          </>
+        )}
+      </Section>
+    </Card>
+  );
+}
+
 // ── Main SettingsPage ─────────────────────────────────────────────────────────
 export function SettingsPage() {
   useEffect(() => { document.title = 'Settings | TradeDesk'; }, []);
@@ -322,6 +413,10 @@ export function SettingsPage() {
   const [searchParams] = useSearchParams();
   const gmailStatus = searchParams.get('gmail');
   const googleStatus = searchParams.get('google');
+  const billingStatus = searchParams.get('billing');
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const navigate = useNavigate();
+  const { logOut } = useAuth();
 
   useEffect(() => {
     api.get<Settings>('/settings').then(s => {
@@ -382,6 +477,19 @@ export function SettingsPage() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (!confirm('Are you sure you want to delete your account? This cancels your subscription and permanently deletes all your data. This cannot be undone.')) return;
+    setDeletingAccount(true);
+    try {
+      await api.delete('/account');
+      await logOut();
+      navigate('/');
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete account. Please try again or contact support.');
+      setDeletingAccount(false);
+    }
+  };
+
   if (loading) return (
     <div className="max-w-2xl space-y-6">
       <Skeleton className="h-8 w-32" />
@@ -422,6 +530,16 @@ export function SettingsPage() {
       {googleStatus === 'error' && (
         <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/30 text-red-400 text-sm px-4 py-3 rounded-lg mb-4">
           <AlertCircle size={16} /> Google connection failed — try again
+        </div>
+      )}
+      {billingStatus === 'success' && (
+        <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/30 text-green-400 text-sm px-4 py-3 rounded-lg mb-4">
+          <CheckCircle size={16} /> You're subscribed — welcome to TradeDesk Pro!
+        </div>
+      )}
+      {billingStatus === 'canceled' && (
+        <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-sm px-4 py-3 rounded-lg mb-4">
+          <AlertCircle size={16} /> Checkout canceled — no charge was made
         </div>
       )}
 
@@ -503,6 +621,14 @@ export function SettingsPage() {
               <span className="text-white font-mono text-sm">{settings.twilioNumber || 'Not configured yet'}</span>
             </div>
             <Input label="Update number" value={settings.twilioNumber || ''} onChange={e => update('twilioNumber', e.target.value)} placeholder="+61400000000" hint="Set this to match your Twilio number" />
+            <div className="mt-1">
+              <Toggle
+                label="Call forwarding is set up"
+                hint="Tick this once you've forwarded your missed calls to the number above"
+                checked={!!settings.hasForwardingSetup}
+                onChange={v => update('hasForwardingSetup', v)}
+              />
+            </div>
           </Section>
         </Card>
 
@@ -546,20 +672,9 @@ export function SettingsPage() {
       </form>
 
       {/* 7. Billing */}
-      <Card className="mt-4">
-        <Section icon={CreditCard} title="Billing" description="Your plan and payment details" iconColor="text-blue-400" iconBg="bg-blue-500/15">
-          <div className="glass rounded-xl p-4 border border-blue-500/20 bg-blue-500/5 mb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-white text-sm">TradeDesk Pro</p>
-                <p className="text-xs text-gray-400 mt-0.5">$199/month · renews monthly</p>
-              </div>
-              <span className="text-xs bg-green-500/20 text-green-400 border border-green-500/30 px-2.5 py-1 rounded-full font-semibold">Active</span>
-            </div>
-          </div>
-          <Button variant="secondary" size="sm" type="button">Manage billing</Button>
-        </Section>
-      </Card>
+      <div className="mt-4">
+        <BillingCard />
+      </div>
 
       {/* Test your AI */}
       <Card className="mt-4">
@@ -594,8 +709,7 @@ export function SettingsPage() {
       {/* Danger Zone */}
       <Card className="mt-4 border-red-500/20">
         <Section icon={Trash2} title="Danger Zone" description="Irreversible actions — proceed with caution" iconColor="text-red-400" iconBg="bg-red-500/15">
-          <Button variant="danger" size="sm" type="button"
-            onClick={() => { if (confirm('Are you sure you want to delete your account? This cannot be undone.')) { /* handle delete */ } }}>
+          <Button variant="danger" size="sm" type="button" loading={deletingAccount} onClick={handleDeleteAccount}>
             <Trash2 size={14} /> Delete account
           </Button>
         </Section>

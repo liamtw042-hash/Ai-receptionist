@@ -53,12 +53,17 @@ export async function finalizeSession(callSid: string, summary: string, outcome:
   session.outcome = outcome;
   session.updatedAt = new Date();
 
+  // Prefer Twilio's own CallDuration (from the status callback) since it's the
+  // authoritative telephony-measured duration; fall back to our own session
+  // bookkeeping if that wasn't provided.
+  const computedDurationSeconds = Math.max(0, Math.round((session.updatedAt.getTime() - session.createdAt.getTime()) / 1000));
+
   const docRef = await db.collection('calls').add({
     ...session,
     turns: session.turns.map(t => ({ ...t, timestamp: t.timestamp.toISOString() })),
     createdAt: session.createdAt.toISOString(),
     updatedAt: session.updatedAt.toISOString(),
-    durationSeconds: durationSeconds ?? null,
+    durationSeconds: durationSeconds ?? computedDurationSeconds,
     googleSheetLogged: false,
   });
 
