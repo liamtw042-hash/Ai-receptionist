@@ -13,7 +13,7 @@ router.get('/stats', async (req: AuthRequest, res: Response) => {
     const startOfWeek = new Date(startOfDay);
     startOfWeek.setDate(startOfDay.getDate() - startOfDay.getDay());
 
-    const [callsTodaySnap, weekSnap, contactsSnap, settingsSnap, anyCallSnap] = await Promise.all([
+    const [callsTodaySnap, weekSnap, contactsSnap, settingsSnap, anyCallSnap, jobsTodaySnap, jobsWeekSnap] = await Promise.all([
       db.collection('calls')
         .where('userId', '==', req.userId)
         .where('createdAt', '>=', startOfDay.toISOString())
@@ -28,14 +28,25 @@ router.get('/stats', async (req: AuthRequest, res: Response) => {
       db.collection('settings').doc(req.userId!).get(),
       // "Made a test call" = at least one call has ever come through, regardless of when.
       db.collection('calls').where('userId', '==', req.userId).limit(1).get(),
+      // Jobs booked (by creation date, not scheduled date) — the Jobs page
+      // is the source of truth here, including manually-added jobs that
+      // never went through a call.
+      db.collection('jobs')
+        .where('userId', '==', req.userId)
+        .where('createdAt', '>=', startOfDay.toISOString())
+        .get(),
+      db.collection('jobs')
+        .where('userId', '==', req.userId)
+        .where('createdAt', '>=', startOfWeek.toISOString())
+        .get(),
     ]);
 
     const callsToday = callsTodaySnap.size;
     const emergenciesToday = callsTodaySnap.docs.filter(d => d.data().outcome === 'emergency').length;
-    const bookedToday = callsTodaySnap.docs.filter(d => d.data().outcome === 'job_booked').length;
+    const bookedToday = jobsTodaySnap.docs.filter(d => d.data().status !== 'cancelled').length;
 
     const callsThisWeek = weekSnap.size;
-    const jobsThisWeek = weekSnap.docs.filter(d => d.data().outcome === 'job_booked').length;
+    const jobsThisWeek = jobsWeekSnap.docs.filter(d => d.data().status !== 'cancelled').length;
     const leadsThisWeek = weekSnap.docs.filter(d =>
       ['job_booked', 'quote_given', 'callback_needed'].includes(d.data().outcome)
     ).length;

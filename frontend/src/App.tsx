@@ -10,6 +10,7 @@ const OnboardingPage = lazy(() => import('./pages/OnboardingPage').then(m => ({ 
 import { DashboardLayout } from './components/dashboard/DashboardLayout';
 const OverviewPage = lazy(() => import('./pages/OverviewPage').then(m => ({ default: m.OverviewPage })));
 const CallsPage = lazy(() => import('./pages/CallsPage').then(m => ({ default: m.CallsPage })));
+const JobsPage = lazy(() => import('./pages/JobsPage').then(m => ({ default: m.JobsPage })));
 const SMSPage = lazy(() => import('./pages/SMSPage').then(m => ({ default: m.SMSPage })));
 const ContactsPage = lazy(() => import('./pages/ContactsPage').then(m => ({ default: m.ContactsPage })));
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
@@ -94,6 +95,7 @@ function AppRoutes() {
         <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
           <Route index element={<OverviewPage />} />
           <Route path="calls" element={<CallsPage />} />
+          <Route path="jobs" element={<JobsPage />} />
           <Route path="sms" element={<SMSPage />} />
           <Route path="contacts" element={<ContactsPage />} />
           <Route path="settings" element={<SettingsPage />} />

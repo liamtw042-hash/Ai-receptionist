@@ -390,7 +390,10 @@ export function OverviewPage() {
             style={{ background: 'rgba(13,20,38,0.5)', borderLeft: '3px solid rgba(59,130,246,0.5)' }}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold text-white">This week</h2>
-              <span className="text-xs text-gray-600">Mon – today</span>
+              <div className="flex items-center gap-2.5 flex-shrink-0">
+                <span className="text-xs text-gray-600">Mon – today</span>
+                <Link to="/dashboard/jobs" className="text-xs text-blue-400 hover:text-blue-300 transition-colors">View jobs →</Link>
+              </div>
             </div>
             <div className="space-y-3">
               {[

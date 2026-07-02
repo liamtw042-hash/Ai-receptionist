@@ -2,7 +2,7 @@ import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  LayoutDashboard, Phone, MessageSquare, Users, Settings,
+  LayoutDashboard, Phone, MessageSquare, Users, Settings, Calendar,
   Menu, X, LogOut, Zap, Bell, Search,
   CheckCircle, PhoneIncoming, AlertTriangle, ChevronLeft, ChevronRight,
 } from 'lucide-react';
@@ -12,6 +12,7 @@ import { clsx } from 'clsx';
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Overview', end: true },
   { to: '/dashboard/calls', icon: Phone, label: 'Calls' },
+  { to: '/dashboard/jobs', icon: Calendar, label: 'Jobs' },
   { to: '/dashboard/sms', icon: MessageSquare, label: 'SMS' },
   { to: '/dashboard/contacts', icon: Users, label: 'Contacts' },
   { to: '/dashboard/settings', icon: Settings, label: 'Settings' },
@@ -20,6 +21,7 @@ const navItems = [
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Overview',
   '/dashboard/calls': 'Calls',
+  '/dashboard/jobs': 'Jobs',
   '/dashboard/sms': 'SMS Inbox',
   '/dashboard/contacts': 'Contacts',
   '/dashboard/settings': 'Settings',
@@ -41,6 +43,7 @@ function CommandSearch({ onClose }: { onClose: () => void }) {
   const ITEMS = [
     { label: 'Overview', icon: LayoutDashboard, href: '/dashboard' },
     { label: 'Calls', icon: Phone, href: '/dashboard/calls', hint: 'View call transcripts' },
+    { label: 'Jobs', icon: Calendar, href: '/dashboard/jobs', hint: 'Booked jobs & calendar' },
     { label: 'SMS Inbox', icon: MessageSquare, href: '/dashboard/sms', hint: 'Two-way messaging' },
     { label: 'Contacts', icon: Users, href: '/dashboard/contacts', hint: 'Caller CRM' },
     { label: 'Settings', icon: Settings, href: '/dashboard/settings', hint: 'AI & account settings' },

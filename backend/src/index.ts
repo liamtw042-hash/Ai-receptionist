@@ -13,6 +13,7 @@ import { dashboardRouter } from './routes/dashboard';
 import { googleRouter } from './routes/google';
 import { billingRouter } from './routes/billing';
 import { accountRouter } from './routes/account';
+import { jobsRouter } from './routes/jobs';
 
 dotenv.config();
 
@@ -45,6 +46,7 @@ app.use('/api/dashboard', dashboardRouter);
 app.use('/api/google', googleRouter);
 app.use('/api/billing', billingRouter);
 app.use('/api/account', accountRouter);
+app.use('/api/jobs', jobsRouter);
 
 app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'TradeDesk' }));
 

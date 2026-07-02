@@ -13,6 +13,7 @@ import {
 import { upsertContact } from '../services/contactService';
 import { resolveTwilioUser } from '../middleware/authMiddleware';
 import { appendToSheet, createCalendarEvent } from '../lib/googleAuth';
+import { createJobFromCall } from '../services/jobService';
 
 const router = Router();
 const VoiceResponse = twilio.twiml.VoiceResponse;
@@ -202,15 +203,33 @@ router.post('/status', async (req: Request, res: Response) => {
       const callDoc = await finalizeSession(CallSid, summary, outcome, durationSeconds);
       await sendCallSummaryToTradie(settings.mobileNumber, From, summary, outcome.replace(/_/g, ' ').toUpperCase());
 
+      const now = new Date();
+
       if (outcome === 'job_booked') {
         await sendBookingConfirmationToCaller(From, settings.businessName,
           'Your job has been logged. We\'ll confirm the exact time shortly.');
+
+        // Log it to the Jobs page too — independent of whether Google is
+        // connected, this is the in-app source of truth for booked work.
+        try {
+          const details = extractCallDetails(transcript, summary, outcome, From, now);
+          await createJobFromCall(userId, {
+            callId: callDoc || CallSid,
+            callerName: details.callerName,
+            callerNumber: From,
+            jobType: details.jobType,
+            address: details.address,
+            quoteGiven: details.quoteGiven,
+            notes: summary,
+          });
+        } catch (jobErr) {
+          console.error('Create job from call error:', jobErr);
+        }
       }
 
       await upsertContact(userId, From, { lastInteraction: new Date(), notes: summary });
 
       // ── Google integrations ────────────────────────────────────────────────
-      const now = new Date();
       const tokenDoc = await db.collection('googleTokens').doc(userId).get();
 
       if (tokenDoc.exists) {
