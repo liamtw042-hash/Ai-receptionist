@@ -175,6 +175,10 @@ router.post('/create-checkout-session', async (req: AuthRequest, res: Response) 
         trial_period_days: 7,
         metadata: { userId },
       },
+      // Lets the marketing/signup pages advertise real promo codes (e.g.
+      // FIRSTMONTH) — Stripe's hosted checkout shows a code field and applies
+      // whatever coupon/promotion code is configured in the Stripe dashboard.
+      allow_promotion_codes: true,
       success_url: `${frontendUrl}/dashboard/settings?billing=success`,
       cancel_url: `${frontendUrl}/dashboard/settings?billing=canceled`,
     });

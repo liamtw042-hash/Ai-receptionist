@@ -145,6 +145,14 @@ export function OnboardingPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Clicking "I'm live!" is the user's confirmation they've set up call
+  // forwarding per the instructions above — mark it done so the dashboard
+  // checklist doesn't ask them to redo a step they just finished.
+  const handleGoLive = () => {
+    api.put('/settings', { hasForwardingSetup: true }).catch(() => {});
+    navigate('/dashboard');
+  };
+
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-4">
@@ -385,7 +393,7 @@ export function OnboardingPage() {
                 ))}
               </div>
 
-              <Button onClick={() => navigate('/dashboard')} size="lg" className="w-full text-base">
+              <Button onClick={handleGoLive} size="lg" className="w-full text-base">
                 I'm live! Take me to my dashboard <ChevronRight size={16} />
               </Button>
             </div>

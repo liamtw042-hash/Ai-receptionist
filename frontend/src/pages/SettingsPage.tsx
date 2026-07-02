@@ -409,7 +409,8 @@ export function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [gmailLoading, setGmailLoading] = useState(false);
   const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<{ greeting: string; sampleQuestion?: string; sampleReply?: string; warning?: string } | null>(null);
+  const [testError, setTestError] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
   const gmailStatus = searchParams.get('gmail');
   const googleStatus = searchParams.get('google');
@@ -432,11 +433,27 @@ export function SettingsPage() {
   const handleTestAI = async () => {
     setTesting(true);
     setTestResult(null);
-    await new Promise(r => setTimeout(r, 1800));
-    const biz = settings.businessName || 'your business';
-    const trader = settings.traderName || 'Dave';
-    setTestResult(`"G'day! You've reached ${biz}. ${trader}'s on a job right now — I'm their AI receptionist. How can I help you today?"`);
-    setTesting(false);
+    setTestError(null);
+    try {
+      const result = await api.post<{ greeting: string; sampleQuestion?: string; sampleReply?: string; warning?: string }>('/settings/test-ai', {
+        businessName: settings.businessName,
+        traderName: settings.traderName,
+        tradeType: settings.tradeType,
+        suburb: settings.suburb,
+        pricingGuide: settings.pricingGuide,
+        availability: settings.availability,
+        mobileNumber: settings.mobileNumber,
+        services: typeof settings.services === 'string'
+          ? (settings.services as string).split(',').map(s => s.trim()).filter(Boolean)
+          : settings.services,
+        emergencyCallbackMinutes: settings.emergencyCallbackMinutes,
+      });
+      setTestResult(result);
+    } catch (err: any) {
+      setTestError(err.message || 'Failed to test AI');
+    } finally {
+      setTesting(false);
+    }
   };
 
   const handleSave = async (e: FormEvent) => {
@@ -694,13 +711,33 @@ export function SettingsPage() {
               <><Play size={15} />Simulate a call</>
             )}
           </button>
+          {testError && (
+            <p className="text-xs text-red-400 mt-3">{testError}</p>
+          )}
           {testResult && (
-            <div className="mt-4 glass rounded-xl p-4 border border-blue-500/20 bg-blue-500/5 animate-fade-in">
-              <div className="flex items-center gap-2 mb-2">
-                <Mic size={14} className="text-blue-400" />
-                <p className="text-xs text-blue-400 font-semibold">Your AI would say:</p>
+            <div className="mt-4 space-y-3 animate-fade-in">
+              <div className="glass rounded-xl p-4 border border-blue-500/20 bg-blue-500/5">
+                <div className="flex items-center gap-2 mb-2">
+                  <Mic size={14} className="text-blue-400" />
+                  <p className="text-xs text-blue-400 font-semibold">Your AI says when it picks up:</p>
+                </div>
+                <p className="text-sm text-white leading-relaxed italic">"{testResult.greeting}"</p>
               </div>
-              <p className="text-sm text-white leading-relaxed italic">{testResult}</p>
+              {testResult.sampleReply && (
+                <div className="glass rounded-xl p-4 border border-white/8">
+                  <p className="text-xs text-gray-500 mb-2">
+                    Caller asks: <span className="text-gray-300">"{testResult.sampleQuestion}"</span>
+                  </p>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <Mic size={14} className="text-blue-400" />
+                    <p className="text-xs text-blue-400 font-semibold">Your AI replies:</p>
+                  </div>
+                  <p className="text-sm text-white leading-relaxed italic">"{testResult.sampleReply}"</p>
+                </div>
+              )}
+              {testResult.warning && (
+                <p className="text-xs text-amber-400">{testResult.warning}</p>
+              )}
             </div>
           )}
         </Section>

@@ -76,11 +76,11 @@ export function SignupPage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* EOFY Sale Banner */}
+      {/* Promo banner */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-500 text-white text-center py-2.5 px-4 text-sm font-medium">
         <span className="opacity-80">🎉</span>{' '}
-        <strong>50% off — EOFY Sale</strong> — ends June 30.{' '}
-        <span className="opacity-80">Use code <strong>EOFY50</strong> at checkout.</span>
+        <strong>Get your first month free</strong> — no credit card required to start.{' '}
+        <span className="opacity-80">Use code <strong>FIRSTMONTH</strong> at checkout.</span>
       </div>
 
       <div className="min-h-[calc(100vh-40px)] flex items-center justify-center p-4 py-10">
@@ -107,11 +107,10 @@ export function SignupPage() {
 
               <div className="mb-6">
                 <div className="flex items-end gap-1.5">
-                  <span className="text-gray-400 line-through text-lg">$398</span>
                   <span className="text-4xl font-extrabold text-white">$199</span>
-                  <span className="text-gray-400 mb-1">/month</span>
+                  <span className="text-gray-400 mb-1">/month AUD</span>
                 </div>
-                <p className="text-xs text-blue-400 font-medium mt-1">50% off EOFY — regular price $398/mo</p>
+                <p className="text-xs text-blue-400 font-medium mt-1">First month free with code FIRSTMONTH</p>
               </div>
 
               <ul className="space-y-2.5 flex-1">
