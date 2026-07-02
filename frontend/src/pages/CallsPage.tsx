@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import {
-  Phone, ChevronDown, Search, Filter, PhoneIncoming, PhoneOutgoing,
-  PhoneMissed, Clock, User, MessageSquare, RefreshCw, X,
+  Phone, ChevronDown, Search, PhoneIncoming, PhoneOutgoing,
+  PhoneMissed, Clock, User, MessageSquare, RefreshCw, X, Sparkles,
 } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { api } from '../lib/api';
 import { OutcomeBadge } from '../components/ui/Badge';
 import { SkeletonRow } from '../components/ui/Skeleton';
+import { staggerContainer, staggerItem, instantContainer, instantItem } from '../lib/motion';
 import { formatDistanceToNow, format } from 'date-fns';
 import { clsx } from 'clsx';
 
@@ -54,26 +56,38 @@ function fmtDuration(secs?: number): string {
 
 const FILTERS = ['All', 'Booked', 'Emergency', 'Lead', 'No Action', 'Transferred'];
 
-function TranscriptBubble({ msg }: { msg: Message }) {
+// Transcript line — clear speaker distinction. The AI (orange = your product
+// working) sits left with an attributed label; the caller sits right, quieter.
+// Real typographic hierarchy: a small speaker label above a comfortable-width
+// message bubble, not monospace dumped in a box.
+function TranscriptLine({ msg }: { msg: Message }) {
   const isAI = msg.role === 'assistant';
   return (
     <div className={clsx('flex gap-2.5', isAI ? 'justify-start' : 'justify-end')}>
       {isAI && (
-        <div className="w-6 h-6 rounded-full bg-orange-500/20 border border-orange-500/25 flex items-center justify-center flex-shrink-0 mt-0.5">
-          <Phone size={10} className="text-orange-400" />
+        <div className="w-7 h-7 rounded-lg bg-orange-500/15 border border-orange-500/25 flex items-center justify-center flex-shrink-0 mt-4">
+          <Sparkles size={12} className="text-orange-400" />
         </div>
       )}
-      <div className={clsx(
-        'max-w-[78%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed',
-        isAI
-          ? 'bg-white/[0.07] text-gray-100 rounded-tl-sm border border-white/8'
-          : 'bg-white/[0.12] text-gray-100 rounded-tr-sm border border-white/10'
-      )}>
-        {msg.content}
+      <div className={clsx('max-w-[80%] min-w-0', isAI ? 'items-start' : 'items-end flex flex-col')}>
+        <span className={clsx(
+          'text-[10px] font-bold uppercase tracking-[0.12em] mb-1 block',
+          isAI ? 'text-orange-400/90' : 'text-gray-500 text-right'
+        )}>
+          {isAI ? 'Your AI' : 'Caller'}
+        </span>
+        <div className={clsx(
+          'px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed',
+          isAI
+            ? 'bg-orange-500/[0.08] text-gray-100 rounded-tl-sm border border-orange-500/15'
+            : 'bg-white/[0.06] text-gray-200 rounded-tr-sm border border-white/10'
+        )}>
+          {msg.content}
+        </div>
       </div>
       {!isAI && (
-        <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-          <User size={10} className="text-gray-400" />
+        <div className="w-7 h-7 rounded-lg bg-white/8 border border-white/10 flex items-center justify-center flex-shrink-0 mt-4">
+          <User size={12} className="text-gray-400" />
         </div>
       )}
     </div>
@@ -88,6 +102,7 @@ export function CallsPage() {
   const [filter, setFilter] = useState('All');
   const [expanded, setExpanded] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const reduceMotion = useReducedMotion();
 
   const load = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -107,42 +122,62 @@ export function CallsPage() {
     return true;
   });
 
+  // Real, honest counts derived from the actual call list — no fabricated series.
+  const bookedCount = calls.filter(c => c.outcome?.toLowerCase() === 'booked').length;
+  const emergencyCount = calls.filter(c => c.outcome?.toLowerCase() === 'emergency').length;
+
   const toggle = (id: string) => setExpanded(e => e === id ? null : id);
 
   return (
     <div className="space-y-4 animate-slide-up">
-      {/* Header row */}
-      <div className="flex items-center gap-3">
-        <div className="flex-1">
-          <h1 className="text-2xl font-black text-white tracking-tight leading-none">Calls</h1>
-          <p className="text-xs text-gray-500 mt-1.5">{calls.length} answered by your AI</p>
+      {/* ── Header: dominant "answered by your AI" count, real supporting tallies ── */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-black text-white tracking-tight leading-none">Call log</h1>
+          <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-2 text-xs">
+            <span className="inline-flex items-center gap-1.5 text-gray-400">
+              <Sparkles size={12} className="text-orange-400" />
+              <strong className="text-white font-semibold tabular-nums">{calls.length}</strong> answered by your AI
+            </span>
+            {bookedCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 text-gray-500">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                <strong className="text-green-400 font-semibold tabular-nums">{bookedCount}</strong> booked
+              </span>
+            )}
+            {emergencyCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 text-gray-500">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                <strong className="text-red-400 font-semibold tabular-nums">{emergencyCount}</strong> emergency
+              </span>
+            )}
+          </div>
         </div>
         <button onClick={() => load(true)} disabled={refreshing}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs text-gray-500 hover:text-white bg-white/4 hover:bg-white/8 border border-white/7 transition-all min-h-[38px]">
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs text-gray-500 hover:text-white bg-white/4 hover:bg-white/8 border border-white/7 transition-all min-h-[38px] flex-shrink-0">
           <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
           <span className="hidden sm:inline">Refresh</span>
         </button>
       </div>
 
-      {/* Search + filter */}
+      {/* ── Search + filter — one bar, TradeDesk-specific: orange focus, pill filters ── */}
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
+          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
           <input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Search number or summary…"
-            className="w-full bg-white/4 border border-white/7 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-700 focus:outline-none focus:border-orange-500/50 transition-colors min-h-[42px]" />
+            placeholder="Search a number or what the call was about…"
+            className="w-full bg-white/4 border border-white/7 rounded-xl pl-10 pr-9 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 focus:bg-white/[0.06] transition-all min-h-[42px]" />
           {search && (
             <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-white">
-              <X size={12} />
+              <X size={13} />
             </button>
           )}
         </div>
-        <div className="flex gap-1.5 flex-wrap sm:flex-nowrap">
-          <Filter size={13} className="self-center text-gray-600 flex-shrink-0 ml-1 hidden sm:block" />
+        <div className="flex gap-1.5 overflow-x-auto sm:overflow-visible -mx-1 px-1 sm:mx-0 sm:px-0 pb-1 sm:pb-0 sm:flex-wrap">
           {FILTERS.map(f => (
             <button key={f} onClick={() => setFilter(f)}
               className={clsx(
-                'px-3 py-2 rounded-xl text-xs font-medium transition-all border min-h-[38px] whitespace-nowrap',
+                'px-3 py-2 rounded-xl text-xs font-semibold transition-all border min-h-[38px] whitespace-nowrap flex-shrink-0',
                 filter === f
                   ? 'bg-orange-500/15 border-orange-500/30 text-orange-400'
                   : 'bg-white/3 border-white/7 text-gray-500 hover:text-gray-200 hover:border-white/15'
@@ -153,37 +188,42 @@ export function CallsPage() {
         </div>
       </div>
 
-      {/* Calls list */}
+      {/* ── Calls list ── */}
       {loading ? (
         <div className="space-y-2">{[...Array(6)].map((_, i) => <SkeletonRow key={i} />)}</div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-2xl border border-white/7 py-14 text-center" style={{ background: 'rgba(13,20,38,0.5)' }}>
-          <div className="w-14 h-14 bg-orange-500/8 border border-orange-500/15 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Phone size={24} className="text-orange-400/40" />
+        <div className="rounded-2xl border border-white/7 py-14 px-6 text-center" style={{ background: 'rgba(13,20,38,0.5)' }}>
+          <div className="w-14 h-14 bg-orange-500/8 border border-orange-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            {search || filter !== 'All'
+              ? <Search size={22} className="text-orange-400/50" />
+              : <Sparkles size={22} className="text-orange-400/60" />}
           </div>
-          <p className="text-sm font-semibold text-gray-300 mb-1">
-            {search || filter !== 'All' ? 'No calls match that' : 'No calls yet'}
+          <p className="text-sm font-bold text-white mb-1.5">
+            {search || filter !== 'All' ? 'Nothing matches that yet' : 'Your first call will land right here'}
           </p>
-          <p className="text-xs text-gray-600 max-w-[240px] mx-auto">
+          <p className="text-xs text-gray-500 max-w-[280px] mx-auto leading-relaxed">
             {search || filter !== 'All'
               ? 'Try clearing the search or picking a different outcome.'
-              : "The next time a caller reaches your AI, the full transcript and outcome land right here."}
+              : "The next time you can't pick up, your AI answers, sorts out what the caller needs, and drops the full transcript and outcome here — so you never lose a job to a missed call again."}
           </p>
         </div>
       ) : (
-        <div className="rounded-2xl border border-white/7 overflow-hidden" style={{ background: 'rgba(13,20,38,0.5)' }}>
+        <motion.div className="rounded-2xl border border-white/7 overflow-hidden" style={{ background: 'rgba(13,20,38,0.5)' }}
+          variants={reduceMotion ? instantContainer : staggerContainer(0.04)}
+          initial="hidden" animate="show">
           {filtered.map((call, idx) => {
             const cfg = getOutcomeConfig(call.outcome);
             const isOpen = expanded === call.id;
             const CallIcon = cfg.icon;
 
             return (
-              <div key={call.id} className={clsx('border-white/5', idx > 0 && 'border-t')}>
+              <motion.div key={call.id} variants={reduceMotion ? instantItem : staggerItem}
+                className={clsx('border-white/5', idx > 0 && 'border-t', isOpen && 'bg-white/[0.015]')}>
                 {/* Row */}
                 <button
                   onClick={() => toggle(call.id)}
                   className="w-full flex items-center gap-0 hover:bg-white/3 transition-colors text-left group">
-                  {/* Coloured outcome bar */}
+                  {/* Coloured outcome rail — semantic status, glows like the sidebar active rail */}
                   <div className="w-[3px] self-stretch flex-shrink-0 rounded-r"
                     style={{ background: cfg.bar, boxShadow: `0 0 8px ${cfg.bar}60` }} />
 
@@ -225,7 +265,7 @@ export function CallsPage() {
                 {/* Expanded transcript */}
                 {isOpen && (
                   <div className="border-t border-white/5 px-4 pb-4" style={{ background: 'rgba(0,0,0,0.2)' }}>
-                    <div className="pt-3 mb-3 flex flex-wrap items-center gap-3 text-xs text-gray-600">
+                    <div className="pt-3 mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600">
                       {call.createdAt && (
                         <span className="flex items-center gap-1">
                           <Clock size={10} />
@@ -235,7 +275,7 @@ export function CallsPage() {
                       {call.durationSeconds && (
                         <span className="flex items-center gap-1">
                           <Phone size={10} />
-                          Duration: {fmtDuration(call.durationSeconds)}
+                          {fmtDuration(call.durationSeconds)} on the line
                         </span>
                       )}
                       {call.turns && (
@@ -246,34 +286,40 @@ export function CallsPage() {
                       )}
                     </div>
 
-                    {/* Summary pill */}
+                    {/* AI summary — orange = your AI's own read on the call */}
                     {call.summary && (
-                      <div className="mb-3 px-3.5 py-2.5 rounded-xl text-xs text-gray-200 border border-orange-500/15"
+                      <div className="mb-4 px-3.5 py-3 rounded-xl border border-orange-500/15"
                         style={{ background: 'rgba(249,115,22,0.06)' }}>
-                        <span className="text-orange-400 font-bold text-[10px] uppercase tracking-wider">AI summary · </span>
-                        {call.summary}
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <Sparkles size={11} className="text-orange-400" />
+                          <span className="text-orange-400 font-bold text-[10px] uppercase tracking-[0.12em]">AI summary</span>
+                        </div>
+                        <p className="text-sm text-gray-200 leading-relaxed">{call.summary}</p>
                       </div>
                     )}
 
                     {/* Transcript */}
                     {call.transcript && call.transcript.length > 0 ? (
-                      <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
-                        {call.transcript.map((msg, i) => <TranscriptBubble key={i} msg={msg} />)}
-                      </div>
+                      <>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-600 mb-3">Full transcript</p>
+                        <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                          {call.transcript.map((msg, i) => <TranscriptLine key={i} msg={msg} />)}
+                        </div>
+                      </>
                     ) : (
-                      <p className="text-xs text-gray-700 italic">No transcript available.</p>
+                      <p className="text-xs text-gray-600 italic">No transcript was captured for this call.</p>
                     )}
                   </div>
                 )}
-              </div>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
       )}
 
       {!loading && filtered.length > 0 && (
         <p className="text-center text-xs text-gray-700 pb-2">
-          Showing {filtered.length} of {calls.length} calls
+          Showing {filtered.length} of {calls.length} call{calls.length !== 1 ? 's' : ''}
         </p>
       )}
     </div>

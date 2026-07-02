@@ -45,22 +45,35 @@ interface GoogleStatus {
   gmailConnected: boolean;
 }
 
-function Section({ icon: Icon, title, description, children, iconColor = 'text-blue-400', iconBg = 'bg-blue-500/15' }: {
+function Section({ icon: Icon, title, description, children, iconColor = 'text-orange-400', iconBg = 'bg-orange-500/15' }: {
   icon: typeof User; title: string; description?: string; children: React.ReactNode;
   iconColor?: string; iconBg?: string;
 }) {
   return (
     <div>
       <div className="flex items-center gap-3 mb-4">
-        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${iconBg}`}>
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${iconBg}`}>
           <Icon size={17} className={iconColor} />
         </div>
         <div>
-          <h2 className="text-base font-semibold text-white">{title}</h2>
+          <h2 className="text-base font-bold text-white tracking-tight">{title}</h2>
           {description && <p className="text-xs text-gray-500 mt-0.5">{description}</p>}
         </div>
       </div>
       {children}
+    </div>
+  );
+}
+
+// A quiet group divider — introduces a band of related settings and creates the
+// hierarchy the flat "stack of identical cards" was missing. The label carries
+// the weighting: primary (daily) vs the quieter admin/occasional groups.
+function GroupHeading({ label, hint, accent = false }: { label: string; hint: string; accent?: boolean }) {
+  return (
+    <div className="flex items-baseline gap-2.5 px-1 pt-2">
+      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 self-center ${accent ? 'bg-orange-400' : 'bg-white/20'}`} />
+      <h3 className={`text-xs font-bold uppercase tracking-[0.14em] ${accent ? 'text-orange-400/90' : 'text-gray-500'}`}>{label}</h3>
+      <span className="text-[11px] text-gray-700 hidden sm:block">— {hint}</span>
     </div>
   );
 }
@@ -423,21 +436,32 @@ function BillingCard() {
 
   return (
     <Card>
-      <Section icon={CreditCard} title="Billing" description="Your plan and payment details" iconColor="text-blue-400" iconBg="bg-blue-500/15">
+      <Section icon={CreditCard} title="Billing" description="Your plan and payment details">
         {loadingStatus ? (
           <div className="flex items-center gap-2 text-sm text-gray-500"><Loader2 size={14} className="animate-spin" /> Checking subscription…</div>
         ) : isActive ? (
           <>
-            <div className="glass rounded-xl p-4 border border-blue-500/20 bg-blue-500/5 mb-4">
-              <div className="flex items-center justify-between flex-wrap gap-2">
+            {/* Live plan tile — feels like a considered product's plan card, not
+                generic Stripe boilerplate. Status colour is the only decorative hue. */}
+            <div className="relative overflow-hidden rounded-2xl p-5 mb-4 border border-orange-500/25"
+              style={{ background: 'linear-gradient(135deg,rgba(38,22,8,0.5) 0%,rgba(13,20,38,0.85) 55%,rgba(8,12,20,0.9) 100%)' }}>
+              <div className="absolute top-0 right-0 w-40 h-40 rounded-full pointer-events-none"
+                style={{ background: 'radial-gradient(circle,rgba(249,115,22,0.12) 0%,transparent 70%)', transform: 'translate(30%,-35%)' }} />
+              <div className="relative flex items-start justify-between gap-3 flex-wrap">
                 <div>
-                  <p className="font-semibold text-white text-sm">TradeDesk Pro</p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    $199/month AUD{billing?.status === 'trialing' ? ' · Free trial' : ''}
+                  <div className="flex items-center gap-2">
+                    <Zap size={14} className="text-orange-400" fill="currentColor" />
+                    <p className="font-black text-white text-lg tracking-tight leading-none">TradeDesk Pro</p>
+                  </div>
+                  <p className="text-2xl font-black text-white tracking-tight mt-3 tabular-nums">
+                    $199<span className="text-sm font-semibold text-gray-500">/month AUD</span>
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1.5">
+                    {billing?.status === 'trialing' ? 'On your free trial' : 'Your AI is answering calls around the clock'}
                     {billing?.currentPeriodEnd && ` · ${billing.cancelAtPeriodEnd ? 'ends' : 'renews'} ${new Date(billing.currentPeriodEnd).toLocaleDateString('en-AU')}`}
                   </p>
                 </div>
-                <span className={`text-xs px-2.5 py-1 rounded-full font-semibold border ${
+                <span className={`text-xs px-2.5 py-1 rounded-full font-semibold border flex-shrink-0 ${
                   billing?.cancelAtPeriodEnd ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-green-500/20 text-green-400 border-green-500/30'
                 }`}>
                   {billing?.cancelAtPeriodEnd ? 'Cancels soon' : billing?.status === 'trialing' ? 'Trialing' : 'Active'}
@@ -449,9 +473,26 @@ function BillingCard() {
           </>
         ) : (
           <>
-            <p className="text-sm text-gray-400 mb-4">
-              {billing?.status === 'canceled' ? 'Your subscription has ended — resubscribe any time.' : billing?.status === 'past_due' ? 'Your last payment failed — update your card to keep TradeDesk running.' : "You're not subscribed yet."} Start your 7-day free trial, then $199/month AUD. Cancel any time. (Stripe test mode)
-            </p>
+            {/* Pre-subscription — anchor the price against the payoff, tradie-voiced */}
+            <div className="relative overflow-hidden rounded-2xl p-5 mb-4 border border-orange-500/25"
+              style={{ background: 'linear-gradient(135deg,rgba(38,22,8,0.5) 0%,rgba(13,20,38,0.85) 100%)' }}>
+              <div className="flex items-center gap-2">
+                <Zap size={14} className="text-orange-400" fill="currentColor" />
+                <p className="font-black text-white text-lg tracking-tight leading-none">TradeDesk Pro</p>
+              </div>
+              <p className="text-2xl font-black text-white tracking-tight mt-3 tabular-nums">
+                $199<span className="text-sm font-semibold text-gray-500">/month AUD</span>
+              </p>
+              <p className="text-sm text-gray-400 mt-2 leading-relaxed">
+                {billing?.status === 'canceled'
+                  ? 'Your subscription has ended — pick up right where you left off.'
+                  : billing?.status === 'past_due'
+                  ? 'Your last payment failed — update your card to keep your AI answering.'
+                  : 'One missed job usually costs more than a month of this.'}{' '}
+                Start with a 7-day free trial. Cancel any time.
+              </p>
+              <p className="text-[11px] text-gray-700 mt-2">Stripe test mode</p>
+            </div>
             {error && <p className="text-xs text-red-400 mb-3">{error}</p>}
             <Button type="button" onClick={handleSubscribe} loading={starting}>
               <CreditCard size={15} /> Start 7-day free trial
@@ -568,7 +609,7 @@ export function SettingsPage() {
     <div className="max-w-2xl animate-slide-up">
       <div className="mb-6">
         <h1 className="text-2xl font-black text-white tracking-tight leading-none">Settings</h1>
-        <p className="text-gray-500 text-sm mt-1.5">Configure your AI receptionist</p>
+        <p className="text-gray-500 text-sm mt-1.5">Tune what your AI knows and how it works for you</p>
       </div>
 
       {googleStatus === 'connected' && (
@@ -592,7 +633,11 @@ export function SettingsPage() {
         </div>
       )}
 
-      <form onSubmit={handleSave} className="space-y-4">
+      {/* ═══ PRIMARY: your AI's brain — the settings that change what every caller
+             hears. This is the daily-important band, so it leads and gets the
+             orange "your product working" accent. ═══ */}
+      <GroupHeading label="Your AI's brain" hint="what every caller hears" accent />
+      <form onSubmit={handleSave} className="space-y-4 mt-3">
 
         {/* 1. Business Profile */}
         <Card>
@@ -606,7 +651,7 @@ export function SettingsPage() {
                 <label className="text-sm font-medium text-gray-300">Trade type</label>
                 <div className="relative">
                   <select value={settings.tradeType || ''} onChange={e => update('tradeType', e.target.value)}
-                    className="glass w-full rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/40 appearance-none pr-10 bg-transparent cursor-pointer transition-all">
+                    className="glass w-full rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-orange-500/60 focus:ring-1 focus:ring-orange-500/40 appearance-none pr-10 bg-transparent cursor-pointer transition-all">
                     <option value="" disabled className="bg-gray-900">Select trade…</option>
                     {TRADES.map(t => <option key={t} value={t} className="bg-gray-900">{t}</option>)}
                   </select>
@@ -624,7 +669,7 @@ export function SettingsPage() {
 
         {/* 2. Call Settings */}
         <Card>
-          <Section icon={Phone} title="Call Settings" description="What your AI says and how it handles calls" iconColor="text-purple-400" iconBg="bg-purple-500/15">
+          <Section icon={Phone} title="Call Settings" description="What your AI says and how it handles calls">
             <div className="space-y-4">
               <Textarea label="Services offered" value={servicesStr} onChange={e => update('services', e.target.value)}
                 placeholder="Hot water repairs, blocked drains, new installations" rows={3} hint="Comma-separated" />
@@ -647,26 +692,69 @@ export function SettingsPage() {
         </div>
       </form>
 
-      {/* 3. Integrations (outside form — manages its own state) */}
-      <div className="mt-4">
-        <GoogleIntegrationsCard />
+      {/* Test your AI — the payoff of the config above: hear it in your own words.
+          Full orange treatment; this is the "your AI working" moment. */}
+      <Card className="mt-4 relative overflow-hidden" style={{ borderColor: 'rgba(249,115,22,0.25)' }}>
+        <div className="absolute top-0 right-0 w-40 h-40 rounded-full pointer-events-none"
+          style={{ background: 'radial-gradient(circle,rgba(249,115,22,0.08) 0%,transparent 70%)', transform: 'translate(30%,-35%)' }} />
+        <Section icon={Zap} title="Hear your AI" description="A live preview using your actual business details">
+          <p className="text-sm text-gray-400 mb-4">
+            Run a mock call to hear exactly what your AI receptionist says when it picks up — spoken in your business name, with your pricing and hours baked in.
+          </p>
+          <button
+            type="button"
+            onClick={handleTestAI}
+            disabled={testing}
+            className="flex items-center gap-2 bg-orange-500 hover:bg-orange-400 text-black text-sm font-bold px-4 py-2.5 rounded-xl transition-all duration-200 disabled:opacity-50 shadow-lg shadow-orange-500/20"
+          >
+            {testing ? (
+              <><span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin inline-block" />Simulating call…</>
+            ) : (
+              <><Play size={15} fill="currentColor" />Simulate a call</>
+            )}
+          </button>
+          {testError && (
+            <p className="text-xs text-red-400 mt-3">{testError}</p>
+          )}
+          {testResult && (
+            <div className="mt-4 space-y-3 animate-fade-in">
+              <div className="glass rounded-xl p-4 border border-orange-500/20 bg-orange-500/[0.06]">
+                <div className="flex items-center gap-2 mb-2">
+                  <Mic size={14} className="text-orange-400" />
+                  <p className="text-xs text-orange-400 font-bold uppercase tracking-wider">Your AI says when it picks up</p>
+                </div>
+                <p className="text-sm text-white leading-relaxed italic">"{testResult.greeting}"</p>
+              </div>
+              {testResult.sampleReply && (
+                <div className="glass rounded-xl p-4 border border-white/8">
+                  <p className="text-xs text-gray-500 mb-2">
+                    Caller asks: <span className="text-gray-300">"{testResult.sampleQuestion}"</span>
+                  </p>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <Mic size={14} className="text-orange-400" />
+                    <p className="text-xs text-orange-400 font-bold uppercase tracking-wider">Your AI replies</p>
+                  </div>
+                  <p className="text-sm text-white leading-relaxed italic">"{testResult.sampleReply}"</p>
+                </div>
+              )}
+              {testResult.warning && (
+                <p className="text-xs text-amber-400">{testResult.warning}</p>
+              )}
+            </div>
+          )}
+        </Section>
+      </Card>
+
+      {/* ═══ Your phone line + alerts — set once, glance at occasionally ═══ */}
+      <div className="mt-7">
+        <GroupHeading label="Your line & alerts" hint="the number, and when we tap you on the shoulder" />
       </div>
-
-      {/* 4. Notification Preferences */}
-      <form onSubmit={handleSave} className="space-y-4 mt-4">
-        <Card>
-          <Section icon={Bell} title="Notification Preferences" description="How and when you get notified" iconColor="text-yellow-400" iconBg="bg-yellow-500/15">
-            <Toggle label="SMS alerts after each call" hint="Receive a text summary after every call" checked={!!(settings.smsAlertsEnabled)} onChange={v => update('smsAlertsEnabled', v)} />
-            <Toggle label="Email summary" hint="Get a daily email digest of all calls" checked={!!(settings.emailSummaryEnabled)} onChange={v => update('emailSummaryEnabled', v)} />
-            <Toggle label="Weekly leads summary" hint="Sunday email with your week's leads and bookings" checked={!!(settings.weeklySummaryEnabled)} onChange={v => update('weeklySummaryEnabled', v)} />
-          </Section>
-        </Card>
-
-        {/* 5. Twilio / Phone Number */}
+      <form onSubmit={handleSave} className="space-y-4 mt-3">
+        {/* Twilio / Phone Number */}
         <Card>
           <Section icon={Phone} title="Your TradeDesk Number" description="The number callers reach your AI on" iconColor="text-green-400" iconBg="bg-green-500/15">
             <div className="flex items-center gap-3 glass rounded-lg px-4 py-3 mb-3">
-              <Phone size={16} className="text-blue-400" />
+              <Phone size={16} className="text-green-400" />
               <span className="text-white font-mono text-sm">{settings.twilioNumber || 'Not configured yet'}</span>
             </div>
             <Input label="Update number" value={settings.twilioNumber || ''} onChange={e => update('twilioNumber', e.target.value)} placeholder="+61400000000" hint="Set this to match your Twilio number" />
@@ -681,6 +769,15 @@ export function SettingsPage() {
           </Section>
         </Card>
 
+        {/* Notification Preferences */}
+        <Card>
+          <Section icon={Bell} title="Notifications" description="How and when you get notified" iconColor="text-yellow-400" iconBg="bg-yellow-500/15">
+            <Toggle label="SMS alerts after each call" hint="Receive a text summary after every call" checked={!!(settings.smsAlertsEnabled)} onChange={v => update('smsAlertsEnabled', v)} />
+            <Toggle label="Email summary" hint="Get a daily email digest of all calls" checked={!!(settings.emailSummaryEnabled)} onChange={v => update('emailSummaryEnabled', v)} />
+            <Toggle label="Weekly leads summary" hint="Sunday email with your week's leads and bookings" checked={!!(settings.weeklySummaryEnabled)} onChange={v => update('weeklySummaryEnabled', v)} />
+          </Section>
+        </Card>
+
         {/* Save button */}
         <div className="flex items-center gap-4 pb-2">
           <Button type="submit" loading={saving} size="lg" variant={saved ? 'success' : 'primary'}>
@@ -690,69 +787,43 @@ export function SettingsPage() {
         </div>
       </form>
 
-      {/* 7. Billing */}
-      <div className="mt-4">
+      {/* ═══ Connections & account — occasional / admin. Quieter band. ═══ */}
+      <div className="mt-7">
+        <GroupHeading label="Connections & account" hint="set up once, revisit rarely" />
+      </div>
+      <div className="mt-3 space-y-4">
+        <GoogleIntegrationsCard />
         <BillingCard />
       </div>
 
-      {/* Test your AI */}
-      <Card className="mt-4">
-        <Section icon={Zap} title="Test your AI" description="Hear exactly what your AI says when it picks up a call" iconColor="text-blue-400" iconBg="bg-blue-500/15">
-          <p className="text-sm text-gray-400 mb-4">
-            Click below to simulate what your AI receptionist will say when answering a call — using your actual business name and details.
-          </p>
-          <button
-            type="button"
-            onClick={handleTestAI}
-            disabled={testing}
-            className="flex items-center gap-2 bg-orange-500/15 hover:bg-orange-500/25 border border-orange-500/30 text-orange-400 text-sm font-semibold px-4 py-2.5 rounded-lg transition-all duration-200 disabled:opacity-50"
-          >
-            {testing ? (
-              <><span className="w-4 h-4 border-2 border-orange-400 border-t-transparent rounded-full animate-spin inline-block" />Simulating call...</>
-            ) : (
-              <><Play size={15} />Simulate a call</>
-            )}
-          </button>
-          {testError && (
-            <p className="text-xs text-red-400 mt-3">{testError}</p>
-          )}
-          {testResult && (
-            <div className="mt-4 space-y-3 animate-fade-in">
-              <div className="glass rounded-xl p-4 border border-orange-500/20 bg-orange-500/[0.06]">
-                <div className="flex items-center gap-2 mb-2">
-                  <Mic size={14} className="text-orange-400" />
-                  <p className="text-xs text-orange-400 font-semibold">Your AI says when it picks up:</p>
-                </div>
-                <p className="text-sm text-white leading-relaxed italic">"{testResult.greeting}"</p>
+      {/* Danger Zone — serious and deliberately hard to fire by accident, but not
+          alarmist. Set apart with its own band, a clear plain-English warning of
+          exactly what's lost, and the destructive action isolated at the bottom. */}
+      <div className="mt-7">
+        <div className="rounded-2xl border border-red-500/20 overflow-hidden" style={{ background: 'rgba(30,10,12,0.35)' }}>
+          <div className="px-5 pt-5 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-red-500/12 border border-red-500/20 flex items-center justify-center flex-shrink-0">
+                <Trash2 size={16} className="text-red-400" />
               </div>
-              {testResult.sampleReply && (
-                <div className="glass rounded-xl p-4 border border-white/8">
-                  <p className="text-xs text-gray-500 mb-2">
-                    Caller asks: <span className="text-gray-300">"{testResult.sampleQuestion}"</span>
-                  </p>
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <Mic size={14} className="text-orange-400" />
-                    <p className="text-xs text-orange-400 font-semibold">Your AI replies:</p>
-                  </div>
-                  <p className="text-sm text-white leading-relaxed italic">"{testResult.sampleReply}"</p>
-                </div>
-              )}
-              {testResult.warning && (
-                <p className="text-xs text-amber-400">{testResult.warning}</p>
-              )}
+              <div>
+                <h2 className="text-base font-bold text-white tracking-tight">Delete account</h2>
+                <p className="text-xs text-gray-500 mt-0.5">This can't be undone</p>
+              </div>
             </div>
-          )}
-        </Section>
-      </Card>
-
-      {/* Danger Zone */}
-      <Card className="mt-4 border-red-500/20">
-        <Section icon={Trash2} title="Danger Zone" description="Irreversible actions — proceed with caution" iconColor="text-red-400" iconBg="bg-red-500/15">
-          <Button variant="danger" size="sm" type="button" loading={deletingAccount} onClick={handleDeleteAccount}>
-            <Trash2 size={14} /> Delete account
-          </Button>
-        </Section>
-      </Card>
+            <p className="text-sm text-gray-400 mt-4 leading-relaxed">
+              Deleting your account cancels your subscription and permanently removes every call, contact and setting — for good. Your AI stops answering the moment it's done.
+            </p>
+          </div>
+          <div className="border-t border-red-500/15 px-5 py-4 flex items-center justify-between gap-3 flex-wrap"
+            style={{ background: 'rgba(239,68,68,0.04)' }}>
+            <span className="text-xs text-gray-600">You'll be asked to confirm before anything is deleted.</span>
+            <Button variant="danger" size="sm" type="button" loading={deletingAccount} onClick={handleDeleteAccount}>
+              <Trash2 size={14} /> Delete my account
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
