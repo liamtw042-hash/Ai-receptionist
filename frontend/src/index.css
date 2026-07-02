@@ -52,6 +52,16 @@ html, body {
     backdrop-filter: blur(12px);
   }
 
+  /* Hide the scrollbar on compact horizontally-scrolling rows (e.g. filter
+     pills on a narrow phone) while keeping the row scrollable. */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
   .glass-hover:hover {
     background: rgba(255, 255, 255, 0.07);
     border-color: rgba(59, 130, 246, 0.3);
@@ -271,24 +281,15 @@ html, body {
   #scroll-progress { display: none; }
 }
 
-/* ── Floating chat widget ── */
-.chat-widget {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  z-index: 40;
-}
-@media (max-width: 767px) {
-  .chat-widget { bottom: 80px; }
-}
-
-/* ── Exit intent overlay ── */
+/* ── Fade + scale in (chat widget panel, exit intent overlay) ── */
 @keyframes fade-in-scale {
   from { opacity: 0; transform: scale(0.92); }
   to { opacity: 1; transform: scale(1); }
 }
-.exit-intent {
+.exit-intent,
+.animate-fade-in-scale {
   animation: fade-in-scale 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  transform-origin: bottom right;
 }
 
 /* ── Accessibility focus rings ── */

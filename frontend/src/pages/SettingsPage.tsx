@@ -643,7 +643,7 @@ export function SettingsPage() {
         <Card>
           <Section icon={User} title="Business Profile" description="How your AI introduces itself to callers">
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Input label="Business name" value={settings.businessName || ''} onChange={e => update('businessName', e.target.value)} placeholder="Smith's Plumbing" required />
                 <Input label="Your name" value={settings.traderName || ''} onChange={e => update('traderName', e.target.value)} placeholder="Dave Smith" required />
               </div>
@@ -658,7 +658,7 @@ export function SettingsPage() {
                   <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Input label="Suburb / area" value={settings.suburb || ''} onChange={e => update('suburb', e.target.value)} placeholder="Bondi, Sydney" />
                 <Input label="Mobile (for alerts)" type="tel" value={settings.mobileNumber || ''} onChange={e => update('mobileNumber', e.target.value)} placeholder="+61400000000" />
               </div>

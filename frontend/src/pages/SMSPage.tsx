@@ -313,8 +313,8 @@ export function SMSPage() {
 
             {/* Input bar — email threads are handled by the AI auto-reply, not a manual SMS box */}
             {selected.channel === 'email' ? (
-              <div className="px-4 pb-4 pt-3 flex-shrink-0 border-t border-white/6 flex items-center gap-2 justify-center" style={{ background: 'rgba(0,0,0,0.15)' }}>
-                <Mail size={13} className="text-gray-600" />
+              <div className="px-4 pb-4 pt-3 flex-shrink-0 border-t border-white/6 flex items-center gap-2 justify-center text-center" style={{ background: 'rgba(0,0,0,0.15)' }}>
+                <Mail size={13} className="text-gray-600 flex-shrink-0" />
                 <p className="text-xs text-gray-600">Your AI auto-replies to this email thread — no manual reply needed here.</p>
               </div>
             ) : (

@@ -724,16 +724,18 @@ export function JobsPage() {
         )}
 
         {view === 'list' && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="relative">
+          <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+            <div className="relative w-full sm:w-48">
               <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search jobs…"
-                className="w-48 bg-white/5 border border-white/8 rounded-xl pl-8 pr-3 py-2 text-xs text-white placeholder-gray-700 focus:outline-none focus:border-orange-500/40 transition-colors" />
+                className="w-full bg-white/5 border border-white/8 rounded-xl pl-8 pr-3 py-2 text-xs text-white placeholder-gray-700 focus:outline-none focus:border-orange-500/40 transition-colors" />
             </div>
-            <div className="flex items-center gap-1 glass rounded-xl p-1 border border-white/8">
+            {/* Filter pills scroll horizontally rather than overflow the row on
+                a narrow (~390px) phone. */}
+            <div className="flex items-center gap-1 glass rounded-xl p-1 border border-white/8 overflow-x-auto max-w-full no-scrollbar">
               {STATUS_FILTERS.map(f => (
                 <button key={f.key} onClick={() => setStatusFilter(f.key)}
-                  className={clsx('px-2.5 py-1 rounded-lg text-xs font-medium transition-all whitespace-nowrap', statusFilter === f.key ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300')}>
+                  className={clsx('px-2.5 py-1 rounded-lg text-xs font-medium transition-all whitespace-nowrap flex-shrink-0', statusFilter === f.key ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300')}>
                   {f.label}
                 </button>
               ))}

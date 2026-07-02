@@ -4,7 +4,9 @@ import {
   Phone, MessageSquare, Mail, Clock, FileText, Zap,
   CheckCircle, XCircle, ArrowRight, Menu, X, AlertTriangle,
   ChevronDown, ArrowUp, DollarSign, Send, ExternalLink,
+  MessageCircle, Sparkles,
 } from 'lucide-react';
+import { publicPost } from '../lib/api';
 
 /* ──────────────────────────────────────
    HOOKS
@@ -253,17 +255,47 @@ function CallTranscriptDemo() {
    ────────────────────────────────────── */
 function NewsletterSignup() {
   const [email, setEmail] = useState('');
-  const [done, setDone] = useState(false);
-  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); if (email) setDone(true); };
-  return done ? (
-    <p className="text-sm text-green-400 flex items-center gap-2"><CheckCircle size={15} /> You're in — tips incoming!</p>
-  ) : (
-    <form onSubmit={handleSubmit} className="flex gap-2 max-w-xs">
-      <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" required
-        className="flex-1 min-w-0 glass rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/40 transition-all min-h-[44px]" />
-      <button type="submit" className="flex-shrink-0 bg-blue-500 hover:bg-blue-400 text-white px-3.5 py-2.5 rounded-lg transition-all flex items-center gap-1.5 text-sm font-medium min-h-[44px]">
-        <Send size={13} /> Sub
-      </button>
+  const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+  const [message, setMessage] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || status === 'loading') return;
+    setStatus('loading');
+    setMessage('');
+    try {
+      const res = await publicPost<{ status: string }>('/newsletter/subscribe', { email });
+      setStatus('done');
+      setMessage(res.status === 'already-subscribed' ? "You're already on the list — nice one." : "You're in — tips incoming!");
+    } catch (err) {
+      setStatus('error');
+      setMessage(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+    }
+  };
+
+  if (status === 'done') {
+    return <p className="text-sm text-green-400 flex items-center gap-2"><CheckCircle size={15} /> {message}</p>;
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="max-w-xs" noValidate>
+      <div className="flex gap-2">
+        <input type="email" value={email}
+          onChange={e => { setEmail(e.target.value); if (status === 'error') setStatus('idle'); }}
+          placeholder="your@email.com" required aria-label="Email address"
+          disabled={status === 'loading'}
+          className="flex-1 min-w-0 glass rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/40 transition-all min-h-[44px] disabled:opacity-60" />
+        <button type="submit" disabled={status === 'loading' || !email}
+          className="flex-shrink-0 bg-blue-500 hover:bg-blue-400 disabled:opacity-60 disabled:hover:bg-blue-500 text-white px-3.5 py-2.5 rounded-lg transition-all flex items-center gap-1.5 text-sm font-medium min-h-[44px]">
+          {status === 'loading'
+            ? <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" aria-hidden="true" />
+            : <Send size={13} />}
+          {status === 'loading' ? '' : 'Sub'}
+        </button>
+      </div>
+      {status === 'error' && (
+        <p className="text-xs text-red-400 mt-2 flex items-center gap-1.5"><XCircle size={12} /> {message}</p>
+      )}
     </form>
   );
 }
@@ -298,6 +330,160 @@ const COMPARE_ROWS = [
   { label: 'Australian data', td: '✓', hr: 'N/A', comp: '✗ US servers' },
   { label: 'Setup time', td: '✓ 10 minutes', hr: '✗ 2–4 weeks', comp: '30–60 min' },
 ];
+
+/* ──────────────────────────────────────
+   SUPPORT CHAT WIDGET
+   A small, tightly-scoped TradeDesk FAQ assistant. Backed by
+   POST /api/chat/widget (public, rate-limited, TradeDesk-only prompt).
+   ────────────────────────────────────── */
+interface ChatMsg { role: 'user' | 'assistant'; content: string; }
+
+const CHAT_SUGGESTIONS = [
+  'How much does it cost?',
+  'How does it work?',
+  'How long to set up?',
+];
+
+function SupportChatWidget() {
+  const [open, setOpen] = useState(false);
+  const [messages, setMessages] = useState<ChatMsg[]>([
+    { role: 'assistant', content: "G'day! I'm the TradeDesk assistant. Ask me anything about how it works, pricing, or getting set up." },
+  ]);
+  const [draft, setDraft] = useState('');
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open) scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+  }, [messages, open, sending]);
+
+  useEffect(() => {
+    if (open) inputRef.current?.focus();
+  }, [open]);
+
+  const send = async (text: string) => {
+    const q = text.trim();
+    if (!q || sending) return;
+    setError('');
+    const history = messages.filter(m => m.role === 'user' || m.role === 'assistant').slice(-6);
+    const next: ChatMsg[] = [...messages, { role: 'user', content: q }];
+    setMessages(next);
+    setDraft('');
+    setSending(true);
+    try {
+      const res = await publicPost<{ reply: string }>('/chat/widget', { message: q, history });
+      setMessages(m => [...m, { role: 'assistant', content: res.reply }]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <>
+      {/* Launcher */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        aria-label={open ? 'Close chat' : 'Open TradeDesk chat assistant'}
+        aria-expanded={open}
+        className="fixed z-50 right-4 bottom-24 md:bottom-6 w-14 h-14 rounded-full bg-orange-500 hover:bg-orange-400 text-black flex items-center justify-center shadow-lg shadow-orange-500/30 transition-all"
+      >
+        {open ? <X size={22} /> : <MessageCircle size={22} />}
+      </button>
+
+      {/* Panel */}
+      {open && (
+        <div
+          role="dialog"
+          aria-label="TradeDesk chat assistant"
+          className="fixed z-50 right-4 bottom-40 md:bottom-24 w-[calc(100vw-2rem)] max-w-sm h-[28rem] max-h-[calc(100vh-12rem)] flex flex-col rounded-2xl border border-white/10 shadow-2xl overflow-hidden animate-fade-in-scale"
+          style={{ background: 'rgba(13,20,38,0.98)', backdropFilter: 'blur(12px)' }}
+        >
+          {/* Header */}
+          <div className="flex items-center gap-2.5 px-4 py-3 border-b border-white/8 flex-shrink-0" style={{ background: 'rgba(0,0,0,0.25)' }}>
+            <div className="w-8 h-8 rounded-lg bg-orange-500/15 border border-orange-500/25 flex items-center justify-center flex-shrink-0">
+              <Sparkles size={15} className="text-orange-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-white leading-tight">TradeDesk Assistant</p>
+              <p className="text-[11px] text-gray-500 leading-tight">Answers about pricing, setup & features</p>
+            </div>
+          </div>
+
+          {/* Messages */}
+          <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-2.5">
+            {messages.map((m, i) => (
+              <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[85%] px-3.5 py-2 text-sm leading-relaxed ${
+                  m.role === 'user'
+                    ? 'bg-orange-500 text-black font-medium rounded-2xl rounded-br-md'
+                    : 'text-gray-100 rounded-2xl rounded-bl-md border border-white/8'
+                }`} style={m.role === 'assistant' ? { background: 'rgba(255,255,255,0.06)' } : undefined}>
+                  {m.content}
+                </div>
+              </div>
+            ))}
+            {sending && (
+              <div className="flex justify-start">
+                <div className="px-3.5 py-2.5 rounded-2xl rounded-bl-md border border-white/8 flex items-center gap-1" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '120ms' }} />
+                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '240ms' }} />
+                </div>
+              </div>
+            )}
+            {/* Quick suggestions (only before the user has asked anything) */}
+            {messages.length === 1 && !sending && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {CHAT_SUGGESTIONS.map(s => (
+                  <button key={s} onClick={() => send(s)}
+                    className="text-xs text-gray-300 border border-white/12 hover:border-orange-500/40 hover:text-orange-300 rounded-full px-3 py-1.5 transition-colors min-h-[32px]">
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+            {error && (
+              <p className="text-xs text-red-400 flex items-center gap-1.5 pt-1"><XCircle size={12} /> {error}</p>
+            )}
+          </div>
+
+          {/* Input */}
+          <form
+            onSubmit={e => { e.preventDefault(); send(draft); }}
+            className="flex-shrink-0 border-t border-white/8 p-3 flex items-end gap-2"
+            style={{ background: 'rgba(0,0,0,0.2)' }}
+          >
+            <input
+              ref={inputRef}
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              maxLength={500}
+              placeholder="Ask about TradeDesk…"
+              aria-label="Type your question"
+              className="flex-1 min-w-0 bg-white/6 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/40 transition-colors min-h-[44px]"
+            />
+            <button
+              type="submit"
+              disabled={!draft.trim() || sending}
+              aria-label="Send message"
+              className={`flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center transition-all ${
+                draft.trim() && !sending
+                  ? 'bg-orange-500 hover:bg-orange-400 text-black shadow-lg shadow-orange-500/30'
+                  : 'bg-white/8 text-gray-600 cursor-not-allowed'
+              }`}
+            >
+              <Send size={15} />
+            </button>
+          </form>
+        </div>
+      )}
+    </>
+  );
+}
 
 /* ──────────────────────────────────────
    MAIN
@@ -956,13 +1142,17 @@ export function LandingPage() {
         </div>
       </div>
 
-      {/* ── Back to top ── */}
+      {/* ── Back to top ── (stacked above the chat launcher, which owns the
+           bottom-right corner) */}
       <button
         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
         aria-label="Back to top"
-        className={`fixed bottom-24 right-4 md:bottom-6 z-40 w-11 h-11 glass rounded-full border border-white/15 flex items-center justify-center text-gray-400 hover:text-white hover:border-blue-500/40 hover:bg-blue-500/10 transition-all duration-300 shadow-lg ${showBackTop ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+        className={`fixed bottom-[10.5rem] right-5 md:bottom-[5.75rem] z-40 w-11 h-11 glass rounded-full border border-white/15 flex items-center justify-center text-gray-400 hover:text-white hover:border-blue-500/40 hover:bg-blue-500/10 transition-all duration-300 shadow-lg ${showBackTop ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
         <ArrowUp size={16} />
       </button>
+
+      {/* ── TradeDesk FAQ chat assistant ── */}
+      <SupportChatWidget />
 
       {/* ── Cookie banner ── */}
       {!cookieDismissed && (

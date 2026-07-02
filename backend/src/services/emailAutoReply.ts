@@ -13,7 +13,7 @@ export interface EmailPollResult {
 }
 
 // "Dave Smith <dave@smithsplumbing.com.au>" -> { name: "Dave Smith", email: "dave@smithsplumbing.com.au" }
-function parseFromHeader(from: string): { name?: string; email: string } {
+export function parseFromHeader(from: string): { name?: string; email: string } {
   const match = from.match(/^\s*"?([^"<]*)"?\s*<([^>]+)>\s*$/);
   if (match) {
     const name = match[1].trim();
@@ -25,7 +25,7 @@ function parseFromHeader(from: string): { name?: string; email: string } {
 // Gmail message payloads are a MIME tree — the plain text part can be nested
 // several levels deep inside multipart/mixed > multipart/alternative, so this
 // walks the whole tree rather than assuming a flat one-level structure.
-function extractPlainTextBody(payload?: gmail_v1.Schema$MessagePart): string {
+export function extractPlainTextBody(payload?: gmail_v1.Schema$MessagePart): string {
   if (!payload) return '';
   if (payload.mimeType === 'text/plain' && payload.body?.data) {
     return Buffer.from(payload.body.data, 'base64url').toString('utf-8');
@@ -45,7 +45,7 @@ function extractPlainTextBody(payload?: gmail_v1.Schema$MessagePart): string {
   return '';
 }
 
-function buildRawReply(opts: {
+export function buildRawReply(opts: {
   fromAddress: string;
   toAddress: string;
   subject: string;
