@@ -2,12 +2,28 @@
   "redirects": [
     {
       "source": "/(.*)",
-      "has": [{ "type": "host", "value": "tradedesk-frontend-one.vercel.app" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "tradedesk-frontend-one.vercel.app"
+        }
+      ],
       "destination": "https://tradedesk-au.vercel.app/$1",
       "permanent": true
     }
   ],
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/api/(.*)",
+      "destination": "https://tradedesk-backend-delta.vercel.app/api/$1"
+    },
+    {
+      "source": "/health",
+      "destination": "https://tradedesk-backend-delta.vercel.app/health"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }

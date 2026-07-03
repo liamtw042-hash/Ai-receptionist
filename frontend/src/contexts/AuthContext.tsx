@@ -21,11 +21,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u: User | null) => {
-      setUser(u);
+    // If Firebase is misconfigured (bad/missing env at build time) the SDK
+    // throws synchronously on subscribe (auth/invalid-api-key) — without the
+    // try/catch every auth-gated route white-screens on an infinite spinner.
+    // Fail open to the logged-out state so /login still renders.
+    // Belt-and-braces: Firebase never invokes the observer's error callback
+    // for init failures (e.g. auth/invalid-api-key surfaces as an unhandled
+    // rejection instead), which would leave auth-gated routes on an infinite
+    // spinner. If auth hasn't reported within 5s, fail open to logged-out —
+    // a late success still updates the user normally.
+    const failOpen = setTimeout(() => setLoading(false), 5000);
+    if (!auth) { clearTimeout(failOpen); setUser(null); setLoading(false); return; }
+    try {
+      const unsub = onAuthStateChanged(
+        auth,
+        (u: User | null) => {
+          clearTimeout(failOpen);
+          setUser(u);
+          setLoading(false);
+        },
+        (err) => {
+          clearTimeout(failOpen);
+          console.error('Firebase auth unavailable:', err);
+          setUser(null);
+          setLoading(false);
+        }
+      );
+      return () => { clearTimeout(failOpen); unsub(); };
+    } catch (err) {
+      clearTimeout(failOpen);
+      console.error('Firebase auth failed to initialise:', err);
+      setUser(null);
       setLoading(false);
-    });
-    return unsub;
+    }
   }, []);
 
   const signIn = async (email: string, password: string) => {

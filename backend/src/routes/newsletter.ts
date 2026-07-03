@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { db } from '../lib/firebase';
+import { sendAdminEmail } from '../services/adminNotify';
 
 const router = Router();
 
@@ -37,6 +38,12 @@ router.post('/subscribe', async (req: Request, res: Response) => {
       source: 'landing-footer',
       createdAt: new Date(),
     });
+
+    // Best-effort email alert — never fail the signup over a notification.
+    await sendAdminEmail(
+      'TradeDesk newsletter signup',
+      `New newsletter signup: ${email}`
+    );
 
     res.status(201).json({ status: 'subscribed' });
   } catch (err) {

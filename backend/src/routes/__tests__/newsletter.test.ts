@@ -20,7 +20,10 @@ const fakeDb = {
 
 const originalLoad = (Module as any)._load;
 (Module as any)._load = function (request: string, parent: any, isMain: boolean) {
-  if (request.endsWith('/lib/firebase') || request.endsWith('lib/firebase')) return { db: fakeDb, auth: {}, default: {} };
+  if (request.endsWith('/lib/firebase') || request.endsWith('lib/firebase') || request === './firebase') return { db: fakeDb, auth: {}, default: {} };
+  // adminNotify (email alerts) pulls googleapis + googleAuth — stub it so the
+  // route test stays hermetic and no notification is attempted.
+  if (request.endsWith('/services/adminNotify')) return { sendAdminEmail: async () => true };
   return originalLoad.apply(this, [request, parent, isMain]);
 };
 

@@ -102,6 +102,37 @@ export function SMSPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Live refresh: poll every 30s so new inbound messages appear without a
+  // manual reload. The refresh keeps the current selection and preserves any
+  // optimistic (just-sent, id "opt-…") bubbles the server hasn't returned yet.
+  const selectedIdRef = useRef<string | null>(null);
+  useEffect(() => { selectedIdRef.current = selected?.id ?? null; }, [selected?.id]);
+
+  useEffect(() => {
+    const tick = async () => {
+      if (document.hidden) return; // don't burn requests in a background tab
+      try {
+        const fresh = await api.get<Conversation[]>('/sms/conversations');
+        setConversations(fresh);
+        const id = selectedIdRef.current;
+        if (id) {
+          const updated = fresh.find(c => c.id === id);
+          if (updated) {
+            setSelected(prev => {
+              if (!prev || prev.id !== id) return prev;
+              const pendingOptimistic = prev.messages.filter(m =>
+                m.id.startsWith('opt-') && !updated.messages.some(sm => sm.direction === 'outbound' && sm.body === m.body)
+              );
+              return { ...updated, messages: [...updated.messages, ...pendingOptimistic] };
+            });
+          }
+        }
+      } catch { /* transient poll failure — next tick will retry */ }
+    };
+    const interval = setInterval(tick, 30_000);
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [selected?.messages]);

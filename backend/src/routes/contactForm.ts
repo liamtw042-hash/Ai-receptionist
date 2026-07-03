@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { db } from '../lib/firebase';
+import { sendAdminEmail } from '../services/adminNotify';
 
 const router = Router();
 
@@ -32,6 +33,14 @@ router.post('/', async (req: Request, res: Response) => {
       source: 'contact-page',
       createdAt: new Date(),
     });
+
+    // Best-effort email alert — the Firestore doc above is the record of
+    // truth, so a notification failure must not fail the submission.
+    await sendAdminEmail(
+      `TradeDesk contact form: ${name}`,
+      [`New contact form submission`, '', `Name: ${name}`, `Email: ${email}`, `Trade: ${trade || '—'}`, '', 'Message:', message].join('\n')
+    );
+
     res.status(201).json({ status: 'sent' });
   } catch (err) {
     console.error('Contact form error:', err);

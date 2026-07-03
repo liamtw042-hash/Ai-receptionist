@@ -23,9 +23,33 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Vercel (and most PaaS) sit behind a reverse proxy that sets X-Forwarded-For.
+// Without this, express-rate-limit v7 THROWS on every request that carries
+// that header (ERR_ERL_UNEXPECTED_X_FORWARDED_FOR) — i.e. every production
+// request 500s — and req.ip would be the proxy's IP, collapsing all users
+// into one rate-limit bucket.
+app.set('trust proxy', 1);
+
 app.use(helmet({ contentSecurityPolicy: false }));
+
+// Allow the configured frontend plus the known production/preview domains.
+// A single hard origin here meant any FRONTEND_URL mismatch surfaced in the
+// browser as a bare "Failed to fetch" (CORS failures hide the real status).
+const ALLOWED_ORIGINS = new Set(
+  [
+    process.env.FRONTEND_URL,
+    'https://tradedesk-au.vercel.app',
+    'https://tradedesk-frontend-one.vercel.app',
+    'http://localhost:5173',
+  ].filter(Boolean) as string[]
+);
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: (origin, cb) => {
+    // No Origin header = same-origin request, curl, or server-to-server
+    // (Twilio/Stripe webhooks, Vercel cron) — always allow.
+    if (!origin || ALLOWED_ORIGINS.has(origin)) cb(null, true);
+    else cb(null, false);
+  },
   credentials: true,
 }));
 

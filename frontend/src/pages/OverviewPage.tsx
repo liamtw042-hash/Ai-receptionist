@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import {
   Phone, AlertTriangle, TrendingUp, Users, Calendar,
-  CheckCircle2, DollarSign, PhoneCall, Table2, CalendarCheck, Link2,
+  CheckCircle2, PhoneCall, Table2, CalendarCheck, Link2,
   MessageSquare, Settings, ArrowRight, Activity, Sparkles,
   Sun, Sunset, Moon,
 } from 'lucide-react';
@@ -217,7 +217,6 @@ export function OverviewPage() {
   const allDone = doneCount === CHECKLIST_ITEMS.length;
   const callsThisWeek = stats?.callsThisWeek ?? stats?.leadsThisWeek ?? 0;
   const jobsThisWeek = stats?.jobsThisWeek ?? stats?.bookedToday ?? 0;
-  const estRevenue = jobsThisWeek * 350;
   // A genuinely brand-new account: nothing has happened yet AND setup isn't done.
   const freshUser =
     !allDone &&
@@ -442,20 +441,6 @@ export function OverviewPage() {
                   <span className="text-white font-bold tabular-nums">{value}</span>
                 </div>
               ))}
-              <div className="pt-2 border-t border-white/6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-7 h-7 bg-emerald-500/12 rounded-lg flex items-center justify-center">
-                      <DollarSign size={13} className="text-emerald-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-400">Est. revenue saved</p>
-                      <p className="text-[10px] text-gray-700">avg $350/job</p>
-                    </div>
-                  </div>
-                  <span className="text-emerald-400 font-black text-lg tabular-nums">${estRevenue.toLocaleString()}</span>
-                </div>
-              </div>
             </div>
           </div>
 
