@@ -1,11 +1,12 @@
 /**
  * Verification for the public chat-widget route's ABUSE PROTECTIONS.
- * Mocks firebase (rate-limit store) and openai, then drives the real router.
+ * Mocks firebase (rate-limit store) and the Anthropic SDK client, then drives
+ * the real router.
  * Run: npx tsx src/routes/__tests__/chat.test.ts
  */
 import Module from 'module';
 
-let openaiCalls = 0;
+let anthropicCalls = 0;
 let nextAIError: { reason: string; status: number; upstreamStatus?: number; code?: string } | null = null;
 const usageDocs: Record<string, { count: number }> = {};
 
@@ -32,18 +33,19 @@ const originalLoad = (Module as any)._load;
   // adminNotify (email alerts) pulls googleapis + googleAuth — stub it so the
   // route test stays hermetic and no notification is attempted.
   if (request.endsWith('/services/adminNotify')) return { sendAdminEmail: async () => true };
-  if (request.endsWith('/lib/openai')) {
+  if (request.endsWith('/lib/anthropic')) {
     // Real AIError class so the route's `instanceof AIError` classification
-    // works; getAIResponse either returns a canned reply or throws a supplied
-    // AIError so we can assert the safe error surfacing.
+    // works; getChatWidgetResponse either returns a canned reply or throws a
+    // supplied AIError so we can assert the safe error surfacing. This stands in
+    // for the Anthropic SDK client (messages.create) that the real helper wraps.
     class AIError extends Error {
       reason: string; status: number; upstreamStatus?: number; code?: string;
       constructor(message: string, opts: any) { super(message); this.name = 'AIError'; Object.assign(this, opts); }
     }
     return {
       AIError,
-      getAIResponse: async () => {
-        openaiCalls++;
+      getChatWidgetResponse: async () => {
+        anthropicCalls++;
         if (nextAIError) { const e = nextAIError; throw new AIError('boom', e); }
         return 'TradeDesk is $199/month AUD.';
       },
@@ -71,7 +73,7 @@ function dispatch(router: any, body: any, ip = '1.2.3.4'): Promise<{ status: num
 }
 
 async function run() {
-  process.env.OPENAI_API_KEY = 'sk-test';
+  process.env.ANTHROPIC_API_KEY = 'sk-ant-test';
   process.env.CHAT_WIDGET_DAILY_LIMIT = '3';
   const { chatRouter } = require('../chat');
 
@@ -82,10 +84,10 @@ async function run() {
   const tooLong = await dispatch(chatRouter, { message: 'x'.repeat(501) });
   assert(tooLong.status === 400, 'rejects over-long input >500 chars (400)');
 
-  openaiCalls = 0;
+  anthropicCalls = 0;
   const ok1 = await dispatch(chatRouter, { message: 'How much does it cost?' }, '9.9.9.9');
   assert(ok1.status === 200 && typeof ok1.body.reply === 'string', 'accepts a valid question (200 with reply)');
-  assert(openaiCalls === 1, 'calls OpenAI exactly once for a valid question');
+  assert(anthropicCalls === 1, 'calls Anthropic exactly once for a valid question');
 
   // Rate limit: cap is 3/day for this ip. We used 1 above from 9.9.9.9; use a
   // fresh ip and exhaust it.
@@ -99,20 +101,20 @@ async function run() {
 
   console.log('\n── Safe error surfacing (production 500 diagnosis) ──');
   // Fresh IPs so the rate limiter doesn't interfere.
-  nextAIError = { reason: 'auth', status: 503, upstreamStatus: 401, code: 'invalid_api_key' };
+  nextAIError = { reason: 'auth', status: 503, upstreamStatus: 401, code: 'authentication_error' };
   const authErr = await dispatch(chatRouter, { message: 'hi' }, '10.0.0.1');
-  assert(authErr.status === 503 && authErr.body.reason === 'auth' && authErr.body.code === 'invalid_api_key',
-    'invalid key → 503 with reason=auth, code=invalid_api_key');
+  assert(authErr.status === 503 && authErr.body.reason === 'auth' && authErr.body.code === 'authentication_error',
+    'invalid key → 503 with reason=auth, code=authentication_error');
   assert(!JSON.stringify(authErr.body).includes('sk-'), 'error body leaks no API key');
   assert(typeof authErr.body.error === 'string' && authErr.body.error.length > 0, 'error body has a friendly user message');
 
-  nextAIError = { reason: 'quota', status: 503, upstreamStatus: 429, code: 'insufficient_quota' };
+  nextAIError = { reason: 'quota', status: 503, upstreamStatus: 429, code: 'rate_limit_error' };
   const quotaErr = await dispatch(chatRouter, { message: 'hi' }, '10.0.0.2');
-  assert(quotaErr.status === 503 && quotaErr.body.reason === 'quota', 'quota exceeded → 503 with reason=quota');
+  assert(quotaErr.status === 503 && quotaErr.body.reason === 'quota', 'rate limit / capacity → 503 with reason=quota');
 
-  nextAIError = { reason: 'upstream', status: 502, upstreamStatus: 500, code: 'server_error' };
+  nextAIError = { reason: 'upstream', status: 502, upstreamStatus: 500, code: 'api_error' };
   const upErr = await dispatch(chatRouter, { message: 'hi' }, '10.0.0.3');
-  assert(upErr.status === 502 && upErr.body.reason === 'upstream', 'OpenAI 5xx → 502 with reason=upstream');
+  assert(upErr.status === 502 && upErr.body.reason === 'upstream', 'Anthropic 5xx → 502 with reason=upstream');
   nextAIError = null;
 
   console.log(`\n${failures === 0 ? '✅ ALL ASSERTIONS PASSED' : `❌ ${failures} FAILED`}\n`);
