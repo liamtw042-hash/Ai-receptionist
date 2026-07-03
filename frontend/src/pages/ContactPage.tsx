@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Zap, Mail, MapPin, Clock, CheckCircle } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { publicPost } from '../lib/api';
 
 export function ContactPage() {
   useEffect(() => { document.title = 'Contact | TradeDesk'; }, []);
@@ -10,12 +11,20 @@ export function ContactPage() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
 
+  const [error, setError] = useState('');
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSending(true);
-    await new Promise(r => setTimeout(r, 1200));
-    setSending(false);
-    setSent(true);
+    setError('');
+    try {
+      await publicPost<{ status: string }>('/contact-form', form);
+      setSent(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -98,6 +107,9 @@ export function ContactPage() {
                     rows={5} required placeholder="What can we help with?"
                     className="glass rounded-lg px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/40 transition-all resize-none" />
                 </div>
+                {error && (
+                  <p className="text-sm text-red-400">{error}</p>
+                )}
                 <Button type="submit" loading={sending} size="lg" className="w-full">
                   Send message
                 </Button>

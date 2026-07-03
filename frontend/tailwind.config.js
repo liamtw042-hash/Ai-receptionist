@@ -3,6 +3,19 @@ export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
+      // The design system uses fine-grained alpha steps (bg-white/4,
+      // border-white/8, …) that are NOT in Tailwind's default opacity scale —
+      // without these entries those ~200 class instances silently compile to
+      // nothing, which left inputs with the browser's default white
+      // background (white-on-white text) and cards with fallback borders.
+      opacity: {
+        3: '0.03',
+        4: '0.04',
+        6: '0.06',
+        7: '0.07',
+        8: '0.08',
+        12: '0.12',
+      },
       colors: {
         blue: {
           500: '#3B82F6',

@@ -265,11 +265,14 @@ export function ContactsPage() {
           {sorted.map((contact) => {
             const calls = callCountOf(contact);
             return (
-              <motion.button
+              <motion.div
                 key={contact.id}
                 variants={reduceMotion ? instantItem : staggerItem}
+                role="button"
+                tabIndex={0}
                 onClick={() => setDetail(contact)}
-                className="w-full text-left rounded-2xl border border-white/7 hover:border-orange-500/25 px-4 py-3.5 flex items-center gap-3.5 transition-all group hover:bg-white/[0.02]"
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDetail(contact); } }}
+                className="w-full text-left rounded-2xl border border-white/7 hover:border-orange-500/25 px-4 py-3.5 flex items-center gap-3.5 transition-all group hover:bg-white/[0.02] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/50"
                 style={{ background: 'rgba(13,20,38,0.5)' }}>
                 {/* Avatar — solid tile, consistent with sidebar/Overview (no rainbow) */}
                 <div className="w-11 h-11 rounded-xl bg-white/[0.06] border border-white/10 group-hover:border-orange-500/30 flex items-center justify-center text-sm font-black text-gray-200 flex-shrink-0 transition-colors">
@@ -323,7 +326,7 @@ export function ContactsPage() {
                   </div>
                   <ArrowRight size={15} className="text-gray-700 group-hover:text-orange-400 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
                 </div>
-              </motion.button>
+              </motion.div>
             );
           })}
         </motion.div>

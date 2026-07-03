@@ -389,7 +389,7 @@ function SupportChatWidget() {
         onClick={() => setOpen(o => !o)}
         aria-label={open ? 'Close chat' : 'Open TradeDesk chat assistant'}
         aria-expanded={open}
-        className="fixed z-50 right-4 bottom-24 md:bottom-6 w-14 h-14 rounded-full bg-orange-500 hover:bg-orange-400 text-black flex items-center justify-center shadow-lg shadow-orange-500/30 transition-all"
+        className="fixed z-[60] right-4 bottom-24 md:bottom-6 w-14 h-14 rounded-full bg-orange-500 hover:bg-orange-400 text-black flex items-center justify-center shadow-lg shadow-orange-500/30 transition-all"
       >
         {open ? <X size={22} /> : <MessageCircle size={22} />}
       </button>
@@ -399,7 +399,7 @@ function SupportChatWidget() {
         <div
           role="dialog"
           aria-label="TradeDesk chat assistant"
-          className="fixed z-50 right-4 bottom-40 md:bottom-24 w-[calc(100vw-2rem)] max-w-sm h-[28rem] max-h-[calc(100vh-12rem)] flex flex-col rounded-2xl border border-white/10 shadow-2xl overflow-hidden animate-fade-in-scale"
+          className="fixed z-[60] right-4 bottom-40 md:bottom-24 w-[calc(100vw-2rem)] max-w-sm h-[28rem] max-h-[calc(100vh-12rem)] flex flex-col rounded-2xl border border-white/10 shadow-2xl overflow-hidden animate-fade-in-scale"
           style={{ background: 'rgba(13,20,38,0.98)', backdropFilter: 'blur(12px)' }}
         >
           {/* Header */}
