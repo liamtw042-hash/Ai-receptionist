@@ -35,23 +35,39 @@ app.use(helmet({ contentSecurityPolicy: false }));
 // Allow the configured frontend plus the known production/preview domains.
 // A single hard origin here meant any FRONTEND_URL mismatch surfaced in the
 // browser as a bare "Failed to fetch" (CORS failures hide the real status).
+if (!process.env.FRONTEND_URL) {
+  console.warn(
+    '⚠️  FRONTEND_URL is not set — set it to https://tradedesk-au.vercel.app on the ' +
+    'backend Vercel project. Falling back to the built-in origin allowlist.'
+  );
+}
 const ALLOWED_ORIGINS = new Set(
-  [
+  ([
     process.env.FRONTEND_URL,
     'https://tradedesk-au.vercel.app',
     'https://tradedesk-frontend-one.vercel.app',
     'http://localhost:5173',
-  ].filter(Boolean) as string[]
+    'http://localhost:4173',
+  ].filter(Boolean) as string[]).map(o => o.replace(/\/+$/, ''))
 );
-app.use(cors({
+// Vercel preview deployments get per-branch subdomains — allow them too.
+const VERCEL_PREVIEW_RE = /^https:\/\/tradedesk-[a-z0-9-]+\.vercel\.app$/;
+const corsOptions: cors.CorsOptions = {
   origin: (origin, cb) => {
     // No Origin header = same-origin request, curl, or server-to-server
     // (Twilio/Stripe webhooks, Vercel cron) — always allow.
-    if (!origin || ALLOWED_ORIGINS.has(origin)) cb(null, true);
-    else cb(null, false);
+    if (!origin) return cb(null, true);
+    const o = origin.replace(/\/+$/, '');
+    cb(null, ALLOWED_ORIGINS.has(o) || VERCEL_PREVIEW_RE.test(o));
   },
   credentials: true,
-}));
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+app.use(cors(corsOptions));
+// Answer preflights for every route explicitly — some proxies won't forward an
+// OPTIONS request to a handler unless one is registered.
+app.options('*', cors(corsOptions));
 
 // Twilio webhooks need raw body for signature validation
 app.use('/api/voice', express.urlencoded({ extended: false }));

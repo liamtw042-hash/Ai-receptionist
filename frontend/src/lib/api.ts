@@ -1,6 +1,19 @@
 import { auth } from './firebase';
 
-const BASE_URL = import.meta.env.VITE_API_URL || '/api';
+// Prefer the same-origin '/api' path — frontend/vercel.json rewrites it to the
+// backend project, so no CORS is involved. If VITE_API_URL is set anyway,
+// normalise it: strip trailing slashes and append '/api' when it's missing,
+// because a bare backend URL (e.g. https://tradedesk-backend-delta.vercel.app)
+// would otherwise send every call to paths like /chat/widget that Express
+// doesn't serve — surfacing in the browser as a CORS/"Failed to fetch" error.
+function normaliseBase(raw: string | undefined): string {
+  if (!raw) return '/api';
+  let base = raw.trim().replace(/\/+$/, '');
+  if (!base) return '/api';
+  if (!base.endsWith('/api')) base += '/api';
+  return base;
+}
+const BASE_URL = normaliseBase(import.meta.env.VITE_API_URL);
 
 async function getToken(): Promise<string> {
   const user = auth.currentUser;
