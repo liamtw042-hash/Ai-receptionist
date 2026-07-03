@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { db } from '../lib/firebase';
-import { getAIResponse } from '../lib/openai';
+import { getAIResponse, AIError } from '../lib/openai';
 
 const router = Router();
 
@@ -101,8 +101,29 @@ router.post('/widget', async (req: Request, res: Response) => {
     const reply = await getAIResponse(SYSTEM_PROMPT, message, history, 150);
     res.json({ reply: reply || "Sorry, I didn't catch that — could you rephrase?" });
   } catch (err) {
-    console.error('Chat widget error:', err);
-    res.status(500).json({ error: 'Something went wrong. Please try again in a moment.' });
+    // Surface the real cause safely. `reason`, upstream HTTP status, and
+    // OpenAI's public error `code` (e.g. "insufficient_quota",
+    // "invalid_api_key", "model_not_found") contain no secrets — they let us
+    // diagnose production 500s from the response body without reading logs,
+    // and never echo the API key or a raw stack trace.
+    if (err instanceof AIError) {
+      console.error(`Chat widget AIError: reason=${err.reason} upstreamStatus=${err.upstreamStatus ?? '-'} code=${err.code ?? '-'}`);
+      const userMessage =
+        err.reason === 'missing_key' || err.reason === 'auth' || err.reason === 'access'
+          ? 'The assistant is not configured correctly right now. Please email support and we\'ll sort it out.'
+          : err.reason === 'quota'
+          ? 'The assistant is temporarily over capacity. Please try again shortly or email support.'
+          : 'Something went wrong. Please try again in a moment.';
+      res.status(err.status).json({
+        error: userMessage,
+        reason: err.reason,
+        upstreamStatus: err.upstreamStatus,
+        code: err.code,
+      });
+      return;
+    }
+    console.error('Chat widget unexpected error:', err);
+    res.status(500).json({ error: 'Something went wrong. Please try again in a moment.', reason: 'unknown' });
   }
 });
 

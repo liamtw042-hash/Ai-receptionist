@@ -6,6 +6,7 @@
 import Module from 'module';
 
 let openaiCalls = 0;
+let nextAIError: { reason: string; status: number; upstreamStatus?: number; code?: string } | null = null;
 const usageDocs: Record<string, { count: number }> = {};
 
 const fakeDb = {
@@ -31,7 +32,23 @@ const originalLoad = (Module as any)._load;
   // adminNotify (email alerts) pulls googleapis + googleAuth — stub it so the
   // route test stays hermetic and no notification is attempted.
   if (request.endsWith('/services/adminNotify')) return { sendAdminEmail: async () => true };
-  if (request.endsWith('/lib/openai')) return { getAIResponse: async () => { openaiCalls++; return 'TradeDesk is $199/month AUD.'; } };
+  if (request.endsWith('/lib/openai')) {
+    // Real AIError class so the route's `instanceof AIError` classification
+    // works; getAIResponse either returns a canned reply or throws a supplied
+    // AIError so we can assert the safe error surfacing.
+    class AIError extends Error {
+      reason: string; status: number; upstreamStatus?: number; code?: string;
+      constructor(message: string, opts: any) { super(message); this.name = 'AIError'; Object.assign(this, opts); }
+    }
+    return {
+      AIError,
+      getAIResponse: async () => {
+        openaiCalls++;
+        if (nextAIError) { const e = nextAIError; throw new AIError('boom', e); }
+        return 'TradeDesk is $199/month AUD.';
+      },
+    };
+  }
   return originalLoad.apply(this, [request, parent, isMain]);
 };
 
@@ -79,6 +96,24 @@ async function run() {
   const r4 = await dispatch(chatRouter, { message: 'd' }, ip);
   assert(r1.status === 200 && r2.status === 200 && r3.status === 200, 'first 3 requests from an IP succeed');
   assert(r4.status === 429, '4th request from same IP is rate-limited (429)');
+
+  console.log('\n── Safe error surfacing (production 500 diagnosis) ──');
+  // Fresh IPs so the rate limiter doesn't interfere.
+  nextAIError = { reason: 'auth', status: 503, upstreamStatus: 401, code: 'invalid_api_key' };
+  const authErr = await dispatch(chatRouter, { message: 'hi' }, '10.0.0.1');
+  assert(authErr.status === 503 && authErr.body.reason === 'auth' && authErr.body.code === 'invalid_api_key',
+    'invalid key → 503 with reason=auth, code=invalid_api_key');
+  assert(!JSON.stringify(authErr.body).includes('sk-'), 'error body leaks no API key');
+  assert(typeof authErr.body.error === 'string' && authErr.body.error.length > 0, 'error body has a friendly user message');
+
+  nextAIError = { reason: 'quota', status: 503, upstreamStatus: 429, code: 'insufficient_quota' };
+  const quotaErr = await dispatch(chatRouter, { message: 'hi' }, '10.0.0.2');
+  assert(quotaErr.status === 503 && quotaErr.body.reason === 'quota', 'quota exceeded → 503 with reason=quota');
+
+  nextAIError = { reason: 'upstream', status: 502, upstreamStatus: 500, code: 'server_error' };
+  const upErr = await dispatch(chatRouter, { message: 'hi' }, '10.0.0.3');
+  assert(upErr.status === 502 && upErr.body.reason === 'upstream', 'OpenAI 5xx → 502 with reason=upstream');
+  nextAIError = null;
 
   console.log(`\n${failures === 0 ? '✅ ALL ASSERTIONS PASSED' : `❌ ${failures} FAILED`}\n`);
   (Module as any)._load = originalLoad;
