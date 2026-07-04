@@ -14,9 +14,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || loading}
         className={clsx(
-          'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 focus:ring-offset-black disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.97] hover:scale-[1.02] will-change-transform gap-2',
+          'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:ring-offset-2 focus:ring-offset-black disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.97] hover:scale-[1.02] will-change-transform gap-2',
           {
-            'bg-blue-500 hover:bg-blue-400 text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30': variant === 'primary',
+            'bg-orange-500 hover:bg-orange-400 text-black shadow-lg shadow-orange-500/20 hover:shadow-orange-500/30': variant === 'primary',
             'glass border border-white/10 hover:bg-white/8 hover:border-white/20 text-white': variant === 'secondary',
             'text-gray-400 hover:text-white hover:bg-white/5': variant === 'ghost',
             'bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/30 hover:border-red-500/50': variant === 'danger',

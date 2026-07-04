@@ -11,6 +11,7 @@ import { Textarea } from '../components/ui/Textarea';
 import { Button } from '../components/ui/Button';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Skeleton } from '../components/ui/Skeleton';
+import { ForwardingGuide } from '../components/setup/ForwardingGuide';
 import { useAuth } from '../contexts/AuthContext';
 
 const TRADES = ['Plumber', 'Electrician', 'Builder', 'Carpenter', 'Painter', 'Landscaper', 'Roofer', 'Tiler', 'Locksmith', 'HVAC', 'Other'];
@@ -515,11 +516,26 @@ export function SettingsPage() {
   const [testResult, setTestResult] = useState<{ greeting: string; sampleQuestion?: string; sampleReply?: string; warning?: string } | null>(null);
   const [testError, setTestError] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
+  const [showForwardGuide, setShowForwardGuide] = useState(false);
   const googleStatus = searchParams.get('google');
   const billingStatus = searchParams.get('billing');
   const [deletingAccount, setDeletingAccount] = useState(false);
   const navigate = useNavigate();
   const { logOut } = useAuth();
+
+  // Deep links from the dashboard checklist: scroll to the anchored card once
+  // settings have loaded (the sections don't exist while the skeleton shows).
+  useEffect(() => {
+    if (loading) return;
+    const hash = window.location.hash.replace('#', '');
+    if (!hash) return;
+    if (hash === 'forwarding') setShowForwardGuide(true);
+    // Let the section paint before scrolling to it.
+    const t = setTimeout(() => {
+      document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 120);
+    return () => clearTimeout(t);
+  }, [loading]);
 
   useEffect(() => {
     api.get<Settings>('/settings').then(s => {
@@ -750,24 +766,73 @@ export function SettingsPage() {
         <GroupHeading label="Your line & alerts" hint="the number, and when we tap you on the shoulder" />
       </div>
       <form onSubmit={handleSave} className="space-y-4 mt-3">
-        {/* Twilio / Phone Number */}
+        {/* Twilio / Phone Number + forwarding setup. The id anchors let the
+            dashboard checklist deep-link straight here. */}
+        <div id="forwarding" className="scroll-mt-20">
         <Card>
           <Section icon={Phone} title="Your TradeDesk Number" description="The number callers reach your AI on" iconColor="text-green-400" iconBg="bg-green-500/15">
             <div className="flex items-center gap-3 glass rounded-lg px-4 py-3 mb-3">
               <Phone size={16} className="text-green-400" />
-              <span className="text-white font-mono text-sm">{settings.twilioNumber || 'Not configured yet'}</span>
+              <span className="text-white font-mono text-sm">{settings.twilioNumber || 'Being assigned — check back shortly'}</span>
             </div>
-            <Input label="Update number" value={settings.twilioNumber || ''} onChange={e => update('twilioNumber', e.target.value)} placeholder="+61400000000" hint="Set this to match your Twilio number" />
+
+            {/* How to forward — the actual dial codes, collapsible */}
+            <div className="rounded-xl border border-white/8 bg-white/[0.02] overflow-hidden mb-3">
+              <button type="button" onClick={() => setShowForwardGuide(o => !o)}
+                aria-expanded={showForwardGuide}
+                className="w-full flex items-center justify-between gap-3 px-4 py-3.5 text-left min-h-[50px]">
+                <span className="text-sm font-semibold text-white">How to forward your missed calls (2 minutes)</span>
+                <ChevronDown size={15} className={`text-gray-500 flex-shrink-0 transition-transform duration-200 ${showForwardGuide ? 'rotate-180' : ''}`} />
+              </button>
+              {showForwardGuide && (
+                <div className="px-4 pb-4">
+                  <ForwardingGuide number={settings.twilioNumber} />
+                </div>
+              )}
+            </div>
+
             <div className="mt-1">
               <Toggle
                 label="Call forwarding is set up"
-                hint="Tick this once you've forwarded your missed calls to the number above"
+                hint="Flick this on once you've dialled the codes — it ticks off the dashboard checklist (saves instantly)"
                 checked={!!settings.hasForwardingSetup}
-                onChange={v => update('hasForwardingSetup', v)}
+                onChange={v => {
+                  update('hasForwardingSetup', v);
+                  // Persist immediately — a tradie flicking this on shouldn't
+                  // need to find a Save button three cards further down.
+                  api.put('/settings', { hasForwardingSetup: v }).catch(() => {});
+                }}
               />
             </div>
           </Section>
         </Card>
+        </div>
+
+        {/* Make a REAL test call — distinct from the simulation above: this one
+            rings the actual line. Works even before forwarding is set up,
+            because you dial the TradeDesk number directly. */}
+        <div id="test-call" className="scroll-mt-20">
+        <Card>
+          <Section icon={Phone} title="Make your first test call" description="Prove the whole thing works, end to end" iconColor="text-orange-400" iconBg="bg-orange-500/15">
+            <ol className="space-y-3 mb-4">
+              {[
+                <>Grab your mobile and ring your TradeDesk number{settings.twilioNumber ? <> — <a className="text-orange-400 font-mono font-semibold hover:text-orange-300" href={`tel:${(settings.twilioNumber || '').replace(/\s/g, '')}`}>{settings.twilioNumber}</a></> : ' (shown above once assigned)'}. This works even before call forwarding is set up.</>,
+                <>You'll hear: <span className="text-gray-300 italic">"Hi, thanks for calling {settings.businessName || 'your business'}, I'm their AI assistant…"</span> Ask it what a job costs — it quotes from your pricing guide.</>,
+                <>Hang up. Within a minute: an SMS summary lands on your mobile ({settings.mobileNumber || 'the number in your profile'}) and the full transcript appears in <span className="text-white font-medium">Calls</span>.</>,
+              ].map((text, i) => (
+                <li key={i} className="flex items-start gap-3">
+                  <span className="w-6 h-6 rounded-full bg-orange-500/12 border border-orange-500/25 text-orange-400 text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
+                  <p className="text-sm text-gray-400 leading-relaxed">{text}</p>
+                </li>
+              ))}
+            </ol>
+            <p className="text-xs text-gray-600 leading-relaxed">
+              The "Make a test call" step on your dashboard ticks itself the moment your first
+              call comes through — no need to mark anything.
+            </p>
+          </Section>
+        </Card>
+        </div>
 
         {/* Notification Preferences */}
         <Card>

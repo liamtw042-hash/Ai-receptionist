@@ -53,9 +53,11 @@ router.get('/stats', async (req: AuthRequest, res: Response) => {
 
     const settings = settingsSnap.exists ? settingsSnap.data()! : {};
     const hasBusinessDetails = !!(settings.businessName && settings.traderName && settings.tradeType);
-    // Either an explicit "I've set this up" confirmation, or having already
-    // entered a Twilio number, counts — whichever happens first.
-    const hasForwardingSetup = !!settings.hasForwardingSetup || !!settings.twilioNumber;
+    // Only the user's explicit "I've set this up" confirmation counts. A
+    // Twilio number being assigned to the account says nothing about whether
+    // the tradie has actually dialled the forwarding codes on their phone —
+    // counting it made the checklist tick a step that hadn't happened.
+    const hasForwardingSetup = !!settings.hasForwardingSetup;
     const hasMadeTestCall = !anyCallSnap.empty;
 
     res.json({

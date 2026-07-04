@@ -1,10 +1,21 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, ChevronRight, Zap, Smartphone, Phone, PartyPopper, Copy, Clock } from 'lucide-react';
+import { Check, ChevronRight, ChevronLeft, Zap, Phone, Clock, MessageSquare, Copy, PhoneCall } from 'lucide-react';
 import { api } from '../lib/api';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Textarea } from '../components/ui/Textarea';
+import { ForwardingGuide } from '../components/setup/ForwardingGuide';
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ONBOARDING — signup → first working AI call, with zero dead ends.
+
+   Three steps: (1) business details, (2) services & pricing, (3) go live
+   (forwarding). Every field says WHY the AI needs it; every validation error
+   is shown inline next to its field; the final step shows the user's REAL
+   TradeDesk number (fetched from settings — never a hardcoded placeholder)
+   and only marks forwarding done when the user says they've done it.
+   ═══════════════════════════════════════════════════════════════════════ */
 
 const TRADES = ['Plumber', 'Electrician', 'Builder', 'Carpenter', 'Painter', 'Landscaper', 'Roofer', 'Tiler', 'Locksmith', 'HVAC', 'Pest Control', 'Concreter', 'Other'];
 
@@ -40,17 +51,18 @@ const TRADE_PRICING: Record<string, string> = {
   Other: 'Service call: $120/hr. Please contact for a detailed quote.',
 };
 
-const STEPS = ['Business Setup', 'Your Services', 'Go Live'];
+const STEPS = ['Your business', 'Services & pricing', 'Go live'];
+
+const AU_MOBILE_RE = /^(\+?61|0)4\d{8}$/;
 
 export function OnboardingPage() {
   useEffect(() => { document.title = 'Set up TradeDesk | TradeDesk'; }, []);
   const [step, setStep] = useState(0);
-  const [errors, setErrors] = useState<Record<string,string>>({});
-  const [confetti, setConfetti] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [copied, setCopied] = useState(false);
-  const tradeskNumber = '+61 2 8320 5000';
+  const [twilioNumber, setTwilioNumber] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -79,32 +91,52 @@ export function OnboardingPage() {
           mobileNumber: phone || '',
         }));
       }
-    } catch {}
+    } catch { /* corrupted prefill is fine to ignore */ }
   }, []);
 
-  // Auto-fill services/pricing when trade type changes
+  // The REAL TradeDesk number for this account, if one has been assigned —
+  // never show a hardcoded placeholder a tradie might actually forward to.
   useEffect(() => {
-    if (form.tradeType && TRADE_SERVICES[form.tradeType]) {
-      setForm(f => ({
-        ...f,
-        services: TRADE_SERVICES[f.tradeType] || '',
-        pricingGuide: TRADE_PRICING[f.tradeType] || '',
-      }));
-    }
+    api.get<{ twilioNumber?: string }>('/settings')
+      .then(s => { if (s?.twilioNumber) setTwilioNumber(s.twilioNumber); })
+      .catch(() => {});
+  }, []);
+
+  // Auto-fill services/pricing on trade change — but NEVER over the top of
+  // text the user has already edited. "Untouched" = empty or still exactly
+  // some trade's template.
+  const isTemplate = (val: string, table: Record<string, string>) =>
+    !val.trim() || Object.values(table).includes(val);
+
+  useEffect(() => {
+    if (!form.tradeType || !TRADE_SERVICES[form.tradeType]) return;
+    setForm(f => ({
+      ...f,
+      services: isTemplate(f.services, TRADE_SERVICES) ? TRADE_SERVICES[f.tradeType] : f.services,
+      pricingGuide: isTemplate(f.pricingGuide, TRADE_PRICING) ? TRADE_PRICING[f.tradeType] : f.pricingGuide,
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.tradeType]);
 
-  const update = (key: string, val: string) => setForm(f => ({ ...f, [key]: val }));
+  const update = (key: string, val: string) => {
+    setForm(f => ({ ...f, [key]: val }));
+    if (errors[key]) setErrors(e => ({ ...e, [key]: '' }));
+  };
 
   const validateStep = (s: number) => {
-    const errs: Record<string,string> = {};
+    const errs: Record<string, string> = {};
     if (s === 0) {
-      if (!form.traderName.trim()) errs.traderName = 'Your name is required';
-      if (!form.businessName.trim()) errs.businessName = 'Business name is required';
-      if (!form.tradeType) errs.tradeType = 'Please select your trade type';
-      if (!form.mobileNumber.trim()) errs.mobileNumber = 'Mobile number is required';
+      if (!form.traderName.trim()) errs.traderName = 'The AI says things like "Dave\'s on a job right now" — it needs your name.';
+      if (!form.businessName.trim()) errs.businessName = 'This is how the AI answers your phone — it can\'t pick up without it.';
+      if (!form.tradeType) errs.tradeType = 'Pick your trade so the AI talks about the right kind of jobs.';
+      if (!form.mobileNumber.trim()) {
+        errs.mobileNumber = 'This is where your SMS summaries and urgent alerts go — without it you\'ll never hear about a call.';
+      } else if (!AU_MOBILE_RE.test(form.mobileNumber.replace(/[\s-]/g, ''))) {
+        errs.mobileNumber = 'That doesn\'t look like an Australian mobile — use 04xx xxx xxx or +614xx xxx xxx.';
+      }
     }
     if (s === 1) {
-      if (!form.services.trim()) errs.services = 'Please list at least one service';
+      if (!form.services.trim()) errs.services = 'List at least one service so the AI knows what jobs to say yes to.';
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -131,131 +163,121 @@ export function OnboardingPage() {
         onboardingComplete: true,
       });
       localStorage.removeItem('td_onboard');
-      setStep(3);
-      setConfetti(true);
-      setTimeout(() => setConfetti(false), 3500);
-    } catch (err: any) {
-      // Don't advance to the success screen on a failed save — the AI
-      // wouldn't actually have the business details it needs to answer
-      // calls correctly, so silently proceeding would leave the account
-      // half-configured with no indication anything went wrong.
-      setSaveError(err?.message || 'Failed to save your details. Please try again.');
+      setStep(2);
+      window.scrollTo({ top: 0 });
+    } catch (err: unknown) {
+      // Don't advance on a failed save — the AI wouldn't actually have the
+      // details it needs, and silently proceeding leaves a half-configured
+      // account with no sign anything went wrong.
+      setSaveError(err instanceof Error ? err.message : 'Failed to save your details. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const copyNumber = () => {
-    navigator.clipboard.writeText(tradeskNumber.replace(/\s/g, '')).catch(() => {});
+    if (!twilioNumber) return;
+    navigator.clipboard.writeText(twilioNumber.replace(/\s/g, '')).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Clicking "I'm live!" is the user's confirmation they've set up call
-  // forwarding per the instructions above — mark it done so the dashboard
-  // checklist doesn't ask them to redo a step they just finished.
-  const handleGoLive = () => {
+  // Only mark forwarding done when the user SAYS they've dialled the codes —
+  // "I'll do it later" leaves the dashboard checklist honest.
+  const finishForwarded = () => {
     api.put('/settings', { hasForwardingSetup: true }).catch(() => {});
     navigate('/dashboard');
   };
+  const finishLater = () => navigate('/dashboard');
 
+  const fieldError = (key: string) => errors[key] || undefined;
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
-      {/* Confetti overlay */}
-      {confetti && (
-        <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
-          {[...Array(60)].map((_, i) => {
-            const colors = ['#3b82f6','#22c55e','#a855f7','#f59e0b','#ef4444','#06b6d4'];
-            const color = colors[i % colors.length];
-            const left = `${Math.random() * 100}%`;
-            const delay = `${Math.random() * 0.8}s`;
-            const size = 6 + Math.random() * 8;
-            return (
-              <div key={i}
-                style={{
-                  position:'absolute', left, top:'-20px', width: size, height: size,
-                  backgroundColor: color, borderRadius: Math.random() > 0.5 ? '50%' : '2px',
-                  animation: `confetti-fall ${1.5 + Math.random()}s ${delay} ease-in forwards`,
-                  transform: `rotate(${Math.random()*360}deg)`,
-                }}
-              />
-            );
-          })}
-        </div>
-      )}
+    <div className="min-h-screen bg-ink-950 flex items-start sm:items-center justify-center p-4 py-8 sm:py-12">
       <div className="w-full max-w-xl animate-slide-up">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-8 justify-center">
-          <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center blue-glow">
-            <Zap size={20} className="text-white" />
+        <div className="flex items-center gap-3 mb-7 justify-center">
+          <div className="w-9 h-9 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/25">
+            <Zap size={17} className="text-black" fill="currentColor" />
           </div>
-          <h1 className="font-bold text-xl text-white">Set up TradeDesk</h1>
+          <h1 className="font-bold text-lg text-white tracking-tight">Set up your AI receptionist</h1>
         </div>
 
-        {/* Progress steps — only show for steps 0–2 */}
-        {step < 3 && (
-          <div className="flex items-center mb-8">
-            {STEPS.map((s, i) => (
-              <div key={s} className="flex items-center flex-1">
-                <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
-                    i < step
-                      ? 'bg-green-500 text-white shadow-lg shadow-green-500/30'
-                      : i === step
-                      ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
-                      : 'bg-white/5 text-gray-600 border border-white/10'
-                  }`}>
-                    {i < step ? <Check size={15} /> : i + 1}
-                  </div>
-                  <span className={`text-[10px] font-medium hidden sm:block transition-colors duration-300 whitespace-nowrap ${
-                    i === step ? 'text-white' : i < step ? 'text-green-400' : 'text-gray-600'
-                  }`}>{s}</span>
+        {/* Progress */}
+        <div className="flex items-center mb-7">
+          {STEPS.map((s, i) => (
+            <div key={s} className="flex items-center flex-1 last:flex-initial">
+              <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                  i < step
+                    ? 'bg-emerald-500 text-black'
+                    : i === step
+                    ? 'bg-orange-500 text-black shadow-lg shadow-orange-500/25'
+                    : 'bg-white/5 text-gray-600 border border-white/10'
+                }`}>
+                  {i < step ? <Check size={14} /> : i + 1}
                 </div>
-                {i < STEPS.length - 1 && (
-                  <div className={`flex-1 h-0.5 mx-2 transition-all duration-500 ${i < step ? 'bg-blue-500' : 'bg-white/8'}`} />
-                )}
+                <span className={`text-[10px] font-medium transition-colors duration-300 whitespace-nowrap ${
+                  i === step ? 'text-white' : i < step ? 'text-emerald-400' : 'text-gray-600'
+                }`}>{s}</span>
               </div>
-            ))}
-          </div>
-        )}
+              {i < STEPS.length - 1 && (
+                <div className={`flex-1 h-px mx-2 mb-5 transition-all duration-500 ${i < step ? 'bg-emerald-500/60' : 'bg-white/8'}`} />
+              )}
+            </div>
+          ))}
+        </div>
 
-        <div className="glass rounded-2xl p-6 sm:p-8">
+        <div className="rounded-2xl border border-white/8 bg-ink-900 p-5 sm:p-8">
 
-          {/* Step 0 — Business Setup */}
+          {/* ── Step 0 — Business details ── */}
           {step === 0 && (
-            <div className="space-y-4 animate-slide-in-right">
-              <div className="mb-5">
-                <h2 className="text-xl font-bold text-white">Your business</h2>
-                <p className="text-gray-500 text-sm mt-0.5">Let's personalise your AI receptionist</p>
+            <div className="space-y-5 animate-slide-in-right">
+              <div>
+                <h2 className="text-xl font-bold text-white">Tell the AI who it works for</h2>
+                <p className="text-gray-500 text-sm mt-1">
+                  Everything here goes straight into how it answers your calls — you can change any of it later in Settings.
+                </p>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Input label="Your name" value={form.traderName} onChange={e => { update('traderName', e.target.value); if(errors.traderName) setErrors(e2=>({...e2,traderName:''})); }} placeholder="Dave Smith" required className={errors.traderName ? 'border-red-500' : ''} />
-                  {errors.traderName && <p className="text-xs text-red-400 mt-1">{errors.traderName}</p>}
-                </div>
-                <Input label="Business name" value={form.businessName} onChange={e => update('businessName', e.target.value)} placeholder="Smith's Plumbing" required />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-3">
+                <Input label="Your name" value={form.traderName}
+                  onChange={e => update('traderName', e.target.value)}
+                  placeholder="Dave Smith" required error={fieldError('traderName')}
+                  hint={!errors.traderName ? '"Dave\'s on a job — I can help."' : undefined} />
+                <Input label="Business name" value={form.businessName}
+                  onChange={e => update('businessName', e.target.value)}
+                  placeholder="Smith's Plumbing" required error={fieldError('businessName')}
+                  hint={!errors.businessName ? 'How the AI answers the phone.' : undefined} />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-gray-300">Trade type</label>
+                <label className="text-sm font-medium text-gray-300">Your trade</label>
+                <p className="text-xs text-gray-500 -mt-0.5 mb-1">Picks the right starter services and prices for the next step.</p>
                 <div className="flex flex-wrap gap-2">
                   {TRADES.map(t => (
                     <button key={t} type="button" onClick={() => update('tradeType', t)}
-                      className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 min-h-[44px] ${
+                      className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 min-h-[44px] border ${
                         form.tradeType === t
-                          ? 'bg-blue-500 text-white shadow-md shadow-blue-500/20'
-                          : 'glass text-gray-400 hover:text-white hover:border-white/20'
+                          ? 'bg-orange-500 border-orange-500 text-black font-semibold'
+                          : 'bg-white/4 border-white/10 text-gray-400 hover:text-white hover:border-white/20'
                       }`}>
                       {t}
                     </button>
                   ))}
                 </div>
+                {errors.tradeType && <p className="text-xs text-red-400">{errors.tradeType}</p>}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <Input label="Suburb / area" value={form.suburb} onChange={e => update('suburb', e.target.value)} placeholder="Bondi, Sydney" />
-                <Input label="Mobile (for alerts)" type="tel" value={form.mobileNumber} onChange={e => update('mobileNumber', e.target.value)} placeholder="+61400000000" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-3">
+                <Input label="Suburb / area" value={form.suburb}
+                  onChange={e => update('suburb', e.target.value)}
+                  placeholder="Merewether, Newcastle"
+                  hint="So the AI can tell callers what area you cover." />
+                <Input label="Your mobile" type="tel" value={form.mobileNumber}
+                  onChange={e => update('mobileNumber', e.target.value)}
+                  placeholder="0400 000 000" required error={fieldError('mobileNumber')}
+                  hint={!errors.mobileNumber ? 'Where SMS summaries + urgent alerts land.' : undefined} />
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -264,151 +286,156 @@ export function OnboardingPage() {
                   <div className="flex-1 relative">
                     <Clock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
                     <input type="time" value={form.hoursStart} onChange={e => update('hoursStart', e.target.value)}
-                      className="glass w-full rounded-lg pl-9 pr-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/40 transition-all bg-transparent min-h-[48px]" />
+                      aria-label="Working hours start"
+                      className="glass w-full rounded-lg pl-9 pr-3 py-3 text-sm text-white focus:outline-none focus:border-orange-500/50 transition-all bg-transparent min-h-[48px]" />
                   </div>
                   <span className="text-gray-500 text-sm flex-shrink-0">to</span>
                   <div className="flex-1 relative">
                     <Clock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
                     <input type="time" value={form.hoursEnd} onChange={e => update('hoursEnd', e.target.value)}
-                      className="glass w-full rounded-lg pl-9 pr-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/40 transition-all bg-transparent min-h-[48px]" />
+                      aria-label="Working hours end"
+                      className="glass w-full rounded-lg pl-9 pr-3 py-3 text-sm text-white focus:outline-none focus:border-orange-500/50 transition-all bg-transparent min-h-[48px]" />
                   </div>
                 </div>
-                <p className="text-xs text-gray-500">The AI will mention this when callers ask about availability</p>
+                <p className="text-xs text-gray-500">The AI only offers bookings inside these hours — and tells after-hours callers when you open.</p>
               </div>
 
               <Button onClick={goNext} size="lg" className="w-full">
-                Next: Your Services <ChevronRight size={16} />
+                Next: services & pricing <ChevronRight size={16} />
               </Button>
+              <p className="text-center text-xs text-gray-600 -mt-1">Step 1 of 3 · about 2 minutes each</p>
             </div>
           )}
 
-          {/* Step 1 — Services & Pricing */}
+          {/* ── Step 1 — Services & pricing ── */}
           {step === 1 && (
-            <div className="space-y-4 animate-slide-in-right">
-              <div className="mb-5">
-                <h2 className="text-xl font-bold text-white">Services & pricing</h2>
-                <p className="text-gray-500 text-sm mt-0.5">
-                  Pre-filled for {form.tradeType || 'your trade'} — edit to match your business
+            <div className="space-y-5 animate-slide-in-right">
+              <div>
+                <h2 className="text-xl font-bold text-white">What you do, and what it costs</h2>
+                <p className="text-gray-500 text-sm mt-1">
+                  We've pre-filled typical {form.tradeType || 'trade'} numbers — <span className="text-gray-300">edit them to match yours</span>, because the AI quotes callers straight from this.
                 </p>
               </div>
 
               <Textarea
-                label="Services offered"
+                label="Services you offer"
                 value={form.services}
                 onChange={e => update('services', e.target.value)}
                 rows={4}
-                hint="The AI uses this to tell callers what you do"
+                error={fieldError('services')}
+                hint={!errors.services ? 'The AI says yes to these jobs and takes a message for anything else.' : undefined}
               />
               <Textarea
-                label="Pricing guide"
+                label="Your pricing guide"
                 value={form.pricingGuide}
                 onChange={e => update('pricingGuide', e.target.value)}
-                rows={4}
-                hint="The AI gives callers rough estimates based on this — you can be as detailed as you like"
+                rows={5}
+                hint="The AI gives callers rough figures from this list — the more real your numbers, the better its quotes sound."
               />
 
-              <div className="glass rounded-xl p-4 border border-blue-500/20 bg-blue-500/5">
-                <p className="text-xs text-gray-400">
-                  <span className="text-blue-400 font-medium">💡 Tip:</span> The AI will always say prices are estimates and that they should confirm when you call back. You can update this any time in Settings.
+              <div className="rounded-xl border border-orange-500/20 bg-orange-500/[0.04] px-4 py-3">
+                <p className="text-xs text-gray-400 leading-relaxed">
+                  <span className="text-orange-400 font-semibold">Worth knowing:</span> the AI always
+                  calls these estimates and says you'll confirm the exact price when you ring back.
+                  It never invents a number that isn't on this list.
                 </p>
               </div>
 
               {saveError && (
-                <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm px-4 py-3 rounded-lg">{saveError}</div>
+                <div className="rounded-xl border border-red-500/25 bg-red-500/[0.06] px-4 py-3">
+                  <p className="text-sm text-red-400">{saveError}</p>
+                  <p className="text-xs text-gray-500 mt-1">Your answers are still here — hit "Save & continue" to try again.</p>
+                </div>
               )}
 
               <div className="flex gap-3 pt-1">
-                <Button variant="secondary" onClick={() => setStep(0)} size="lg" className="flex-1">Back</Button>
+                <Button variant="secondary" onClick={() => setStep(0)} size="lg" className="flex-shrink-0">
+                  <ChevronLeft size={15} /> Back
+                </Button>
                 <Button onClick={handleFinish} size="lg" loading={loading} className="flex-1">
-                  Finish setup <ChevronRight size={16} />
+                  Save & continue <ChevronRight size={16} />
                 </Button>
               </div>
+              <p className="text-center text-xs text-gray-600 -mt-1">Step 2 of 3 · one step left after this</p>
             </div>
           )}
 
-          {/* Step 3 — Go Live! */}
-          {step === 3 && (
+          {/* ── Step 2 — Go live (forwarding) ── */}
+          {step === 2 && (
             <div className="space-y-6 animate-slide-in-right">
-              {/* Hero icon */}
               <div className="text-center">
-                <div className="relative mx-auto w-20 h-20 mb-4">
-                  <div className="absolute inset-0 bg-blue-500/20 rounded-2xl blur-xl" />
-                  <div className="relative w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30">
-                    <PartyPopper size={36} className="text-white" />
+                <div className="relative mx-auto w-16 h-16 mb-4">
+                  <div className="absolute inset-0 bg-orange-500/25 rounded-2xl blur-xl" />
+                  <div className="relative w-16 h-16 bg-orange-500 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-500/30">
+                    <PhoneCall size={28} className="text-black" />
                   </div>
                 </div>
-                <h2 className="text-2xl font-bold text-white mb-1">You're almost live! 🎉</h2>
-                <p className="text-gray-400 text-sm max-w-sm mx-auto">
-                  Forward your missed calls to your TradeDesk number below and you're set.
+                <h2 className="text-2xl font-bold text-white mb-1.5">Details saved. One thing left.</h2>
+                <p className="text-gray-500 text-sm max-w-sm mx-auto leading-relaxed">
+                  Point your missed calls at your TradeDesk number. Two minutes on your
+                  phone's keypad — then you're live.
                 </p>
               </div>
 
-              {/* TradeDesk number */}
-              <div className="glass rounded-xl p-5 border border-blue-500/30 bg-blue-500/5 text-center">
-                <p className="text-xs text-blue-400 font-semibold uppercase tracking-wider mb-2">Your TradeDesk number</p>
-                <div className="flex items-center justify-center gap-3">
-                  <span className="text-2xl font-bold text-white tracking-wider">{tradeskNumber}</span>
-                  <button onClick={copyNumber}
-                    className="w-8 h-8 glass rounded-lg flex items-center justify-center text-gray-400 hover:text-white hover:border-blue-500/40 transition-all duration-200">
-                    {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
-                  </button>
-                </div>
-                <p className="text-xs text-gray-500 mt-2">Forward your missed calls to this number</p>
+              {/* The user's REAL number (or an honest pending state) */}
+              <div className="rounded-xl border border-orange-500/25 bg-orange-500/[0.05] p-5 text-center">
+                <p className="text-[10px] text-orange-400 font-bold uppercase tracking-[0.14em] mb-2">Your TradeDesk number</p>
+                {twilioNumber ? (
+                  <div className="flex items-center justify-center gap-3">
+                    <span className="text-2xl font-bold text-white tracking-wider font-mono">{twilioNumber}</span>
+                    <button onClick={copyNumber} aria-label="Copy TradeDesk number"
+                      className="w-9 h-9 rounded-lg border border-white/10 bg-white/4 flex items-center justify-center text-gray-400 hover:text-white hover:border-orange-500/40 transition-all">
+                      {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400 leading-relaxed max-w-xs mx-auto">
+                    Being assigned now — it'll appear in{' '}
+                    <span className="text-white font-medium">Settings → Your TradeDesk Number</span>{' '}
+                    within a few minutes. You can finish this step from the dashboard checklist any time.
+                  </p>
+                )}
               </div>
 
-              {/* Call forwarding instructions */}
-              <div className="space-y-3">
-                {/* iPhone */}
-                <div className="glass rounded-xl p-4 border border-white/8">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-9 h-9 bg-gray-800 border border-white/10 rounded-xl flex items-center justify-center">
-                      <Smartphone size={16} className="text-blue-400" />
-                    </div>
-                    <span className="font-semibold text-white text-sm">iPhone</span>
-                  </div>
-                  <ol className="space-y-1.5 text-sm text-gray-300">
-                    <li className="flex gap-2.5"><span className="text-blue-400 font-bold w-4 flex-shrink-0">1.</span> <span>Go to <strong className="text-white">Settings → Phone → Call Forwarding</strong></span></li>
-                    <li className="flex gap-2.5"><span className="text-blue-400 font-bold w-4 flex-shrink-0">2.</span> <span>Toggle <strong className="text-white">Call Forwarding ON</strong></span></li>
-                    <li className="flex gap-2.5"><span className="text-blue-400 font-bold w-4 flex-shrink-0">3.</span> <span>Enter <strong className="text-white">{tradeskNumber.replace(/\s/g, '')}</strong> as the number</span></li>
-                  </ol>
-                </div>
+              <ForwardingGuide number={twilioNumber} />
 
-                {/* Android */}
-                <div className="glass rounded-xl p-4 border border-white/8">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-9 h-9 bg-gray-800 border border-white/10 rounded-xl flex items-center justify-center">
-                      <Phone size={16} className="text-green-400" />
-                    </div>
-                    <span className="font-semibold text-white text-sm">Android</span>
-                  </div>
-                  <ol className="space-y-1.5 text-sm text-gray-300">
-                    <li className="flex gap-2.5"><span className="text-blue-400 font-bold w-4 flex-shrink-0">1.</span> <span>Open Phone app → tap <strong className="text-white">⋮ → Settings → Supplementary services</strong></span></li>
-                    <li className="flex gap-2.5"><span className="text-blue-400 font-bold w-4 flex-shrink-0">2.</span> <span>Tap <strong className="text-white">Call forwarding → Forward when unanswered</strong></span></li>
-                    <li className="flex gap-2.5"><span className="text-blue-400 font-bold w-4 flex-shrink-0">3.</span> <span>Enter <strong className="text-white">{tradeskNumber.replace(/\s/g, '')}</strong> and confirm</span></li>
-                  </ol>
-                </div>
+              {/* What happens next — including the test call */}
+              <div className="rounded-xl border border-white/8 bg-white/[0.02] p-4">
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-gray-500 mb-3">Then prove it works</p>
+                <ol className="space-y-2.5">
+                  {[
+                    { icon: Phone, text: <>Ring <span className="text-white font-medium">your own mobile</span> from another phone (the missus', a mate's) and let it ring out.</> },
+                    { icon: Zap, text: <>Your AI picks up: <span className="text-gray-300 italic">"Hi, thanks for calling {form.businessName || 'your business'}…"</span> — have a chat, ask for a quote.</> },
+                    { icon: MessageSquare, text: <>Hang up. Within a minute there's an <span className="text-white font-medium">SMS summary on your phone</span> and the full call in your dashboard.</> },
+                  ].map(({ icon: Icon, text }, i) => (
+                    <li key={i} className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <Icon size={12} className="text-orange-400" />
+                      </div>
+                      <p className="text-sm text-gray-400 leading-relaxed">{text}</p>
+                    </li>
+                  ))}
+                </ol>
               </div>
 
-              {/* What happens next */}
-              <div className="space-y-2">
-                {[
-                  { dot: 'bg-blue-400', text: 'AI answers any missed calls in under 2 seconds' },
-                  { dot: 'bg-green-400', text: "You'll get an SMS summary after every call" },
-                  { dot: 'bg-purple-400', text: 'All calls and contacts appear in your dashboard' },
-                ].map(({ dot, text }) => (
-                  <div key={text} className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${dot} flex-shrink-0`} />
-                    <p className="text-sm text-gray-300">{text}</p>
-                  </div>
-                ))}
+              <div className="space-y-2.5">
+                <Button onClick={finishForwarded} size="lg" className="w-full text-base">
+                  I've dialled the codes — I'm live <ChevronRight size={16} />
+                </Button>
+                <button onClick={finishLater}
+                  className="w-full text-sm text-gray-500 hover:text-gray-300 transition-colors py-2.5 min-h-[44px]">
+                  I'll set up forwarding later — take me to the dashboard
+                </button>
               </div>
-
-              <Button onClick={handleGoLive} size="lg" className="w-full text-base">
-                I'm live! Take me to my dashboard <ChevronRight size={16} />
-              </Button>
             </div>
           )}
         </div>
+
+        {step < 2 && (
+          <p className="text-center text-xs text-gray-700 mt-5">
+            Nothing here is locked in — every answer can be changed in Settings later.
+          </p>
+        )}
       </div>
     </div>
   );

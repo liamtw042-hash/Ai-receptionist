@@ -162,9 +162,30 @@ function formatPhone(num: string): string {
 }
 
 const CHECKLIST_ITEMS = [
-  { key: 'hasBusinessDetails', label: 'Add business details', hint: 'Settings → Business profile', action: '/dashboard/settings' },
-  { key: 'hasForwardingSetup', label: 'Set up call forwarding', hint: 'Forward missed calls to your TradeDesk number', action: '/dashboard/settings' },
-  { key: 'hasMadeTestCall', label: 'Make a test call', hint: 'Call your number and hear your AI', action: '/dashboard/settings' },
+  {
+    key: 'hasBusinessDetails',
+    label: 'Add your business details',
+    hint: 'Your name, trade and prices — everything the AI answers with',
+    action: '/dashboard/settings',
+    cta: 'Fill them in',
+    manual: false, // derived server-side from the actual saved fields
+  },
+  {
+    key: 'hasForwardingSetup',
+    label: 'Forward your missed calls',
+    hint: 'Three quick dial codes on your phone — instructions included',
+    action: '/dashboard/settings#forwarding',
+    cta: 'Show me the codes',
+    manual: true, // the one step only the user can confirm
+  },
+  {
+    key: 'hasMadeTestCall',
+    label: 'Make a test call',
+    hint: 'Ring your TradeDesk number and hear it answer as your business',
+    action: '/dashboard/settings#test-call',
+    cta: 'How to test it',
+    manual: false, // ticks itself when the first real call lands
+  },
 ];
 
 /* ── Main ──────────────────────────────────────────── */
@@ -196,7 +217,16 @@ export function OverviewPage() {
     api.get<GoogleStatus>('/google/status').then(setGoogleStatus).catch(() => null);
   }, []);
 
-  const toggleCheck = (key: string) => setChecklist(c => ({ ...c, [key]: !c[key] }));
+  const toggleCheck = (key: string) => {
+    const item = CHECKLIST_ITEMS.find(i => i.key === key);
+    if (!item?.manual) return; // derived steps complete themselves
+    setChecklist(c => {
+      const next = !c[key];
+      // Persist — an un-saved tick that vanishes on reload reads as a bug.
+      api.put('/settings', { hasForwardingSetup: next }).catch(() => {});
+      return { ...c, [key]: next };
+    });
+  };
   const greeting = getGreeting();
   const GreetIcon = greeting.icon;
   const firstName = user?.displayName?.split(' ')[0] || user?.email?.split('@')[0] || 'there';
@@ -227,7 +257,9 @@ export function OverviewPage() {
   return (
     <div className="space-y-5 animate-slide-up">
 
-      {/* ── AI Status Banner ── */}
+      {/* ── AI Status Banner (hidden for fresh users — the guided panel below
+             carries the same message without the nag) ── */}
+      {!freshUser && (
       <div className={`flex items-center gap-3 rounded-xl px-4 py-2.5 border text-sm font-medium transition-all ${
         allDone
           ? 'bg-green-500/6 border-green-500/20 text-green-400'
@@ -239,6 +271,7 @@ export function OverviewPage() {
         </span>
         {!allDone && <Link to="/dashboard/settings" className="text-xs underline underline-offset-2 flex-shrink-0">Finish →</Link>}
       </div>
+      )}
 
       {/* ── Greeting row ── */}
       <div className="flex items-center justify-between gap-4">
@@ -254,36 +287,66 @@ export function OverviewPage() {
         </div>
       </div>
 
-      {/* ── First-run welcome (brand-new account) ── */}
+      {/* ── First-run experience (brand-new account) ──
+             A guided do-this-first panel instead of empty stat cards: each step
+             is numbered, state-aware, and links straight to where it happens. */}
       {freshUser && (
-        <div className="relative overflow-hidden rounded-2xl border border-orange-500/25 p-5 sm:p-6"
-          style={{ background: 'linear-gradient(135deg,rgba(249,115,22,0.12) 0%,rgba(15,17,20,0.6) 55%,rgba(10,11,13,0.6) 100%)' }}>
+        <div className="relative overflow-hidden rounded-2xl border border-orange-500/25 p-5 sm:p-7"
+          style={{ background: 'linear-gradient(135deg,rgba(249,115,22,0.10) 0%,rgba(15,17,20,0.7) 55%,rgba(10,11,13,0.7) 100%)' }}>
           <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full pointer-events-none"
-            style={{ background: 'radial-gradient(circle,rgba(249,115,22,0.14) 0%,transparent 70%)' }} />
-          <div className="relative flex items-start gap-4">
-            <div className="w-11 h-11 rounded-xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center flex-shrink-0">
-              <Sparkles size={20} className="text-orange-400" />
+            style={{ background: 'radial-gradient(circle,rgba(249,115,22,0.13) 0%,transparent 70%)' }} />
+          <div className="relative">
+            <div className="flex items-center gap-3 mb-1.5">
+              <Sparkles size={18} className="text-orange-400 flex-shrink-0" />
+              <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">Three steps and your AI is taking calls</h2>
             </div>
-            <div className="flex-1 min-w-0">
-              <h2 className="text-lg font-bold text-white tracking-tight">Let's get your AI answering calls</h2>
-              <p className="text-sm text-gray-400 mt-1 leading-relaxed max-w-xl">
-                You're a few minutes from never missing a job again. Finish these{' '}
-                {CHECKLIST_ITEMS.length - doneCount} step{CHECKLIST_ITEMS.length - doneCount > 1 ? 's' : ''} and your
-                first calls, leads and bookings will start landing right here.
-              </p>
-              <div className="flex flex-wrap items-center gap-2.5 mt-4">
-                <Link to="/dashboard/settings"
-                  className="inline-flex items-center gap-1.5 bg-orange-500 hover:bg-orange-400 text-black text-sm font-bold px-4 py-2 rounded-xl transition-all shadow-lg shadow-orange-500/20">
-                  Finish setup <ArrowRight size={14} />
-                </Link>
-                <span className="text-xs text-gray-600">Takes about 10 minutes · no hardware needed</span>
-              </div>
-            </div>
+            <p className="text-sm text-gray-400 leading-relaxed max-w-xl mb-5">
+              About ten minutes, all up. The moment a call comes through, this page fills with
+              calls, leads and booked jobs — here's exactly what to do first.
+            </p>
+
+            <ol className="space-y-3 max-w-xl">
+              {CHECKLIST_ITEMS.map(({ key, label, hint, action, cta }, i) => {
+                const done = !!checklist[key];
+                return (
+                  <li key={key} className={`flex items-start gap-3.5 rounded-xl border px-4 py-3.5 transition-all ${
+                    done ? 'border-emerald-500/25 bg-emerald-500/[0.04]' : 'border-white/8 bg-white/[0.03]'
+                  }`}>
+                    <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                      done ? 'bg-emerald-500 text-black' : 'bg-orange-500/15 border border-orange-500/30 text-orange-400'
+                    }`}>
+                      {done ? <CheckCircle2 size={14} /> : i + 1}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-semibold ${done ? 'text-gray-500 line-through' : 'text-white'}`}>{label}</p>
+                      {!done && (
+                        <>
+                          <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{hint}</p>
+                          <Link to={action}
+                            className="inline-flex items-center gap-1.5 mt-2 bg-orange-500 hover:bg-orange-400 text-black text-xs font-bold px-3 py-1.5 rounded-lg transition-all min-h-[32px]">
+                            {cta} <ArrowRight size={12} />
+                          </Link>
+                        </>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+
+            <p className="text-xs text-gray-600 mt-4">
+              Stuck on any step? Email{' '}
+              <a href="mailto:hello@tradedesk.com.au" className="text-orange-400/90 hover:text-orange-300">hello@tradedesk.com.au</a>{' '}
+              and a human will sort you out.
+            </p>
           </div>
         </div>
       )}
 
-      {/* ── Stats — deliberate hierarchy: one dominant hero, three quiet supports ── */}
+      {/* ── Stats — deliberate hierarchy: one dominant hero, three quiet supports.
+             Hidden for a brand-new account: a wall of zeros reads as "broken",
+             the guided panel above is the first-run content instead. ── */}
+      {!freshUser && (
       <motion.div className="grid gap-3 lg:gap-4 lg:grid-cols-[1.35fr_1fr]"
         variants={reduceMotion ? instantContainer : staggerContainer(0.06)}
         initial="hidden" animate="show">
@@ -294,6 +357,7 @@ export function OverviewPage() {
           <MiniStat icon={Calendar} label="Jobs" value={jobsThisWeek} hint="this week" />
         </div>
       </motion.div>
+      )}
 
       {/* ── Emergency alert ── */}
       {(stats?.emergenciesToday ?? 0) > 0 && (
@@ -306,7 +370,8 @@ export function OverviewPage() {
         </div>
       )}
 
-      {/* ── Quick actions ── */}
+      {/* ── Quick actions (nothing to act on yet for a fresh account) ── */}
+      {!freshUser && (
       <div className="flex gap-2 flex-wrap">
         {[
           { to: '/dashboard/sms', icon: MessageSquare, label: 'Send test SMS' },
@@ -319,6 +384,7 @@ export function OverviewPage() {
           </Link>
         ))}
       </div>
+      )}
 
       {/* ── Two-column content ── */}
       <div className="grid lg:grid-cols-2 gap-4">
@@ -375,8 +441,8 @@ export function OverviewPage() {
 
         {/* RIGHT — Checklist + Weekly summary stacked */}
         <div className="space-y-3">
-          {/* Getting started checklist */}
-          {!allDone && (
+          {/* Getting started checklist (fresh users get the guided panel instead) */}
+          {!allDone && !freshUser && (
             <div className="rounded-2xl border border-white/7 p-5"
               style={{ background: 'rgba(15,17,20,0.5)' }}>
               <div className="flex items-center justify-between mb-3">
@@ -390,33 +456,51 @@ export function OverviewPage() {
                   style={{ width: `${(doneCount / CHECKLIST_ITEMS.length) * 100}%` }} />
               </div>
               <ul className="space-y-3">
-                {CHECKLIST_ITEMS.map(({ key, label, hint, action }) => {
+                {CHECKLIST_ITEMS.map(({ key, label, hint, action, cta, manual }) => {
                   const done = !!checklist[key];
                   return (
                     <li key={key} className="flex items-start gap-3">
-                      <button onClick={() => toggleCheck(key)}
-                        className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-                          done ? 'bg-green-500 border-green-500' : 'border-gray-600 hover:border-orange-400'
-                        }`}>
-                        {done && <CheckCircle2 size={12} className="text-white" />}
-                      </button>
+                      {manual ? (
+                        // The forwarding step is the user's own claim — togglable, persisted.
+                        <button onClick={() => toggleCheck(key)}
+                          aria-label={done ? `Mark "${label}" as not done` : `Mark "${label}" as done`}
+                          className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                            done ? 'bg-emerald-500 border-emerald-500' : 'border-gray-600 hover:border-orange-400'
+                          }`}>
+                          {done && <CheckCircle2 size={12} className="text-black" />}
+                        </button>
+                      ) : (
+                        // Derived steps verify themselves — status, not a claim.
+                        <span aria-hidden="true"
+                          className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                            done ? 'bg-emerald-500 border-emerald-500' : 'border-gray-700 border-dashed'
+                          }`}>
+                          {done && <CheckCircle2 size={12} className="text-black" />}
+                        </span>
+                      )}
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm font-medium transition-all ${done ? 'text-gray-500 line-through' : 'text-white'}`}>{label}</p>
                         {!done && (
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <p className="text-xs text-gray-600">{hint}</p>
-                            <Link to={action} className="text-xs font-semibold text-orange-400 hover:text-orange-300 flex-shrink-0">Go →</Link>
-                          </div>
+                          <>
+                            <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{hint}</p>
+                            <Link to={action} className="inline-flex items-center gap-1 text-xs font-semibold text-orange-400 hover:text-orange-300 mt-1 min-h-[28px]">
+                              {cta} <ArrowRight size={11} />
+                            </Link>
+                          </>
                         )}
                       </div>
                     </li>
                   );
                 })}
               </ul>
+              <p className="text-[11px] text-gray-700 mt-3.5 leading-relaxed">
+                Steps 1 and 3 tick themselves off automatically — only the forwarding step needs your say-so.
+              </p>
             </div>
           )}
 
-          {/* Weekly summary */}
+          {/* Weekly summary (zeros hidden for fresh accounts) */}
+          {!freshUser && (
           <div className="rounded-2xl border border-white/7 p-5"
             style={{ background: 'rgba(15,17,20,0.5)', borderLeft: '3px solid rgba(249,115,22,0.55)' }}>
             <div className="flex items-center justify-between mb-4">
@@ -443,7 +527,7 @@ export function OverviewPage() {
               ))}
             </div>
           </div>
-
+          )}
           {/* Integrations */}
           {googleStatus?.connected && (
             <div className="rounded-2xl border border-white/7 p-4"
