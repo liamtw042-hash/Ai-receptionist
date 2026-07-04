@@ -57,7 +57,7 @@ interface RecentCall {
 function notifMeta(outcome: string) {
   if (outcome === 'emergency') return { icon: AlertTriangle, color: 'text-red-400', bg: 'bg-red-500/15', title: 'Emergency call flagged' };
   if (outcome === 'job_booked') return { icon: CheckCircle, color: 'text-green-400', bg: 'bg-green-500/15', title: 'Job booked!' };
-  return { icon: PhoneIncoming, color: 'text-blue-400', bg: 'bg-blue-500/15', title: 'New call' };
+  return { icon: PhoneIncoming, color: 'text-orange-400', bg: 'bg-orange-500/15', title: 'New call' };
 }
 
 // ── Command Palette ──────────────────────────────────────────────────────────
@@ -88,7 +88,7 @@ function CommandSearch({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-24 px-4 bg-black/75 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-md bg-[#0d1426] rounded-2xl border border-white/12 shadow-2xl shadow-black/60 overflow-hidden" onClick={e => e.stopPropagation()}>
+      <div className="w-full max-w-md bg-[#17191e] rounded-2xl border border-white/12 shadow-2xl shadow-black/60 overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-3 px-4 py-3.5 border-b border-white/8">
           <Search size={15} className="text-gray-500 flex-shrink-0" />
           <input ref={ref} value={q} onChange={e => setQ(e.target.value)}
@@ -265,7 +265,7 @@ export function DashboardLayout() {
       !isMobile && (collapsed ? 'w-[60px]' : 'w-[220px]'),
       isMobile && 'w-72'
     )} style={{
-      background: 'linear-gradient(160deg,#0c1120 0%,#0a0f1d 40%,#080d19 100%)',
+      background: '#0f1114',
       borderRight: '1px solid rgba(255,255,255,0.06)',
     }}>
       {/* Logo */}
@@ -310,7 +310,7 @@ export function DashboardLayout() {
   );
 
   return (
-    <div className="min-h-screen flex" style={{ background: '#080c14' }}>
+    <div className="min-h-screen flex" style={{ background: '#0a0b0d' }}>
       {cmdOpen && <CommandSearch onClose={() => setCmdOpen(false)} />}
 
       {/* Desktop sidebar */}
@@ -333,7 +333,7 @@ export function DashboardLayout() {
 
         {/* ─── Top header ─── */}
         <header className="flex items-center gap-3 px-4 h-14 flex-shrink-0 border-b border-white/[0.07]"
-          style={{ background: 'rgba(8,12,20,0.98)', backdropFilter: 'blur(16px)' }}>
+          style={{ background: 'rgba(10,11,13,0.98)', backdropFilter: 'blur(16px)' }}>
 
           {/* Mobile hamburger */}
           <button onClick={() => setMobileOpen(true)}
@@ -381,7 +381,7 @@ export function DashboardLayout() {
                   <>
                   <div className="fixed inset-0 z-[9998]" onClick={() => setNotifOpen(false)} />
                   <motion.div className="w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-white/10 shadow-2xl shadow-black/60 z-[9999] overflow-hidden"
-                    style={{ ...dropdownStyle, background: '#0d1426', transformOrigin: 'top right' }}
+                    style={{ ...dropdownStyle, background: '#17191e', transformOrigin: 'top right' }}
                     initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -8, scale: 0.97 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -6, scale: 0.98 }}
@@ -459,7 +459,7 @@ export function DashboardLayout() {
 
       {/* ─── Mobile bottom nav ─── */}
       <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 flex border-t border-white/8"
-        style={{ background: 'rgba(8,12,20,0.98)', backdropFilter: 'blur(20px)', height: '60px' }}>
+        style={{ background: 'rgba(10,11,13,0.98)', backdropFilter: 'blur(20px)', height: '60px' }}>
         {navItems.map(({ to, icon: Icon, label, end }) => (
           <NavLink key={to} to={to} end={end}
             className={({ isActive }) => clsx(

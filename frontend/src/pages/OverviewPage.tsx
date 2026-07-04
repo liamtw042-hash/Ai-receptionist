@@ -89,7 +89,7 @@ function HeroMetric({ value, booked }: { value: number; booked: number }) {
     <motion.div variants={reduce ? instantItem : staggerItem}
       className="relative overflow-hidden rounded-2xl p-5 sm:p-6"
       style={{
-        background: 'linear-gradient(135deg,rgba(38,22,8,0.55) 0%,rgba(13,20,38,0.9) 45%,rgba(8,12,20,0.92) 100%)',
+        background: 'linear-gradient(135deg,rgba(38,22,8,0.55) 0%,rgba(15,17,20,0.9) 45%,rgba(10,11,13,0.92) 100%)',
         border: '1px solid rgba(249,115,22,0.28)',
         boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 8px 40px rgba(249,115,22,0.08)',
       }}>
@@ -135,7 +135,7 @@ function MiniStat({ icon: Icon, label, value, hint }: {
   return (
     <motion.div variants={reduce ? instantItem : staggerItem}
       className="group relative rounded-xl p-4 overflow-hidden transition-all duration-200 hover:-translate-y-0.5"
-      style={{ background: 'rgba(13,20,38,0.6)', border: '1px solid rgba(255,255,255,0.07)' }}>
+      style={{ background: 'rgba(15,17,20,0.6)', border: '1px solid rgba(255,255,255,0.07)' }}>
       <div className="flex items-center gap-2 mb-2.5">
         <Icon size={13} className="text-gray-500 group-hover:text-orange-400/80 transition-colors flex-shrink-0" />
         <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider truncate">{label}</p>
@@ -257,7 +257,7 @@ export function OverviewPage() {
       {/* ── First-run welcome (brand-new account) ── */}
       {freshUser && (
         <div className="relative overflow-hidden rounded-2xl border border-orange-500/25 p-5 sm:p-6"
-          style={{ background: 'linear-gradient(135deg,rgba(249,115,22,0.12) 0%,rgba(13,20,38,0.6) 55%,rgba(8,12,20,0.6) 100%)' }}>
+          style={{ background: 'linear-gradient(135deg,rgba(249,115,22,0.12) 0%,rgba(15,17,20,0.6) 55%,rgba(10,11,13,0.6) 100%)' }}>
           <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full pointer-events-none"
             style={{ background: 'radial-gradient(circle,rgba(249,115,22,0.14) 0%,transparent 70%)' }} />
           <div className="relative flex items-start gap-4">
@@ -336,7 +336,7 @@ export function OverviewPage() {
 
           {recentCalls.length === 0 ? (
             <div className="rounded-2xl border border-white/7 py-10 text-center"
-              style={{ background: 'rgba(13,20,38,0.5)' }}>
+              style={{ background: 'rgba(15,17,20,0.5)' }}>
               <div className="w-12 h-12 bg-orange-500/10 border border-orange-500/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
                 <PhoneCall size={22} className="text-orange-400/50" />
               </div>
@@ -349,7 +349,7 @@ export function OverviewPage() {
             </div>
           ) : (
             <div className="divide-y divide-white/5 rounded-2xl overflow-hidden border border-white/7"
-              style={{ background: 'rgba(13,20,38,0.5)' }}>
+              style={{ background: 'rgba(15,17,20,0.5)' }}>
               {recentCalls.slice(0, 6).map(call => (
                 <div key={call.id}
                   className="flex items-center gap-3 px-4 py-3 hover:bg-white/3 transition-colors cursor-pointer group"
@@ -378,7 +378,7 @@ export function OverviewPage() {
           {/* Getting started checklist */}
           {!allDone && (
             <div className="rounded-2xl border border-white/7 p-5"
-              style={{ background: 'rgba(13,20,38,0.5)' }}>
+              style={{ background: 'rgba(15,17,20,0.5)' }}>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-sm font-bold text-white">Getting started</h2>
                 <span className="text-xs font-bold text-orange-400 bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded-full tabular-nums">
@@ -418,7 +418,7 @@ export function OverviewPage() {
 
           {/* Weekly summary */}
           <div className="rounded-2xl border border-white/7 p-5"
-            style={{ background: 'rgba(13,20,38,0.5)', borderLeft: '3px solid rgba(249,115,22,0.55)' }}>
+            style={{ background: 'rgba(15,17,20,0.5)', borderLeft: '3px solid rgba(249,115,22,0.55)' }}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-bold text-white">This week</h2>
               <div className="flex items-center gap-2.5 flex-shrink-0">
@@ -428,7 +428,7 @@ export function OverviewPage() {
             </div>
             <div className="space-y-3">
               {[
-                { icon: Phone, bg: 'bg-blue-500/12', color: 'text-blue-400', label: 'Calls handled', value: callsThisWeek },
+                { icon: Phone, bg: 'bg-orange-500/12', color: 'text-orange-400', label: 'Calls handled', value: callsThisWeek },
                 { icon: Calendar, bg: 'bg-green-500/12', color: 'text-green-400', label: 'Jobs booked', value: jobsThisWeek },
               ].map(({ icon: Icon, bg, color, label, value }) => (
                 <div key={label} className="flex items-center justify-between">
@@ -447,7 +447,7 @@ export function OverviewPage() {
           {/* Integrations */}
           {googleStatus?.connected && (
             <div className="rounded-2xl border border-white/7 p-4"
-              style={{ background: 'rgba(13,20,38,0.5)' }}>
+              style={{ background: 'rgba(15,17,20,0.5)' }}>
               <div className="flex items-center gap-2 mb-3">
                 <Link2 size={13} className="text-emerald-400" />
                 <h2 className="text-xs font-semibold text-white uppercase tracking-wider">Integrations</h2>

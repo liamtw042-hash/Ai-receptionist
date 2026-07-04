@@ -28,7 +28,7 @@ const OUTCOME_CONFIG: Record<string, {
 }> = {
   booked:     { bar: '#22c55e', icon: PhoneIncoming,  iconColor: 'text-green-400',  label: 'Booked' },
   emergency:  { bar: '#ef4444', icon: PhoneIncoming,  iconColor: 'text-red-400',    label: 'Emergency' },
-  lead:       { bar: '#3b82f6', icon: PhoneIncoming,  iconColor: 'text-blue-400',   label: 'Lead' },
+  lead:       { bar: '#ff6b35', icon: PhoneIncoming,  iconColor: 'text-orange-400', label: 'Lead' },
   'no-action':{ bar: '#6b7280', icon: PhoneMissed,    iconColor: 'text-gray-500',   label: 'No Action' },
   transferred:{ bar: '#a78bfa', icon: PhoneOutgoing,  iconColor: 'text-purple-400', label: 'Transferred' },
   callback:   { bar: '#fb923c', icon: PhoneIncoming,  iconColor: 'text-orange-400', label: 'Callback' },
@@ -192,7 +192,7 @@ export function CallsPage() {
       {loading ? (
         <div className="space-y-2">{[...Array(6)].map((_, i) => <SkeletonRow key={i} />)}</div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-2xl border border-white/7 py-14 px-6 text-center" style={{ background: 'rgba(13,20,38,0.5)' }}>
+        <div className="rounded-2xl border border-white/7 py-14 px-6 text-center" style={{ background: 'rgba(15,17,20,0.5)' }}>
           <div className="w-14 h-14 bg-orange-500/8 border border-orange-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
             {search || filter !== 'All'
               ? <Search size={22} className="text-orange-400/50" />
@@ -208,7 +208,7 @@ export function CallsPage() {
           </p>
         </div>
       ) : (
-        <motion.div className="rounded-2xl border border-white/7 overflow-hidden" style={{ background: 'rgba(13,20,38,0.5)' }}
+        <motion.div className="rounded-2xl border border-white/7 overflow-hidden" style={{ background: 'rgba(15,17,20,0.5)' }}
           variants={reduceMotion ? instantContainer : staggerContainer(0.04)}
           initial="hidden" animate="show">
           {filtered.map((call, idx) => {

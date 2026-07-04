@@ -22,6 +22,26 @@ export default {
           600: '#2563EB',
           400: '#60A5FA',
         },
+        // ── Design system (2026 rebuild) ─────────────────────────────────
+        // `ink` is the neutral near-black surface ramp — replaces the old
+        // navy-tinted panels (#0d1426) so the one warm accent reads louder.
+        // Pattern borrowed from Linear: depth comes from 1px borders between
+        // near-identical darks, not from colour-tinted gradient panels.
+        ink: {
+          950: '#0a0b0d', // page background
+          900: '#0f1114', // raised panel
+          850: '#121418', // hover / elevated panel
+          800: '#17191e', // highest surface (dropdowns, modals)
+        },
+        // The single product accent. Warmer + less saturated than Tailwind's
+        // stock orange-500 — closer to hi-vis workwear than to a warning
+        // state, which matters when red/amber remain semantic colours.
+        orange: {
+          300: '#ffb392',
+          400: '#ff8a5e',
+          500: '#ff6b35',
+          600: '#e85a28',
+        },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],

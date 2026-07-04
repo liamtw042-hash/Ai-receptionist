@@ -259,7 +259,7 @@ function GoogleIntegrationsCard() {
                 <div className="space-y-3">
                   {status.spreadsheetUrl && (
                     <a href={status.spreadsheetUrl} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition-colors">
+                      className="flex items-center gap-1.5 text-xs text-orange-400 hover:text-orange-300 transition-colors">
                       <ExternalLink size={11} /> Open your calls spreadsheet
                     </a>
                   )}
@@ -444,7 +444,7 @@ function BillingCard() {
             {/* Live plan tile — feels like a considered product's plan card, not
                 generic Stripe boilerplate. Status colour is the only decorative hue. */}
             <div className="relative overflow-hidden rounded-2xl p-5 mb-4 border border-orange-500/25"
-              style={{ background: 'linear-gradient(135deg,rgba(38,22,8,0.5) 0%,rgba(13,20,38,0.85) 55%,rgba(8,12,20,0.9) 100%)' }}>
+              style={{ background: 'linear-gradient(135deg,rgba(38,22,8,0.5) 0%,rgba(15,17,20,0.85) 55%,rgba(10,11,13,0.9) 100%)' }}>
               <div className="absolute top-0 right-0 w-40 h-40 rounded-full pointer-events-none"
                 style={{ background: 'radial-gradient(circle,rgba(249,115,22,0.12) 0%,transparent 70%)', transform: 'translate(30%,-35%)' }} />
               <div className="relative flex items-start justify-between gap-3 flex-wrap">
@@ -475,7 +475,7 @@ function BillingCard() {
           <>
             {/* Pre-subscription — anchor the price against the payoff, tradie-voiced */}
             <div className="relative overflow-hidden rounded-2xl p-5 mb-4 border border-orange-500/25"
-              style={{ background: 'linear-gradient(135deg,rgba(38,22,8,0.5) 0%,rgba(13,20,38,0.85) 100%)' }}>
+              style={{ background: 'linear-gradient(135deg,rgba(38,22,8,0.5) 0%,rgba(15,17,20,0.85) 100%)' }}>
               <div className="flex items-center gap-2">
                 <Zap size={14} className="text-orange-400" fill="currentColor" />
                 <p className="font-black text-white text-lg tracking-tight leading-none">TradeDesk Pro</p>

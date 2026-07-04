@@ -176,7 +176,7 @@ export function SMSPage() {
 
   return (
     <div className="flex h-[calc(100vh-8rem)] rounded-2xl border border-white/7 overflow-hidden animate-slide-up"
-      style={{ background: 'rgba(13,20,38,0.5)' }}>
+      style={{ background: 'rgba(15,17,20,0.5)' }}>
 
       {/* ── Conversation list ── */}
       <aside className={clsx(

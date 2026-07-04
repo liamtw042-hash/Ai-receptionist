@@ -59,7 +59,7 @@ function ContactDetail({ contact, onClose }: { contact: Contact; onClose: () => 
       <motion.div
         onClick={e => e.stopPropagation()}
         className="relative w-full max-w-md h-full flex flex-col overflow-y-auto border-l border-white/10"
-        style={{ background: 'linear-gradient(160deg,#0d1426 0%,#0a0f1d 100%)', boxShadow: '-24px 0 64px rgba(0,0,0,0.5)' }}
+        style={{ background: 'linear-gradient(160deg,#17191e 0%,#0a0f1d 100%)', boxShadow: '-24px 0 64px rgba(0,0,0,0.5)' }}
         initial={reduceMotion ? { opacity: 0 } : { x: '100%' }}
         animate={reduceMotion ? { opacity: 1 } : { x: 0 }}
         exit={reduceMotion ? { opacity: 0 } : { x: '100%' }}
@@ -245,7 +245,7 @@ export function ContactsPage() {
       {loading ? (
         <div className="space-y-2">{[...Array(6)].map((_, i) => <SkeletonRow key={i} />)}</div>
       ) : sorted.length === 0 ? (
-        <div className="rounded-2xl border border-white/7 py-14 px-6 text-center" style={{ background: 'rgba(13,20,38,0.5)' }}>
+        <div className="rounded-2xl border border-white/7 py-14 px-6 text-center" style={{ background: 'rgba(15,17,20,0.5)' }}>
           <div className="w-14 h-14 bg-orange-500/8 border border-orange-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
             {search ? <Search size={22} className="text-orange-400/50" /> : <Users size={22} className="text-orange-400/60" />}
           </div>
@@ -273,7 +273,7 @@ export function ContactsPage() {
                 onClick={() => setDetail(contact)}
                 onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDetail(contact); } }}
                 className="w-full text-left rounded-2xl border border-white/7 hover:border-orange-500/25 px-4 py-3.5 flex items-center gap-3.5 transition-all group hover:bg-white/[0.02] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/50"
-                style={{ background: 'rgba(13,20,38,0.5)' }}>
+                style={{ background: 'rgba(15,17,20,0.5)' }}>
                 {/* Avatar — solid tile, consistent with sidebar/Overview (no rainbow) */}
                 <div className="w-11 h-11 rounded-xl bg-white/[0.06] border border-white/10 group-hover:border-orange-500/30 flex items-center justify-center text-sm font-black text-gray-200 flex-shrink-0 transition-colors">
                   {avatarInitials(contact)}

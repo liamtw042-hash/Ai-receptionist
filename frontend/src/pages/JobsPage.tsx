@@ -426,8 +426,8 @@ function NewJobModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
 
   return (
     <div className="fixed inset-0 z-[9990] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-lg bg-[#0d1426] rounded-2xl border border-white/12 shadow-2xl shadow-black/60 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/8 sticky top-0 bg-[#0d1426] z-10">
+      <div className="w-full max-w-lg bg-[#17191e] rounded-2xl border border-white/12 shadow-2xl shadow-black/60 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/8 sticky top-0 bg-[#17191e] z-10">
           <h3 className="text-base font-bold text-white flex items-center gap-2"><Plus size={16} className="text-orange-400" /> New Job</h3>
           <button onClick={onClose} className="text-gray-500 hover:text-white p-1"><X size={16} /></button>
         </div>

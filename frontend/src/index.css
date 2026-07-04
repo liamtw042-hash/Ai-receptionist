@@ -21,7 +21,9 @@ html, body {
   }
 
   body {
-    background-color: #000000;
+    /* Near-black, not pure black — pure #000 makes 1px borders vanish and
+       glows look radioactive. #0a0b0d is the Linear-school neutral. */
+    background-color: #0a0b0d;
     color: #ffffff;
     min-height: 100vh;
   }
@@ -41,7 +43,7 @@ html, body {
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #3B82F6;
+    background: #4a4f58;
   }
 }
 
@@ -64,7 +66,7 @@ html, body {
 
   .glass-hover:hover {
     background: rgba(255, 255, 255, 0.07);
-    border-color: rgba(59, 130, 246, 0.3);
+    border-color: rgba(255, 255, 255, 0.18);
   }
 
   .blue-glow {
@@ -72,7 +74,7 @@ html, body {
   }
 
   .text-gradient {
-    background: linear-gradient(135deg, #3B82F6, #60A5FA);
+    background: linear-gradient(135deg, #ff6b35, #ffb392);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -160,15 +162,15 @@ html, body {
   100% { background-position: 50% 0%; }
 }
 .hero-gradient-bg {
-  background: radial-gradient(ellipse 100% 80% at 50% -10%, rgba(10,18,55,0.95) 0%, rgba(5,10,30,0.7) 40%, transparent 75%);
+  background: radial-gradient(ellipse 100% 80% at 50% -10%, rgba(30,20,14,0.9) 0%, rgba(16,12,10,0.6) 40%, transparent 75%);
   background-size: 100% 200%;
   animation: hero-gradient-shift 10s ease-in-out infinite;
 }
 
 /* ── Pricing glow animation ── */
 @keyframes pricing-glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(59,130,246,0.25), 0 0 60px rgba(59,130,246,0.1); }
-  50% { box-shadow: 0 0 35px rgba(59,130,246,0.45), 0 0 90px rgba(59,130,246,0.2); }
+  0%, 100% { box-shadow: 0 0 20px rgba(255,107,53,0.22), 0 0 60px rgba(255,107,53,0.09); }
+  50% { box-shadow: 0 0 32px rgba(255,107,53,0.38), 0 0 90px rgba(255,107,53,0.16); }
 }
 .pricing-card-glow {
   animation: pricing-glow 3s ease-in-out infinite;
@@ -213,7 +215,7 @@ html, body {
   top: 0;
   left: 0;
   height: 2px;
-  background: linear-gradient(to right, #3b82f6, #60a5fa, #fbbf24);
+  background: linear-gradient(to right, #ff6b35, #ff8a5e);
   z-index: 9999;
   transform-origin: left;
   transition: width 0.1s linear;
@@ -265,7 +267,7 @@ html, body {
   display: inline-block;
   width: 3px;
   height: 0.85em;
-  background: #3b82f6;
+  background: #ff6b35;
   margin-left: 3px;
   vertical-align: middle;
   animation: blink 1s step-end infinite;
@@ -294,7 +296,7 @@ html, body {
 
 /* ── Accessibility focus rings ── */
 :focus-visible {
-  outline: 2px solid rgba(59, 130, 246, 0.7);
+  outline: 2px solid rgba(255, 107, 53, 0.65);
   outline-offset: 2px;
 }
 button:focus-visible,
@@ -302,7 +304,7 @@ a:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid rgba(59, 130, 246, 0.7);
+  outline: 2px solid rgba(255, 107, 53, 0.65);
   outline-offset: 2px;
   border-radius: 6px;
 }

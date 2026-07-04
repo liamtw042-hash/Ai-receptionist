@@ -1,31 +1,64 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Zap, ArrowRight, Phone, Clock, TrendingUp, Eye, EyeOff } from 'lucide-react';
+import { Zap, ArrowRight, Eye, EyeOff, PhoneIncoming, MessageSquare, CheckCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
 
-const STATS = [
-  { icon: Clock, value: '< 2 sec', label: 'Answer time', color: 'text-blue-400', bg: 'bg-blue-500/15' },
-  { icon: Phone, value: '24/7', label: 'Always on', color: 'text-green-400', bg: 'bg-green-500/15' },
-  { icon: TrendingUp, value: '0', label: 'Missed jobs', color: 'text-purple-400', bg: 'bg-purple-500/15' },
-];
+/* ═══════════════════════════════════════════════════════════════════════════
+   LOGIN — Linear/Vercel auth pattern: split screen, form on the left, real
+   product context (not marketing fluff) on the right, everything on the same
+   near-black surface system as the app itself so logging in feels like
+   stepping through a door, not visiting a different website.
+   ═══════════════════════════════════════════════════════════════════════ */
 
-// Subtle animated ring element
-function PulseRing({ size, delay, opacity }: { size: number; delay: number; opacity: number }) {
+/* Right-hand panel: a quiet dashboard vignette with slow drift (CSS keyframes
+   in index.css would be overkill — inline animation respects reduced motion
+   via the global media query that zeroes animation durations). */
+function ProductPanel() {
   return (
-    <div
-      className="absolute rounded-full border border-blue-500/20"
-      style={{
-        width: size,
-        height: size,
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        animation: `ping 3s ${delay}s cubic-bezier(0, 0, 0.2, 1) infinite`,
-        opacity,
-      }}
-    />
+    <div className="hidden lg:flex relative flex-col justify-center overflow-hidden border-l border-white/6 bg-ink-900 p-12">
+      <div className="absolute -top-24 -right-24 w-96 h-96 bg-orange-500/[0.06] rounded-full blur-[110px] pointer-events-none" />
+
+      <div className="relative max-w-sm mx-auto w-full" style={{ animation: 'slide-up 0.5s ease both' }}>
+        {/* mini call card — same visual language as the real Calls page */}
+        <div className="rounded-2xl border border-white/10 bg-ink-950 shadow-2xl shadow-black/50 overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/6">
+            <span className="w-2 h-2 rounded-full bg-white/10" />
+            <span className="w-2 h-2 rounded-full bg-white/10" />
+            <span className="ml-2 text-[10px] text-gray-600 tracking-wide">while you were out</span>
+            <span className="ml-auto flex items-center gap-1.5 text-[10px] font-semibold text-emerald-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> AI live
+            </span>
+          </div>
+          <div className="p-4 space-y-3">
+            {[
+              { name: 'Sharon M.', job: 'Burst pipe · quoted $890', badge: 'Emergency', badgeCls: 'text-red-400 bg-red-500/10 border-red-500/25' },
+              { name: 'Tom R.', job: 'Blocked drain · Thurs 3pm', badge: 'Booked', badgeCls: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/25' },
+              { name: 'Priya S.', job: 'Hot water quote · $950–1,400', badge: 'Lead', badgeCls: 'text-orange-400 bg-orange-500/10 border-orange-500/25' },
+            ].map(c => (
+              <div key={c.name} className="flex items-center gap-3 rounded-xl border border-white/7 bg-white/[0.02] px-3.5 py-3">
+                <div className="w-8 h-8 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center flex-shrink-0">
+                  <PhoneIncoming size={13} className="text-orange-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-semibold text-white truncate">{c.name}</p>
+                  <p className="text-[11px] text-gray-500 truncate">{c.job}</p>
+                </div>
+                <span className={`text-[9px] font-bold uppercase tracking-wide border px-1.5 py-0.5 rounded flex-shrink-0 ${c.badgeCls}`}>{c.badge}</span>
+              </div>
+            ))}
+          </div>
+          <div className="px-4 py-3 border-t border-white/6 flex items-center gap-2 text-xs text-gray-500">
+            <MessageSquare size={12} className="text-orange-400" /> 3 SMS summaries sent to your phone
+          </div>
+        </div>
+
+        <p className="mt-8 text-sm text-gray-500 leading-relaxed">
+          "Now I check the phone between jobs and there's a proper list of who rang and what
+          they wanted."
+        </p>
+        <p className="mt-2 text-xs text-gray-600"><span className="text-gray-400 font-medium">Tanya K.</span> · Electrician, Sydney · early access</p>
+      </div>
+    </div>
   );
 }
 
@@ -44,168 +77,114 @@ export function LoginPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
+    setResetSent(false);
     setLoading(true);
     try {
       await signIn(email, password);
       navigate('/dashboard');
     } catch {
-      setError('Invalid email or password. Please try again.');
+      setError('That email and password don\'t match. Try again, or reset your password below.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleReset = async () => {
-    if (!email) { setError('Enter your email address first.'); return; }
+    if (!email) { setError('Type your email address in first, then hit reset.'); return; }
     try {
       await resetPassword(email);
       setResetSent(true);
       setError('');
     } catch {
-      setError('Failed to send reset email. Check the address and try again.');
+      setError('Couldn\'t send the reset email — double-check the address.');
     }
   };
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <div className="min-h-screen flex items-center justify-center p-4 py-10">
-        <div className="w-full max-w-4xl animate-slide-up">
-
-          {/* Logo */}
-          <div className="flex items-center gap-2.5 mb-8 justify-center">
-            <div className="w-9 h-9 bg-blue-500 rounded-xl flex items-center justify-center blue-glow">
-              <Zap size={18} className="text-white" />
-            </div>
-            <span className="font-bold text-xl tracking-tight">TradeDesk</span>
+    <div className="min-h-screen bg-ink-950 text-white grid lg:grid-cols-2">
+      {/* LEFT — form */}
+      <div className="flex flex-col p-6 sm:p-10">
+        <Link to="/" className="flex items-center gap-2.5 w-fit">
+          <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center shadow-lg shadow-orange-500/25">
+            <Zap size={15} className="text-black" fill="currentColor" />
           </div>
+          <span className="font-bold text-lg tracking-tight">TradeDesk</span>
+        </Link>
 
-          <div className="grid lg:grid-cols-2 gap-0 glass rounded-2xl overflow-hidden border border-white/10">
+        <div className="flex-1 flex items-center">
+          <div className="w-full max-w-sm mx-auto py-12">
+            <h1 className="text-3xl font-black tracking-tight mb-2">Welcome back</h1>
+            <p className="text-gray-500 text-sm mb-9">Your AI's been answering. Come see what it caught.</p>
 
-            {/* LEFT — Branding (hidden on mobile) */}
-            <div className="hidden lg:flex relative bg-gradient-to-br from-blue-600/20 via-blue-500/10 to-transparent border-r border-white/8 p-8 lg:p-12 flex-col justify-between overflow-hidden">
-
-              {/* Animated pulse rings behind the icon */}
-              <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-                <PulseRing size={120} delay={0}   opacity={0.5} />
-                <PulseRing size={200} delay={0.8} opacity={0.3} />
-                <PulseRing size={300} delay={1.6} opacity={0.15} />
-              </div>
-
-              {/* Radial glow */}
-              <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-blue-500/10 rounded-full blur-[80px] pointer-events-none" />
-
-              <div className="relative z-10">
-                {/* Big icon */}
-                <div className="relative w-16 h-16 mb-8">
-                  <div className="absolute inset-0 bg-blue-500/30 rounded-2xl blur-xl" />
-                  <div className="relative w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30">
-                    <Zap size={28} className="text-white" />
-                  </div>
-                </div>
-
-                <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight mb-3">
-                  Welcome back.
-                </h1>
-                <p className="text-gray-400 text-base leading-relaxed max-w-xs">
-                  Your AI receptionist is on the job — answering calls, giving quotes, and locking in jobs while you work.
-                </p>
-              </div>
-
-              {/* Stats */}
-              <div className="relative z-10 mt-10 space-y-3">
-                {STATS.map(({ icon: Icon, value, label, color, bg }) => (
-                  <div key={label} className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${bg}`}>
-                      <Icon size={17} className={color} />
-                    </div>
-                    <div>
-                      <p className={`text-sm font-bold ${color}`}>{value}</p>
-                      <p className="text-xs text-gray-500">{label}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Bottom tagline */}
-              <div className="relative z-10 mt-8 pt-6 border-t border-white/8">
-                <p className="text-xs text-gray-600">
-                  Trusted by tradies across Australia 🇦🇺
-                </p>
-              </div>
-            </div>
-
-            {/* RIGHT — Form */}
-            <div className="p-6 sm:p-8 lg:p-12 flex flex-col justify-center">
-              <h2 className="text-2xl font-bold text-white mb-1">Sign in</h2>
-              <p className="text-gray-500 text-sm mb-8">Access your dashboard and call history</p>
-
-              {error && (
-                <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm px-4 py-3 rounded-lg mb-5">
-                  {error}
-                </div>
-              )}
-
-              {resetSent && (
-                <div className="bg-green-500/10 border border-green-500/30 text-green-400 text-sm px-4 py-3 rounded-lg mb-5">
-                  Password reset email sent — check your inbox.
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <Input
-                  label="Email address"
+            <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+              <div>
+                <label htmlFor="login-email" className="block text-sm font-medium text-gray-400 mb-1.5">Email</label>
+                <input
+                  id="login-email"
                   type="email"
                   value={email}
-                  onChange={e => setEmail(e.target.value)}
+                  onChange={e => { setEmail(e.target.value); setError(''); }}
                   placeholder="dave@smithsplumbing.com.au"
                   required
                   autoComplete="email"
+                  autoFocus
+                  className="w-full rounded-xl bg-white/4 border border-white/10 px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 focus:bg-white/[0.06] transition-all min-h-[48px]"
                 />
-                <div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-sm font-medium text-gray-300">Password</label>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        value={password}
-                        onChange={e => setPassword(e.target.value)}
-                        placeholder="••••••••"
-                        required
-                        autoComplete="current-password"
-                        className="glass w-full rounded-lg px-4 py-2.5 pr-10 text-sm text-white placeholder-gray-500 transition-all duration-200 focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/40"
-                      />
-                      <button type="button" onClick={() => setShowPassword(s => !s)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors p-0.5">
-                        {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex justify-end mt-2">
-                    <button
-                      type="button"
-                      onClick={handleReset}
-                      className="text-xs text-blue-400 hover:text-blue-300 transition-colors duration-200"
-                    >
-                      Forgot password?
-                    </button>
-                  </div>
+              </div>
+
+              <div>
+                <div className="flex items-baseline justify-between mb-1.5">
+                  <label htmlFor="login-password" className="text-sm font-medium text-gray-400">Password</label>
+                  <button type="button" onClick={handleReset}
+                    className="text-xs text-gray-600 hover:text-orange-400 transition-colors">
+                    Forgot?
+                  </button>
                 </div>
+                <div className="relative">
+                  <input
+                    id="login-password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={e => { setPassword(e.target.value); setError(''); }}
+                    placeholder="••••••••"
+                    required
+                    autoComplete="current-password"
+                    className="w-full rounded-xl bg-white/4 border border-white/10 px-4 py-3 pr-11 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 focus:bg-white/[0.06] transition-all min-h-[48px]"
+                  />
+                  <button type="button" onClick={() => setShowPassword(s => !s)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-300 transition-colors p-0.5">
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+                {/* inline error, anchored to the field it belongs to */}
+                {error && <p className="mt-2 text-xs text-red-400 leading-relaxed">{error}</p>}
+                {resetSent && (
+                  <p className="mt-2 text-xs text-emerald-400 flex items-center gap-1.5">
+                    <CheckCircle size={12} /> Reset email sent — check your inbox.
+                  </p>
+                )}
+              </div>
 
-                <Button type="submit" size="lg" loading={loading} className="w-full mt-2 text-base py-3.5">
-                  Sign in <ArrowRight size={16} />
-                </Button>
-              </form>
+              <button type="submit" disabled={loading}
+                className="w-full flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-400 active:scale-[0.99] disabled:opacity-60 text-black font-bold py-3.5 rounded-xl transition-all min-h-[52px]">
+                {loading
+                  ? <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" aria-hidden="true" />
+                  : <>Open my dashboard <ArrowRight size={16} /></>}
+              </button>
+            </form>
 
-              <p className="text-center text-sm text-gray-500 mt-8">
-                No account?{' '}
-                <Link to="/signup" className="text-blue-400 hover:text-blue-300 font-medium transition-colors duration-200">
-                  Get started free →
-                </Link>
-              </p>
-            </div>
+            <p className="text-sm text-gray-600 mt-9">
+              New here?{' '}
+              <Link to="/signup" className="text-orange-400 hover:text-orange-300 font-medium transition-colors">
+                Start your free trial
+              </Link>
+            </p>
           </div>
         </div>
       </div>
+
+      <ProductPanel />
     </div>
   );
 }
