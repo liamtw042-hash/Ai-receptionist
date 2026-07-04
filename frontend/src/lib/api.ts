@@ -34,7 +34,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: 'Request failed' }));
-    throw new Error(err.error || `HTTP ${res.status}`);
+    // `detail` (when the server includes it, e.g. admin routes) names the real
+    // underlying cause so failures are diagnosable instead of a bare message.
+    const base = err.error || `HTTP ${res.status}`;
+    throw new Error(err.detail ? `${base} — ${err.detail}` : base);
   }
 
   return res.json();

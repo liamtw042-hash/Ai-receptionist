@@ -42,22 +42,71 @@ const CACHE_MS = 60_000;
 function toIso(v: unknown): string {
   if (!v) return '';
   if (typeof v === 'string') return v;
-  if (v instanceof Date) return v.toISOString();
+  if (v instanceof Date) return isNaN(v.getTime()) ? '' : v.toISOString();
   if (typeof v === 'object' && typeof (v as { toDate?: () => Date }).toDate === 'function') {
-    return (v as { toDate: () => Date }).toDate().toISOString();
+    try {
+      const d = (v as { toDate: () => Date }).toDate();
+      return isNaN(d.getTime()) ? '' : d.toISOString();
+    } catch {
+      return '';
+    }
   }
   return '';
+}
+
+/** Firebase Auth metadata.creationTime → ISO string, never throwing.
+ *  creationTime is a human-readable UTC string that is normally present, but a
+ *  small number of accounts (imported users, certain provider records) can have
+ *  it blank or unparseable. `new Date('').toISOString()` throws
+ *  RangeError: Invalid time value — and because this runs inside the shared
+ *  loader's .map(), one bad account would reject loadAggregate() and 500 EVERY
+ *  admin endpoint. Fall back to epoch-0 ISO so the row still renders. */
+function metaTimeToIso(raw: unknown): string {
+  if (typeof raw === 'string' && raw) {
+    const t = Date.parse(raw);
+    if (!isNaN(t)) return new Date(t).toISOString();
+  }
+  return new Date(0).toISOString();
+}
+
+/** Run a labelled sub-query so that, if it rejects, the thrown error names the
+ *  exact source (e.g. "auth.listUsers", "collection:calls") instead of a bare
+ *  message — turning an opaque dashboard-wide 500 into something debuggable.
+ *  The label is safe to surface: it's a fixed source name, never data. */
+async function labelled<T>(label: string, p: Promise<T>): Promise<T> {
+  try {
+    return await p;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`${label} failed: ${msg}`);
+  }
+}
+
+/** Redact anything that looks like a credential/token/key before it can reach
+ *  a response body, then send a diagnosable 500. We surface the real underlying
+ *  message (and, from `labelled`, which sub-query failed) so a future regression
+ *  is visible in the browser/network tab instead of a bare "Request failed". */
+function sendServerError(res: Response, scope: string, err: unknown): void {
+  const raw = err instanceof Error ? err.message : String(err);
+  const detail = raw
+    .replace(/(?:sk|pk|rk)_[A-Za-z0-9_-]{8,}/g, '[redacted]')
+    .replace(/AIza[A-Za-z0-9_-]{10,}/g, '[redacted]')
+    .replace(/-----BEGIN[\s\S]*?END[^-]*-----/g, '[redacted-key]')
+    .replace(/Bearer\s+[A-Za-z0-9._-]+/gi, 'Bearer [redacted]')
+    .slice(0, 500);
+  console.error(`Admin ${scope} error:`, err);
+  res.status(500).json({ error: `Failed to load ${scope}`, detail });
 }
 
 async function loadAggregate(): Promise<Aggregate> {
   if (cache && Date.now() - cache.fetchedAt < CACHE_MS) return cache;
 
   const [userList, settingsSnap, billingSnap, callsSnap, jobsSnap] = await Promise.all([
-    auth.listUsers(1000),
-    db.collection('settings').get(),
-    db.collection('billing').get(),
-    db.collection('calls').select('userId', 'createdAt', 'outcome').get(),
-    db.collection('jobs').select('userId', 'createdAt', 'status').get(),
+    labelled('auth.listUsers', auth.listUsers(1000)),
+    labelled('collection:settings', db.collection('settings').get()),
+    labelled('collection:billing', db.collection('billing').get()),
+    labelled('collection:calls', db.collection('calls').select('userId', 'createdAt', 'outcome').get()),
+    labelled('collection:jobs', db.collection('jobs').select('userId', 'createdAt', 'status').get()),
   ]);
 
   const settings = new Map<string, FirebaseFirestore.DocumentData>();
@@ -70,7 +119,7 @@ async function loadAggregate(): Promise<Aggregate> {
     users: userList.users.map(u => ({
       uid: u.uid,
       email: u.email,
-      createdAt: new Date(u.metadata.creationTime).toISOString(),
+      createdAt: metaTimeToIso(u.metadata?.creationTime),
     })),
     settings,
     billing,
@@ -171,8 +220,7 @@ router.get('/overview', async (_req: AuthRequest, res: Response) => {
       mrr: paying * MRR_PER_CUSTOMER_AUD,
     });
   } catch (err) {
-    console.error('Admin overview error:', err);
-    res.status(500).json({ error: 'Failed to load overview' });
+    sendServerError(res, 'overview', err);
   }
 });
 
@@ -182,8 +230,7 @@ router.get('/customers', async (_req: AuthRequest, res: Response) => {
     const agg = await loadAggregate();
     res.json(buildCustomerRows(agg));
   } catch (err) {
-    console.error('Admin customers error:', err);
-    res.status(500).json({ error: 'Failed to load customers' });
+    sendServerError(res, 'customers', err);
   }
 });
 
@@ -227,8 +274,7 @@ router.get('/customers/:uid', async (req: AuthRequest, res: Response) => {
       callsPerWeek,
     });
   } catch (err) {
-    console.error('Admin customer detail error:', err);
-    res.status(500).json({ error: 'Failed to load customer' });
+    sendServerError(res, 'customer', err);
   }
 });
 
@@ -261,8 +307,7 @@ router.get('/growth', async (_req: AuthRequest, res: Response) => {
 
     res.json({ signupsPerWeek, payingCumulative, payingNow, payingWithoutStartDate });
   } catch (err) {
-    console.error('Admin growth error:', err);
-    res.status(500).json({ error: 'Failed to load growth data' });
+    sendServerError(res, 'growth', err);
   }
 });
 
@@ -298,8 +343,7 @@ router.get('/activity', async (_req: AuthRequest, res: Response) => {
 
     res.json(merged);
   } catch (err) {
-    console.error('Admin activity error:', err);
-    res.status(500).json({ error: 'Failed to load activity' });
+    sendServerError(res, 'activity', err);
   }
 });
 

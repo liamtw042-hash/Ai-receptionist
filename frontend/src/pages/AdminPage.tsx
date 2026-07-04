@@ -75,7 +75,22 @@ const STATUS_META: Record<CustomerRow['subStatus'], { label: string; cls: string
 
 function ago(iso: string): string {
   if (!iso) return '—';
-  try { return formatDistanceToNow(new Date(iso), { addSuffix: true }); } catch { return '—'; }
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    return formatDistanceToNow(d, { addSuffix: true });
+  } catch { return '—'; }
+}
+
+/** date-fns `format` throws on an invalid Date. Guard every call so one odd
+ *  timestamp can't crash the whole admin page render. */
+function fmt(iso: string | null | undefined, pattern: string): string {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    return format(d, pattern);
+  } catch { return '—'; }
 }
 
 /* ── Simple real-data SVG bar chart ─────────────────────────────────────── */
@@ -110,7 +125,7 @@ function BarChart({ data, unit }: { data: Array<{ week: string; count: number }>
                 fill="#ff6b35"
                 opacity={0.35 + 0.65 * (d.count / max)}
               >
-                <title>{`${format(new Date(d.week), 'd MMM')}: ${d.count} ${unit}`}</title>
+                <title>{`${fmt(d.week, 'd MMM')}: ${d.count} ${unit}`}</title>
               </rect>
               {/* Label sits above the bar, or just inside it when the bar
                   reaches the top of the viewBox (else it clips out of view). */}
@@ -123,7 +138,7 @@ function BarChart({ data, unit }: { data: Array<{ week: string; count: number }>
               </text>
               {(data.length <= 10 || i % Math.ceil(data.length / 10) === 0) && (
                 <text x={pad + i * bw + bw / 2} y={H + 15} textAnchor="middle" fontSize="9" fill="#6b7280">
-                  {format(new Date(d.week), 'd MMM')}
+                  {fmt(d.week, 'd MMM')}
                 </text>
               )}
             </g>
@@ -232,7 +247,7 @@ function CustomerPanel({ uid, onClose }: { uid: string; onClose: () => void }) {
               <Fact label="Mobile" value={detail.mobileNumber && <span className="font-mono">{detail.mobileNumber}</span>} />
               <Fact label="TradeDesk number" value={detail.twilioNumber && <span className="font-mono">{detail.twilioNumber}</span>} />
               <Fact label="Hours" value={detail.availability} />
-              <Fact label="Signed up" value={`${format(new Date(detail.signupDate), 'd MMM yyyy')} (${ago(detail.signupDate)})`} />
+              <Fact label="Signed up" value={`${fmt(detail.signupDate, 'd MMM yyyy')} (${ago(detail.signupDate)})`} />
               <Fact label="Last active" value={ago(detail.lastActive)} />
             </div>
 
@@ -240,8 +255,8 @@ function CustomerPanel({ uid, onClose }: { uid: string; onClose: () => void }) {
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.12em] text-gray-500 mb-1.5">Billing</p>
               <Fact label="Stripe status" value={detail.billing.status} />
-              <Fact label="Subscribed since" value={detail.billing.subscriptionStartedAt ? format(new Date(detail.billing.subscriptionStartedAt), 'd MMM yyyy') : '—'} />
-              <Fact label="Current period ends" value={detail.billing.currentPeriodEnd ? format(new Date(detail.billing.currentPeriodEnd), 'd MMM yyyy') : '—'} />
+              <Fact label="Subscribed since" value={fmt(detail.billing.subscriptionStartedAt, 'd MMM yyyy')} />
+              <Fact label="Current period ends" value={fmt(detail.billing.currentPeriodEnd, 'd MMM yyyy')} />
               {detail.billing.cancelAtPeriodEnd && <p className="text-xs text-amber-400 mt-2">Set to cancel at period end.</p>}
             </div>
 
@@ -449,7 +464,7 @@ export function AdminPage() {
                           <p className="text-gray-600 truncate max-w-[200px]">{c.email}</p>
                         </td>
                         <td className="py-3 px-3 text-gray-400">{c.tradeType || '—'}</td>
-                        <td className="py-3 px-3 text-gray-400 whitespace-nowrap">{format(new Date(c.signupDate), 'd MMM yy')}</td>
+                        <td className="py-3 px-3 text-gray-400 whitespace-nowrap">{fmt(c.signupDate, 'd MMM yy')}</td>
                         <td className="py-3 px-3">
                           <span className={clsx('text-[9px] font-bold uppercase tracking-wide border px-1.5 py-0.5 rounded', STATUS_META[c.subStatus].cls)}>
                             {STATUS_META[c.subStatus].label}
@@ -477,7 +492,7 @@ export function AdminPage() {
                       </span>
                     </div>
                     <p className="text-[11px] text-gray-600">
-                      {c.tradeType || 'No trade set'} · joined {format(new Date(c.signupDate), 'd MMM')} · {c.calls} calls · {c.jobs} jobs
+                      {c.tradeType || 'No trade set'} · joined {fmt(c.signupDate, 'd MMM')} · {c.calls} calls · {c.jobs} jobs
                     </p>
                   </button>
                 ))}
