@@ -28,6 +28,7 @@ const StatusPage = lazy(() => import('./pages/StatusPage').then(m => ({ default:
 const IndustryPlumbersPage = lazy(() => import('./pages/industries/IndustryPlumbersPage').then(m => ({ default: m.IndustryPlumbersPage })));
 const IndustryElectriciansPage = lazy(() => import('./pages/industries/IndustryElectriciansPage').then(m => ({ default: m.IndustryElectriciansPage })));
 const IndustryBuildersPage = lazy(() => import('./pages/industries/IndustryBuildersPage').then(m => ({ default: m.IndustryBuildersPage })));
+const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })));
 
 import { useEffect, useRef } from 'react';
 
@@ -58,6 +59,18 @@ function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) return <Spinner />;
   if (user) return <Navigate to="/dashboard" replace />;
+  return <>{children}</>;
+}
+
+// Owner-only gate. This is cosmetic routing only — every /api/admin endpoint
+// re-verifies the Firebase token's email server-side and 403s non-admins, so
+// spoofing this check gets you an empty page, not data.
+const ADMIN_EMAIL = 'liamtw042@gmail.com';
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  if (loading) return <Spinner />;
+  if (!user) return <Navigate to="/login" replace />;
+  if ((user.email || '').toLowerCase() !== ADMIN_EMAIL) return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
 }
 
@@ -92,6 +105,7 @@ function AppRoutes() {
         <Route path="/signup" element={<PublicOnlyRoute><FadeIn><SignupPage /></FadeIn></PublicOnlyRoute>} />
         <Route path="/welcome" element={<ProtectedRoute><FadeIn><WelcomePage /></FadeIn></ProtectedRoute>} />
         <Route path="/onboarding" element={<ProtectedRoute><FadeIn><OnboardingPage /></FadeIn></ProtectedRoute>} />
+        <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
           <Route index element={<OverviewPage />} />
           <Route path="calls" element={<CallsPage />} />

@@ -5,7 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { pageTransition } from '../../lib/motion';
 import {
   LayoutDashboard, Phone, MessageSquare, Users, Settings, Calendar,
-  Menu, X, LogOut, Zap, Bell, Search,
+  Menu, X, LogOut, Zap, Bell, Search, BarChart3,
   CheckCircle, PhoneIncoming, AlertTriangle, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -237,6 +237,13 @@ export function DashboardLayout() {
               </p>
             </div>
           </div>
+          {(user?.email || '').toLowerCase() === 'liamtw042@gmail.com' && (
+            <NavLink to="/admin"
+              className="flex items-center gap-2.5 px-3 py-2.5 w-full rounded-xl text-sm text-gray-500 hover:text-white hover:bg-white/5 transition-all group min-h-[44px]">
+              <BarChart3 size={15} className="group-hover:text-orange-400 transition-colors" />
+              <span>Owner analytics</span>
+            </NavLink>
+          )}
           <button onClick={handleLogout}
             className="flex items-center gap-2.5 px-3 py-2.5 w-full rounded-xl text-sm text-gray-500 hover:text-white hover:bg-white/5 transition-all group min-h-[44px]">
             <LogOut size={15} className="group-hover:text-red-400 transition-colors" />

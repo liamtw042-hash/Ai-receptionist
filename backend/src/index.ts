@@ -17,6 +17,7 @@ import { jobsRouter } from './routes/jobs';
 import { newsletterRouter } from './routes/newsletter';
 import { contactFormRouter } from './routes/contactForm';
 import { chatRouter } from './routes/chat';
+import { adminRouter } from './routes/admin';
 
 dotenv.config();
 
@@ -93,6 +94,7 @@ app.use('/api/jobs', jobsRouter);
 app.use('/api/newsletter', newsletterRouter);
 app.use('/api/contact-form', contactFormRouter);
 app.use('/api/chat', chatRouter);
+app.use('/api/admin', adminRouter);
 
 app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'TradeDesk' }));
 

@@ -13,6 +13,7 @@ interface BillingRecord {
   priceId?: string;
   currentPeriodEnd?: string;
   cancelAtPeriodEnd?: boolean;
+  subscriptionStartedAt?: string;
   updatedAt?: string;
 }
 
@@ -119,6 +120,9 @@ function subscriptionToRecord(sub: Stripe.Subscription): Partial<BillingRecord> 
     priceId: sub.items.data[0]?.price?.id,
     currentPeriodEnd: new Date(sub.current_period_end * 1000).toISOString(),
     cancelAtPeriodEnd: sub.cancel_at_period_end,
+    // When the subscription began — lets the admin dashboard chart paying
+    // customers over time from real dates instead of guessing.
+    subscriptionStartedAt: new Date(sub.created * 1000).toISOString(),
   };
 }
 
