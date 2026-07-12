@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import twilio from 'twilio';
 import { db } from '../lib/firebase';
 import { getAIResponse } from '../lib/openai';
 import { getBusinessSettings, buildSystemPrompt } from '../services/businessContext';
@@ -9,16 +10,37 @@ import { requireAuth, AuthRequest } from '../middleware/authMiddleware';
 
 const router = Router();
 
-// Twilio inbound SMS webhook
+// Twilio inbound SMS webhook.
+//
+// Always answers 200 + valid TwiML. Anything else (a 500, or the bare "OK" that
+// res.sendStatus(200) used to send) makes Twilio fall through to the number's
+// SmsFallbackUrl — which on a fresh number is still Twilio's demo responder, the
+// actual source of the "Thanks for the message. Configure your number's SMS URL
+// to change this message" auto-reply. The reply itself is sent via the REST API
+// (sendSMS) below, so the TwiML we return here is deliberately EMPTY — returning
+// a <Message> as well would text the customer twice.
 router.post('/inbound', async (req: Request, res: Response) => {
-  const { From, To, Body } = req.body;
+  const emptyTwiml = () =>
+    res.type('text/xml').status(200).send(new twilio.twiml.MessagingResponse().toString());
+
+  // req.body is {} if the form-encoded parser didn't run — never destructure blind.
+  const { From, To, Body } = (req.body ?? {}) as Record<string, string | undefined>;
+
+  if (!From || !To || !Body) {
+    console.warn('SMS inbound: missing fields', {
+      hasFrom: Boolean(From), hasTo: Boolean(To), hasBody: Boolean(Body),
+      contentType: req.headers['content-type'],
+    });
+    emptyTwiml();
+    return;
+  }
 
   try {
     const userId = await resolveTwilioUser(To, db);
-    if (!userId) { res.sendStatus(200); return; }
+    if (!userId) { emptyTwiml(); return; }
 
     const settings = await getBusinessSettings(userId);
-    if (!settings) { res.sendStatus(200); return; }
+    if (!settings) { emptyTwiml(); return; }
 
     await storeSMSMessage(userId, From, Body, 'inbound');
     await upsertContact(userId, From, { lastInteraction: new Date() });
@@ -44,10 +66,13 @@ router.post('/inbound', async (req: Request, res: Response) => {
     await storeSMSMessage(userId, From, reply, 'outbound');
 
   } catch (err) {
-    console.error('SMS inbound error:', err);
+    // Log the REAL error (config errors from lib/firebase + lib/twilio carry a
+    // .reason and a message naming the missing env var) instead of swallowing it.
+    const reason = (err as { reason?: string }).reason;
+    console.error('SMS inbound error:', reason ? `[${reason}] ` : '', err);
   }
 
-  res.sendStatus(200);
+  emptyTwiml();
 });
 
 // Send SMS from dashboard

@@ -1,8 +1,8 @@
-import twilioClient, { twilioNumber } from '../lib/twilio';
+import twilioClient, { getTwilioNumber } from '../lib/twilio';
 import { db } from '../lib/firebase';
 
 export async function sendSMS(to: string, body: string): Promise<void> {
-  await twilioClient.messages.create({ from: twilioNumber, to, body });
+  await twilioClient.messages.create({ from: getTwilioNumber(), to, body });
 }
 
 export async function sendCallSummaryToTradie(
