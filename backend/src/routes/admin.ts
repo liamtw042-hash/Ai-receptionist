@@ -363,6 +363,9 @@ router.get('/waitlist', async (_req: AuthRequest, res: Response) => {
           email: (data.email as string) || '',
           phone: (data.phone as string) || '',
           createdAt: toIso(data.createdAt),
+          // Delivery status of the signup confirmation email. Older docs written
+          // before this field existed report 'unknown' rather than a false alarm.
+          confirmationEmailStatus: (data.confirmationEmailStatus as string) || 'unknown',
         };
       })
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));

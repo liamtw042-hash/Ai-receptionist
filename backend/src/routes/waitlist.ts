@@ -65,11 +65,17 @@ router.post('/', async (req: Request, res: Response) => {
       tradeType,
       source: 'landing-waitlist',
       createdAt: new Date(),
+      // Delivery status of the confirmation email, filled in just below. Starts
+      // 'pending' so a signup that crashes mid-send is still distinguishable
+      // from one where the send genuinely returned. Surfaced in /admin.
+      confirmationEmailStatus: 'pending',
     });
 
     // Best-effort emails — the Firestore write above is the record of truth, so
-    // neither of these failing should fail the signup.
-    await sendGmailFromAdmin(
+    // neither of these failing should fail the signup. sendGmailFromAdmin never
+    // throws (it returns false on any failure), so we capture the boolean and
+    // record it rather than letting a failed send disappear silently.
+    const confirmationSent = await sendGmailFromAdmin(
       email,
       "You're on the TradeDesk waitlist",
       [
@@ -77,7 +83,7 @@ router.post('/', async (req: Request, res: Response) => {
         '',
         "Thanks for putting your name down for TradeDesk — the AI receptionist that answers the calls you can't, works out what the customer needs, and texts you the details.",
         '',
-        "We're putting the finishing touches on it now. As an early waitlister you'll get first access, founding-member pricing, and a free trial when it launches — I'll email you the moment your spot's ready.",
+        "We're putting the finishing touches on it now. As an early waitlister you'll get first access and founding-member pricing when it launches — I'll email you the moment your spot's ready.",
         '',
         "If you ever want to reach me directly, just reply to this email.",
         '',
@@ -87,7 +93,23 @@ router.post('/', async (req: Request, res: Response) => {
       ].join('\n'),
     );
 
-    await sendAdminEmail(
+    // Persist the outcome so the /admin waitlist view can flag confirmations
+    // that never went out, and log it loudly server-side either way.
+    await ref.update({
+      confirmationEmailStatus: confirmationSent ? 'sent' : 'failed',
+      confirmationEmailAt: new Date(),
+    });
+    if (confirmationSent) {
+      console.log(`Waitlist: confirmation email sent to ${email}`);
+    } else {
+      console.error(
+        `Waitlist: confirmation email to ${email} was NOT sent. ` +
+        'The admin Gmail connection is likely missing/expired or lacks the Gmail ' +
+        'scope — see the adminNotify warning logged just above for the exact cause.',
+      );
+    }
+
+    const adminSent = await sendAdminEmail(
       `TradeDesk waitlist: ${businessName}`,
       [
         'New waitlist signup:',
@@ -97,8 +119,13 @@ router.post('/', async (req: Request, res: Response) => {
         `Trade: ${tradeType}`,
         `Email: ${email}`,
         `Phone: ${phone || '—'}`,
+        '',
+        `Confirmation email to caller: ${confirmationSent ? 'SENT' : 'FAILED — check Google connection'}`,
       ].join('\n'),
     );
+    if (!adminSent) {
+      console.error(`Waitlist: admin notification email for ${email} was NOT sent (see adminNotify warning above).`);
+    }
 
     res.status(201).json({ status: 'joined' });
   } catch (err) {

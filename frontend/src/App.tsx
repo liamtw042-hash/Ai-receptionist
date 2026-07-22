@@ -37,12 +37,12 @@ function Spinner() {
     <div className="min-h-screen bg-[#080c14] flex items-center justify-center">
       <div className="flex flex-col items-center gap-4">
         <div className="relative">
-          <div className="absolute inset-0 bg-blue-500/20 rounded-2xl blur-lg" />
-          <div className="relative w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30">
+          <div className="absolute inset-0 bg-orange-500/20 rounded-2xl blur-lg" />
+          <div className="relative w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-500/30">
             <svg viewBox="0 0 32 32" className="w-6 h-6 fill-white"><path d="M18 5L9 18H16L14 27L23 14H16L18 5Z" /></svg>
           </div>
         </div>
-        <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
       </div>
     </div>
   );

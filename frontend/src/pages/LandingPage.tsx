@@ -361,7 +361,7 @@ const FAQS = [
   { q: 'Do I need to change my number?', a: "No. Your number stays exactly as it is. You forward missed calls to the TradeDesk number we give you — so it only picks up the calls you were losing anyway. Turn it off any time from your phone settings." },
   { q: 'How fast is setup, honestly?', a: "About ten minutes. Sign up, type in your business details and price guide, then set call forwarding on your phone (two minutes, we show you the exact taps for iPhone and Android). No hardware, no technician." },
   { q: "Do callers know it's an AI?", a: "Yes — it introduces itself as your AI receptionist, then just gets on with helping. It sounds natural, answers instantly, and never puts anyone on hold, which beats a voicemail on every measure a caller cares about." },
-  { q: 'What does it cost after the trial?', a: "$199/month flat. Unlimited calls, no per-call fees, no setup fee, no lock-in. If it doesn't pay for itself, there's a 30-day money-back guarantee — every cent back, no questions." },
+  { q: 'What does it cost?', a: "$199/month flat. Unlimited calls, no per-call fees, no setup fee, no lock-in. If it doesn't pay for itself, there's a 30-day money-back guarantee — every cent back, no questions." },
   { q: 'What if a call is a real emergency?', a: "The AI detects urgency — burst pipe, gas leak, no power — tells the caller you'll ring back fast, and fires an URGENT SMS to your mobile immediately, separate from the normal summary." },
 ];
 
@@ -630,7 +630,7 @@ function WaitlistForm() {
         <p className="text-sm text-gray-400 leading-relaxed max-w-sm mx-auto">
           {status === 'already'
             ? "No need to sign up twice — we've got you. Liam will email you the moment your early-access spot is ready."
-            : "Nice one. Check your inbox for a quick note from Liam — we'll email you the moment TradeDesk is ready for you, with founding-member pricing and a free trial."}
+            : "Nice one. Check your inbox for a quick note from Liam — we'll email you the moment TradeDesk is ready for you, with early access and founding-member pricing."}
         </p>
       </div>
     );
@@ -832,7 +832,7 @@ export function LandingPage() {
                 <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-gray-600">
                   <span className="flex items-center gap-1.5"><CheckCircle size={13} className="text-emerald-400" /> First access</span>
                   <span className="flex items-center gap-1.5"><CheckCircle size={13} className="text-emerald-400" /> Founding-member pricing</span>
-                  <span className="flex items-center gap-1.5"><CheckCircle size={13} className="text-emerald-400" /> Free trial at launch</span>
+                  <span className="flex items-center gap-1.5"><CheckCircle size={13} className="text-emerald-400" /> 30-day money-back guarantee</span>
                 </div>
               </div>
 
@@ -860,7 +860,7 @@ export function LandingPage() {
                 {[
                   ['First access', 'Skip the queue — waitlisters get in before anyone else.'],
                   ['Founding-member pricing', "Lock in a better rate than we'll ever offer again."],
-                  ['Free trial at launch', 'Try it on your real calls before you pay a cent.'],
+                  ['30-day money-back guarantee', "Try it on your real calls — if it's not for you, get a full refund."],
                 ].map(([title, desc]) => (
                   <li key={title} className="flex items-start gap-3">
                     <CheckCircle size={17} className="text-emerald-400 flex-shrink-0 mt-0.5" />
@@ -1090,7 +1090,7 @@ export function LandingPage() {
             </div>
 
             <p className="mt-5 text-sm text-gray-500 leading-relaxed text-center" data-reveal>
-              Waitlisters get a free trial at launch and a 30-day money-back guarantee.
+              Waitlisters get early access at launch and a 30-day money-back guarantee.
               If it doesn't pay for itself, every cent back — no questions.
             </p>
           </div>
@@ -1117,7 +1117,7 @@ export function LandingPage() {
             </h2>
             <p className="text-gray-500 text-base sm:text-lg mb-10 max-w-xl mx-auto">
               We're nearly there. Join the waitlist and we'll email you the moment it's ready —
-              with founding-member pricing and a free trial.
+              with early access and founding-member pricing.
             </p>
             <a href="#waitlist"
               className="btn-shimmer inline-flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-400 text-black font-bold px-8 py-4 rounded-xl text-base transition-all min-h-[54px] relative overflow-hidden"
@@ -1195,7 +1195,7 @@ export function LandingPage() {
         <div className="bg-ink-950/95 backdrop-blur-md border-t border-white/10 px-4 py-3 flex items-center gap-3">
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-white">Launching soon</p>
-            <p className="text-xs text-gray-600">Founding-member pricing · free trial</p>
+            <p className="text-xs text-gray-600">Early access · founding-member pricing</p>
           </div>
           <a href="#waitlist" className="flex-shrink-0 bg-orange-500 hover:bg-orange-400 text-black font-bold px-5 py-3 rounded-xl text-sm transition-all min-h-[44px] flex items-center">
             Join waitlist

@@ -65,8 +65,33 @@ interface Growth {
 
 interface ActivityItem { type: 'signup' | 'call' | 'job'; at: string; who: string; detail: string }
 
-interface WaitlistEntry { name: string; businessName: string; tradeType: string; email: string; phone: string; createdAt: string }
+interface WaitlistEntry { name: string; businessName: string; tradeType: string; email: string; phone: string; createdAt: string; confirmationEmailStatus?: string }
 interface WaitlistResponse { total: number; entries: WaitlistEntry[] }
+
+/** Small badge showing whether the signup confirmation email actually went out.
+ * 'failed' is the one that matters — it means the Google/Gmail connection is
+ * missing or broken and waitlisters aren't hearing back. 'unknown' covers rows
+ * created before we tracked this, so it reads neutral rather than alarming. */
+function ConfirmationBadge({ status }: { status?: string }) {
+  if (status === 'sent') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-400/90 whitespace-nowrap">
+        <CheckCircle2 size={12} /> Sent
+      </span>
+    );
+  }
+  if (status === 'failed') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-400 whitespace-nowrap" title="The confirmation email did not send — check the admin Google/Gmail connection.">
+        <XCircle size={12} /> Not sent
+      </span>
+    );
+  }
+  if (status === 'pending') {
+    return <span className="text-[10px] font-semibold text-amber-400/90 whitespace-nowrap">Pending</span>;
+  }
+  return <span className="text-[10px] text-gray-600 whitespace-nowrap">—</span>;
+}
 
 /** Build a CSV from waitlist rows and trigger a download. Fields are quoted and
  *  internal quotes doubled per RFC 4180, so commas/quotes in a business name
@@ -468,6 +493,7 @@ export function AdminPage() {
                       <th className="py-2.5 px-3 font-semibold text-gray-500">Trade</th>
                       <th className="py-2.5 px-3 font-semibold text-gray-500">Email</th>
                       <th className="py-2.5 px-3 font-semibold text-gray-500">Phone</th>
+                      <th className="py-2.5 px-3 font-semibold text-gray-500 whitespace-nowrap">Confirmation</th>
                       <th className="py-2.5 px-3 font-semibold text-gray-500 whitespace-nowrap">Joined</th>
                     </tr>
                   </thead>
@@ -479,6 +505,7 @@ export function AdminPage() {
                         <td className="py-3 px-3 text-gray-400 capitalize">{e.tradeType || '—'}</td>
                         <td className="py-3 px-3 text-gray-400">{e.email}</td>
                         <td className="py-3 px-3 text-gray-400 whitespace-nowrap font-mono">{e.phone || '—'}</td>
+                        <td className="py-3 px-3 whitespace-nowrap"><ConfirmationBadge status={e.confirmationEmailStatus} /></td>
                         <td className="py-3 px-3 text-gray-500 whitespace-nowrap">{fmt(e.createdAt, 'd MMM yy')}</td>
                       </tr>
                     ))}
@@ -497,6 +524,7 @@ export function AdminPage() {
                     </div>
                     <p className="text-[11px] text-gray-500 truncate">{e.businessName || 'No business'} · <span className="capitalize">{e.tradeType}</span></p>
                     <p className="text-[11px] text-gray-600 truncate mt-0.5">{e.email}{e.phone ? ` · ${e.phone}` : ''}</p>
+                    <div className="mt-1.5"><ConfirmationBadge status={e.confirmationEmailStatus} /></div>
                   </div>
                 ))}
                 {waitlistFiltered.length === 0 && <p className="text-center text-xs text-gray-600 py-8">No signups match "{waitlistSearch}".</p>}
