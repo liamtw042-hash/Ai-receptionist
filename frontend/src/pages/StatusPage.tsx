@@ -27,12 +27,12 @@ export function StatusPage() {
   return (
     <div className="min-h-screen bg-black text-white">
       <nav className="border-b border-white/8 px-4 h-16 flex items-center max-w-7xl mx-auto justify-between">
-        <Link to="/" className="flex items-center gap-2"><div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center"><Zap size={14} className="text-white" /></div><span className="font-bold">TradeDesk</span></Link>
-        <Link to="/signup" className="bg-blue-500 hover:bg-blue-400 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">Get started</Link>
+        <Link to="/" className="flex items-center gap-2"><div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center"><Zap size={14} className="text-white" /></div><span className="font-bold">TradeDesk</span></Link>
+        <Link to="/signup" className="bg-orange-500 hover:bg-orange-400 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">Get started</Link>
       </nav>
       <div className="max-w-3xl mx-auto px-4 py-16 sm:py-24">
         <div className="text-center mb-12">
-          <p className="text-blue-400 text-xs font-semibold uppercase tracking-widest mb-3">System status</p>
+          <p className="text-orange-400 text-xs font-semibold uppercase tracking-widest mb-3">System status</p>
           <div className={`inline-flex items-center gap-3 glass border rounded-2xl px-6 py-4 mb-5 ${allOperational ? 'border-green-500/30' : 'border-yellow-500/30'}`}>
             {allOperational
               ? <><CheckCircle size={24} className="text-green-400" /><span className="text-xl font-bold text-white">All systems operational</span></>

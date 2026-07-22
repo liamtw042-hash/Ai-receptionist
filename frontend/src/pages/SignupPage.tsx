@@ -55,7 +55,7 @@ function ValuePanel() {
 }
 
 export function SignupPage() {
-  useEffect(() => { document.title = 'Start free trial | TradeDesk'; }, []);
+  useEffect(() => { document.title = 'Start your 7-day trial | TradeDesk'; }, []);
 
   const [step, setStep] = useState<1 | 2>(1);
   const [email, setEmail] = useState('');
@@ -139,8 +139,8 @@ export function SignupPage() {
           <div className="w-full max-w-sm mx-auto py-12">
             {step === 1 ? (
               <div className="animate-fade-in">
-                <h1 className="text-3xl font-black tracking-tight mb-2">Start free. Just an email.</h1>
-                <p className="text-gray-500 text-sm mb-9">7 days free · no credit card · live in about 10 minutes.</p>
+                <h1 className="text-3xl font-black tracking-tight mb-2">Start in seconds. Just an email.</h1>
+                <p className="text-gray-500 text-sm mb-9">7-day trial · no credit card · live in about 10 minutes.</p>
 
                 <form onSubmit={continueToStep2} className="space-y-5" noValidate>
                   <div>

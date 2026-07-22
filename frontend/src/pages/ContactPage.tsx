@@ -32,7 +32,7 @@ export function ContactPage() {
       <nav className="border-b border-white/8 px-5 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-blue-500 rounded-lg flex items-center justify-center"><Zap size={13} className="text-white" /></div>
+            <div className="w-7 h-7 bg-orange-500 rounded-lg flex items-center justify-center"><Zap size={13} className="text-white" /></div>
             <span className="font-bold text-white">TradeDesk</span>
           </Link>
           <Link to="/" className="text-sm text-gray-400 hover:text-white transition-colors">← Back to home</Link>
@@ -47,12 +47,12 @@ export function ContactPage() {
           {/* Contact info */}
           <div className="space-y-6">
             <div className="glass rounded-xl p-5 border border-white/8 flex items-start gap-4">
-              <div className="w-10 h-10 bg-blue-500/15 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Mail size={18} className="text-blue-400" />
+              <div className="w-10 h-10 bg-orange-500/15 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Mail size={18} className="text-orange-400" />
               </div>
               <div>
                 <p className="font-semibold text-white text-sm mb-1">Email us</p>
-                <a href="mailto:hello@tradedesk.com.au" className="text-blue-400 text-sm hover:underline">hello@tradedesk.com.au</a>
+                <a href="mailto:liamtw042@gmail.com" className="text-orange-400 text-sm hover:underline">liamtw042@gmail.com</a>
                 <p className="text-xs text-gray-600 mt-1">We reply within 4 business hours</p>
               </div>
             </div>
@@ -76,10 +76,10 @@ export function ContactPage() {
                 <p className="text-gray-600 text-xs mt-1">TradeDesk itself answers 24/7 🤖</p>
               </div>
             </div>
-            <div className="glass rounded-xl p-5 border border-blue-500/20 bg-blue-500/5">
+            <div className="glass rounded-xl p-5 border border-orange-500/20 bg-orange-500/5">
               <p className="text-sm text-gray-300 mb-2 font-medium">Already a customer?</p>
               <p className="text-xs text-gray-500">Log in to your dashboard and use the live chat in the bottom right, or email us directly — we'll pull up your account automatically.</p>
-              <Link to="/dashboard" className="inline-flex items-center gap-1 text-blue-400 text-xs mt-3 hover:underline">Go to dashboard →</Link>
+              <Link to="/dashboard" className="inline-flex items-center gap-1 text-orange-400 text-xs mt-3 hover:underline">Go to dashboard →</Link>
             </div>
           </div>
 
@@ -105,7 +105,7 @@ export function ContactPage() {
                   <label className="text-sm font-medium text-gray-300">Message</label>
                   <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
                     rows={5} required placeholder="What can we help with?"
-                    className="glass rounded-lg px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/40 transition-all resize-none" />
+                    className="glass rounded-lg px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-orange-500/60 focus:ring-1 focus:ring-orange-500/40 transition-all resize-none" />
                 </div>
                 {error && (
                   <p className="text-sm text-red-400">{error}</p>

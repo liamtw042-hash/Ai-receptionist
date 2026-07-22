@@ -27,7 +27,7 @@ const SECTIONS = [
     title: 'Calls & SMS',
     articles: [
       { q: 'Where do I see my call transcripts?', a: 'Dashboard → Calls. Every call is recorded with a full transcript and AI-generated summary. You can search and filter by date or outcome.' },
-      { q: 'Why didn\'t I get an SMS after a call?', a: 'Make sure your mobile number is set in Settings → Profile. If the number is correct and you\'re still not getting SMS, contact support at hello@tradedesk.com.au' },
+      { q: 'Why didn\'t I get an SMS after a call?', a: 'Make sure your mobile number is set in Settings → Profile. If the number is correct and you\'re still not getting SMS, contact support at liamtw042@gmail.com' },
       { q: 'What happens in an emergency call?', a: 'The AI detects urgent language (flooding, fire, live wire, etc.) and immediately sends you an urgent SMS alert — separate from the standard call summary.' },
     ],
   },
@@ -35,9 +35,9 @@ const SECTIONS = [
     icon: CreditCard,
     title: 'Billing',
     articles: [
-      { q: 'When does my trial end?', a: 'Your 7-day free trial starts the moment you sign up. You won\'t be charged until day 8, and only if you choose to continue. No credit card is required upfront.' },
+      { q: 'When does my trial end?', a: 'Your 7-day trial starts the moment you sign up. You won\'t be charged until day 8, and only if you choose to continue. No credit card is required upfront.' },
       { q: 'How do I cancel?', a: 'Settings → Billing → Cancel subscription. Your account stays active until the end of your billing period. No lock-in, no penalty, no drama.' },
-      { q: 'What\'s the 30-day money-back guarantee?', a: 'If you\'re not satisfied within 30 days of your first charge, we\'ll refund you in full — no questions asked. Email hello@tradedesk.com.au' },
+      { q: 'What\'s the 30-day money-back guarantee?', a: 'If you\'re not satisfied within 30 days of your first charge, we\'ll refund you in full — no questions asked. Email liamtw042@gmail.com' },
     ],
   },
 ];
@@ -48,7 +48,7 @@ function HelpSection({ section, searchActive }: { section: { icon: typeof Phone;
   return (
     <div className="glass rounded-2xl p-6 border border-white/8">
       <div className="flex items-center gap-3 mb-5">
-        <div className="w-9 h-9 bg-blue-500/15 rounded-xl flex items-center justify-center"><Icon size={16} className="text-blue-400" /></div>
+        <div className="w-9 h-9 bg-orange-500/15 rounded-xl flex items-center justify-center"><Icon size={16} className="text-orange-400" /></div>
         <h2 className="font-bold text-white">{section.title}</h2>
       </div>
       <div className="space-y-2">
@@ -87,17 +87,17 @@ export function HelpPage() {
   return (
     <div className="min-h-screen bg-black text-white">
       <nav className="border-b border-white/8 px-4 h-16 flex items-center max-w-7xl mx-auto justify-between">
-        <Link to="/" className="flex items-center gap-2"><div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center"><Zap size={14} className="text-white" /></div><span className="font-bold">TradeDesk</span></Link>
-        <Link to="/signup" className="bg-blue-500 hover:bg-blue-400 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">Get started</Link>
+        <Link to="/" className="flex items-center gap-2"><div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center"><Zap size={14} className="text-white" /></div><span className="font-bold">TradeDesk</span></Link>
+        <Link to="/signup" className="bg-orange-500 hover:bg-orange-400 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">Get started</Link>
       </nav>
       <div className="max-w-4xl mx-auto px-4 py-16 sm:py-20">
         <div className="text-center mb-10">
-          <p className="text-blue-400 text-xs font-semibold uppercase tracking-widest mb-3">Help centre</p>
+          <p className="text-orange-400 text-xs font-semibold uppercase tracking-widest mb-3">Help centre</p>
           <h1 className="text-4xl font-black mb-4">How can we help?</h1>
           <div className="relative max-w-md mx-auto">
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search help articles…"
-              className="glass w-full rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/60" />
+              className="glass w-full rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/60" />
           </div>
         </div>
         {filteredSections.length > 0 ? (
@@ -114,7 +114,7 @@ export function HelpPage() {
         <div className="glass rounded-2xl p-8 border border-white/8 text-center">
           <h2 className="text-xl font-bold mb-2">Still stuck?</h2>
           <p className="text-gray-400 text-sm mb-5">Our Australian support team replies within 2 hours on weekdays.</p>
-          <a href="mailto:hello@tradedesk.com.au" className="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-400 text-white font-semibold px-6 py-3 rounded-xl transition-colors text-sm">
+          <a href="mailto:liamtw042@gmail.com" className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-400 text-white font-semibold px-6 py-3 rounded-xl transition-colors text-sm">
             Email support
           </a>
         </div>

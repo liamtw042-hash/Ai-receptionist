@@ -43,18 +43,18 @@ export function DemoPage() {
       <nav className="border-b border-white/8 px-5 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-blue-500 rounded-lg flex items-center justify-center"><Zap size={13} className="text-white" /></div>
+            <div className="w-7 h-7 bg-orange-500 rounded-lg flex items-center justify-center"><Zap size={13} className="text-white" /></div>
             <span className="font-bold text-white">TradeDesk</span>
           </Link>
           <div className="flex items-center gap-3">
             <Link to="/login" className="text-sm text-gray-400 hover:text-white transition-colors">Log in</Link>
-            <Link to="/signup" className="text-sm bg-blue-500 hover:bg-blue-400 text-white px-4 py-2 rounded-lg font-semibold transition-colors">Get Started Free</Link>
+            <Link to="/signup" className="text-sm bg-orange-500 hover:bg-orange-400 text-white px-4 py-2 rounded-lg font-semibold transition-colors">Get started</Link>
           </div>
         </div>
       </nav>
       <main className="max-w-5xl mx-auto px-5 py-16">
         <div className="text-center mb-16">
-          <p className="text-blue-400 text-xs font-semibold uppercase tracking-widest mb-3">Product walkthrough</p>
+          <p className="text-orange-400 text-xs font-semibold uppercase tracking-widest mb-3">Product walkthrough</p>
           <h1 className="text-4xl font-bold text-white mb-4">See TradeDesk in action</h1>
           <p className="text-gray-500 max-w-xl mx-auto">From missed call to booked job in under 2 minutes. Here's exactly how it works.</p>
         </div>
@@ -64,19 +64,19 @@ export function DemoPage() {
           <div className="space-y-3">
             {STEPS.map((s, i) => (
               <button key={i} onClick={() => setActive(i)}
-                className={`w-full text-left glass rounded-xl p-5 border transition-all duration-200 ${active === i ? 'border-blue-500/40 bg-blue-500/8' : 'border-white/8 hover:border-white/15'}`}>
+                className={`w-full text-left glass rounded-xl p-5 border transition-all duration-200 ${active === i ? 'border-orange-500/40 bg-orange-500/8' : 'border-white/8 hover:border-white/15'}`}>
                 <div className="flex items-start gap-4">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0 transition-all ${active === i ? 'bg-blue-500/20 scale-110' : 'bg-white/5'}`}>
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0 transition-all ${active === i ? 'bg-orange-500/20 scale-110' : 'bg-white/5'}`}>
                     {s.visual}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs text-blue-400 font-semibold">Step {i + 1}</span>
+                      <span className="text-xs text-orange-400 font-semibold">Step {i + 1}</span>
                       {active === i && <span className="text-[10px] text-green-400 bg-green-500/10 border border-green-500/20 px-1.5 py-0.5 rounded-full">Active</span>}
                     </div>
                     <p className="font-semibold text-white text-sm">{s.title}</p>
                     <p className="text-xs text-gray-500 mt-0.5">{s.desc}</p>
-                    {active === i && <p className="text-xs text-blue-300 mt-2 animate-fade-in">{s.detail}</p>}
+                    {active === i && <p className="text-xs text-orange-300 mt-2 animate-fade-in">{s.detail}</p>}
                   </div>
                 </div>
               </button>
@@ -100,7 +100,7 @@ export function DemoPage() {
               <div className="flex gap-1.5 mt-6">
                 {STEPS.map((_, i) => (
                   <button key={i} onClick={() => setActive(i)}
-                    className={`h-1.5 rounded-full transition-all duration-300 ${active === i ? 'w-8 bg-blue-500' : 'w-3 bg-white/20'}`} />
+                    className={`h-1.5 rounded-full transition-all duration-300 ${active === i ? 'w-8 bg-orange-500' : 'w-3 bg-white/20'}`} />
                 ))}
               </div>
             </div>
@@ -127,9 +127,9 @@ export function DemoPage() {
 
         <div className="text-center">
           <Link to="/signup"
-            className="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-400 text-white font-semibold px-8 py-4 rounded-xl text-base transition-all"
+            className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-400 text-white font-semibold px-8 py-4 rounded-xl text-base transition-all"
             style={{ boxShadow: '0 0 24px rgba(59,130,246,0.35)' }}>
-            Start 7-day free trial <ArrowRight size={18} />
+            Start 7-day trial <ArrowRight size={18} />
           </Link>
           <p className="text-sm text-gray-600 mt-3">No credit card · cancel any time</p>
         </div>

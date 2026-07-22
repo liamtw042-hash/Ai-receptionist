@@ -458,7 +458,7 @@ function BillingCard() {
                     $199<span className="text-sm font-semibold text-gray-500">/month AUD</span>
                   </p>
                   <p className="text-xs text-gray-500 mt-1.5">
-                    {billing?.status === 'trialing' ? 'On your free trial' : 'Your AI is answering calls around the clock'}
+                    {billing?.status === 'trialing' ? 'On your trial' : 'Your AI is answering calls around the clock'}
                     {billing?.currentPeriodEnd && ` · ${billing.cancelAtPeriodEnd ? 'ends' : 'renews'} ${new Date(billing.currentPeriodEnd).toLocaleDateString('en-AU')}`}
                   </p>
                 </div>
@@ -490,13 +490,13 @@ function BillingCard() {
                   : billing?.status === 'past_due'
                   ? 'Your last payment failed — update your card to keep your AI answering.'
                   : 'One missed job usually costs more than a month of this.'}{' '}
-                Start with a 7-day free trial. Cancel any time.
+                Start with a 7-day trial. Cancel any time.
               </p>
               <p className="text-[11px] text-gray-700 mt-2">Stripe test mode</p>
             </div>
             {error && <p className="text-xs text-red-400 mb-3">{error}</p>}
             <Button type="button" onClick={handleSubscribe} loading={starting}>
-              <CreditCard size={15} /> Start 7-day free trial
+              <CreditCard size={15} /> Start 7-day trial
             </Button>
           </>
         )}
@@ -645,7 +645,7 @@ export function SettingsPage() {
       )}
       {billingStatus === 'canceled' && (
         <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-sm px-4 py-3 rounded-lg mb-4">
-          <AlertCircle size={16} /> Checkout canceled — no charge was made
+          <AlertCircle size={16} /> Checkout cancelled — no charge was made
         </div>
       )}
 

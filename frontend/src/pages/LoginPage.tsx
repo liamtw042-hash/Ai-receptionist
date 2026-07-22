@@ -177,7 +177,7 @@ export function LoginPage() {
             <p className="text-sm text-gray-600 mt-9">
               New here?{' '}
               <Link to="/signup" className="text-orange-400 hover:text-orange-300 font-medium transition-colors">
-                Start your free trial
+                Start your 7-day trial
               </Link>
             </p>
           </div>

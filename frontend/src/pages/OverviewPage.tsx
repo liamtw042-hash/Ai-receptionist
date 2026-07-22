@@ -336,7 +336,7 @@ export function OverviewPage() {
 
             <p className="text-xs text-gray-600 mt-4">
               Stuck on any step? Email{' '}
-              <a href="mailto:hello@tradedesk.com.au" className="text-orange-400/90 hover:text-orange-300">hello@tradedesk.com.au</a>{' '}
+              <a href="mailto:liamtw042@gmail.com" className="text-orange-400/90 hover:text-orange-300">liamtw042@gmail.com</a>{' '}
               and a human will sort you out.
             </p>
           </div>

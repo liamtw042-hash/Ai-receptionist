@@ -9,7 +9,7 @@ export function NotFoundPage() {
       {/* nav */}
       <nav className="border-b border-white/8 px-5 py-4">
         <Link to="/" className="flex items-center gap-2 w-fit">
-          <div className="w-7 h-7 bg-blue-500 rounded-lg flex items-center justify-center"><Zap size={13} className="text-white" /></div>
+          <div className="w-7 h-7 bg-orange-500 rounded-lg flex items-center justify-center"><Zap size={13} className="text-white" /></div>
           <span className="font-bold text-white">TradeDesk</span>
         </Link>
       </nav>
@@ -19,8 +19,8 @@ export function NotFoundPage() {
         <div className="text-center max-w-md">
           {/* animated glitch number */}
           <div className="relative mb-6">
-            <div className="absolute inset-0 bg-blue-500/10 rounded-full blur-3xl scale-150" />
-            <div className="relative text-[120px] font-extrabold leading-none text-transparent bg-clip-text bg-gradient-to-br from-blue-400 to-blue-600">
+            <div className="absolute inset-0 bg-orange-500/10 rounded-full blur-3xl scale-150" />
+            <div className="relative text-[120px] font-extrabold leading-none text-transparent bg-clip-text bg-gradient-to-br from-orange-400 to-orange-600">
               404
             </div>
           </div>
@@ -30,7 +30,7 @@ export function NotFoundPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link to="/"
-              className="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-400 text-white font-semibold px-6 py-3 rounded-xl transition-all"
+              className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-400 text-white font-semibold px-6 py-3 rounded-xl transition-all"
               style={{ boxShadow: '0 0 20px rgba(59,130,246,0.3)' }}>
               <Home size={16} /> Back to home
             </Link>

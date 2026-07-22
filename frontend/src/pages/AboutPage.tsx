@@ -7,18 +7,18 @@ export function AboutPage() {
   return (
     <div className="min-h-screen bg-black text-white">
       <nav className="border-b border-white/8 px-4 h-16 flex items-center max-w-7xl mx-auto justify-between">
-        <Link to="/" className="flex items-center gap-2"><div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center"><Zap size={14} className="text-white" /></div><span className="font-bold">TradeDesk</span></Link>
-        <Link to="/signup" className="bg-blue-500 hover:bg-blue-400 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">Get started</Link>
+        <Link to="/" className="flex items-center gap-2"><div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center"><Zap size={14} className="text-white" /></div><span className="font-bold">TradeDesk</span></Link>
+        <Link to="/signup" className="bg-orange-500 hover:bg-orange-400 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">Get started</Link>
       </nav>
       <div className="max-w-4xl mx-auto px-4 py-16 sm:py-24">
         <div className="text-center mb-16">
-          <p className="text-blue-400 text-xs font-semibold uppercase tracking-widest mb-3">About us</p>
+          <p className="text-orange-400 text-xs font-semibold uppercase tracking-widest mb-3">About us</p>
           <h1 className="text-4xl sm:text-5xl font-black mb-5">Built for the blokes<br className="hidden sm:block" /> on the tools</h1>
           <p className="text-gray-400 text-lg max-w-2xl mx-auto leading-relaxed">TradeDesk started because a plumber in Newcastle kept losing jobs to missed calls. We built the product we wish existed.</p>
         </div>
         <div className="grid sm:grid-cols-3 gap-6 mb-16">
           {[
-            { icon: Target, title: 'Our mission', text: 'Every Australian tradie deserves a professional receptionist — regardless of their size or budget.', color: 'text-blue-400', bg: 'bg-blue-500/15' },
+            { icon: Target, title: 'Our mission', text: 'Every Australian tradie deserves a professional receptionist — regardless of their size or budget.', color: 'text-orange-400', bg: 'bg-orange-500/15' },
             { icon: Users, title: 'Who we serve', text: 'We work with plumbers, sparkies, builders, painters, and anyone else who earns their living on the tools.', color: 'text-green-400', bg: 'bg-green-500/15' },
             { icon: Heart, title: 'Our values', text: 'Honest pricing, local support, no lock-in contracts. If TradeDesk doesn\'t pay for itself, you get your money back.', color: 'text-purple-400', bg: 'bg-purple-500/15' },
           ].map(({ icon: Icon, title, text, color, bg }) => (
@@ -48,10 +48,10 @@ export function AboutPage() {
               { name: 'Priya Nair', role: 'Lead Engineer', bio: 'Full-stack engineer obsessed with reliability. TradeDesk has maintained 99.97% uptime since launch.', initial: 'P' },
             ].map(m => (
               <div key={m.name} className="flex items-start gap-4 p-4 glass rounded-xl border border-white/8">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500/40 to-purple-500/40 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">{m.initial}</div>
+                <div className="w-10 h-10 bg-gradient-to-br from-orange-500/40 to-orange-600/40 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">{m.initial}</div>
                 <div>
                   <p className="font-semibold text-white text-sm">{m.name}</p>
-                  <p className="text-xs text-blue-400 mb-1">{m.role}</p>
+                  <p className="text-xs text-orange-400 mb-1">{m.role}</p>
                   <p className="text-xs text-gray-500 leading-relaxed">{m.bio}</p>
                 </div>
               </div>
@@ -59,10 +59,10 @@ export function AboutPage() {
           </div>
         </div>
         <div className="text-center">
-          <div className="flex items-center justify-center gap-2 text-sm text-gray-500 mb-2"><MapPin size={14} className="text-blue-400" /> Newcastle, NSW 2300, Australia</div>
-          <div className="flex items-center justify-center gap-2 text-sm text-gray-500 mb-8"><Mail size={14} className="text-blue-400" /> hello@tradedesk.com.au</div>
-          <Link to="/signup" className="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-400 text-white font-semibold px-8 py-4 rounded-xl transition-all">
-            Start your free trial <ArrowRight size={16} />
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-500 mb-2"><MapPin size={14} className="text-orange-400" /> Newcastle, NSW 2300, Australia</div>
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-500 mb-8"><Mail size={14} className="text-orange-400" /> liamtw042@gmail.com</div>
+          <Link to="/signup" className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-400 text-white font-semibold px-8 py-4 rounded-xl transition-all">
+            Start your 7-day trial <ArrowRight size={16} />
           </Link>
         </div>
       </div>

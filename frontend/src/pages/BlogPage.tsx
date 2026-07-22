@@ -40,12 +40,12 @@ export function BlogPage() {
   return (
     <div className="min-h-screen bg-black text-white">
       <nav className="border-b border-white/8 px-4 h-16 flex items-center max-w-7xl mx-auto justify-between">
-        <Link to="/" className="flex items-center gap-2"><div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center"><Zap size={14} className="text-white" /></div><span className="font-bold">TradeDesk</span></Link>
-        <Link to="/signup" className="bg-blue-500 hover:bg-blue-400 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">Get started</Link>
+        <Link to="/" className="flex items-center gap-2"><div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center"><Zap size={14} className="text-white" /></div><span className="font-bold">TradeDesk</span></Link>
+        <Link to="/signup" className="bg-orange-500 hover:bg-orange-400 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">Get started</Link>
       </nav>
       <div className="max-w-4xl mx-auto px-4 py-16 sm:py-24">
         <div className="text-center mb-12">
-          <p className="text-blue-400 text-xs font-semibold uppercase tracking-widest mb-3">Blog</p>
+          <p className="text-orange-400 text-xs font-semibold uppercase tracking-widest mb-3">Blog</p>
           <h1 className="text-4xl font-black mb-4">Tips for tradies</h1>
           <p className="text-gray-400">Business advice, tech guides, and industry insights for Australian trades.</p>
         </div>
@@ -56,13 +56,13 @@ export function BlogPage() {
                 <div className="w-14 h-14 glass rounded-xl flex items-center justify-center text-3xl flex-shrink-0 border border-white/8 group-hover:scale-110 transition-transform">{post.img}</div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <span className="text-xs font-semibold text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full">{post.category}</span>
+                    <span className="text-xs font-semibold text-orange-400 bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded-full">{post.category}</span>
                     <span className="text-xs text-gray-600 flex items-center gap-1"><Clock size={10} /> {post.readTime}</span>
                   </div>
-                  <h2 className="text-lg sm:text-xl font-bold text-white mb-2 group-hover:text-blue-300 transition-colors">{post.title}</h2>
+                  <h2 className="text-lg sm:text-xl font-bold text-white mb-2 group-hover:text-orange-300 transition-colors">{post.title}</h2>
                   <p className="text-sm text-gray-400 leading-relaxed mb-4">{post.excerpt}</p>
                   <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-gradient-to-br from-blue-500/40 to-purple-500/40 rounded-full flex items-center justify-center text-xs font-bold text-white">{post.author[0]}</div>
+                    <div className="w-6 h-6 bg-gradient-to-br from-orange-500/40 to-orange-600/40 rounded-full flex items-center justify-center text-xs font-bold text-white">{post.author[0]}</div>
                     <span className="text-xs text-gray-500">{post.author} · {post.date}</span>
                   </div>
                 </div>

@@ -9,7 +9,7 @@ export function PrivacyPage() {
       <nav className="border-b border-white/8 px-5 py-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-blue-500 rounded-lg flex items-center justify-center"><Zap size={13} className="text-white" /></div>
+            <div className="w-7 h-7 bg-orange-500 rounded-lg flex items-center justify-center"><Zap size={13} className="text-white" /></div>
             <span className="font-bold text-white">TradeDesk</span>
           </Link>
           <Link to="/" className="text-sm text-gray-400 hover:text-white transition-colors">← Back to home</Link>
@@ -44,10 +44,10 @@ We do not sell your personal information to third parties.` },
             { heading: '5. Third-Party Services', body: 'We use the following third-party services to operate TradeDesk: Twilio (call and SMS infrastructure), Firebase (authentication and data storage), Google Cloud (AI and infrastructure), Vercel (hosting). Each of these providers has their own privacy policy and we encourage you to review them.' },
             { heading: '6. Data Storage and Security', body: 'Your data is stored on secure servers. We implement industry-standard security measures including encryption in transit (TLS) and at rest. However, no method of transmission over the internet is 100% secure and we cannot guarantee absolute security.' },
             { heading: '7. Data Retention', body: 'We retain your account data for as long as your account is active. Call recordings and transcripts are retained for 12 months and then deleted automatically. You may request earlier deletion by contacting us.' },
-            { heading: '8. Access and Correction', body: 'You have the right to access the personal information we hold about you and to request corrections. To make such a request, email hello@tradedesk.com.au. We will respond within 30 days.' },
-            { heading: '9. Complaints', body: 'If you believe we have breached the Australian Privacy Principles, you may contact us at hello@tradedesk.com.au. If you are not satisfied with our response, you may lodge a complaint with the Office of the Australian Information Commissioner (OAIC) at oaic.gov.au.' },
+            { heading: '8. Access and Correction', body: 'You have the right to access the personal information we hold about you and to request corrections. To make such a request, email liamtw042@gmail.com. We will respond within 30 days.' },
+            { heading: '9. Complaints', body: 'If you believe we have breached the Australian Privacy Principles, you may contact us at liamtw042@gmail.com. If you are not satisfied with our response, you may lodge a complaint with the Office of the Australian Information Commissioner (OAIC) at oaic.gov.au.' },
             { heading: '10. Changes to This Policy', body: 'We may update this Privacy Policy from time to time. We will notify you of significant changes via email or a notice in the dashboard. Continued use of TradeDesk after changes constitutes acceptance of the updated policy.' },
-            { heading: '11. Contact', body: 'For privacy-related enquiries: hello@tradedesk.com.au · TradeDesk · Newcastle NSW 2300 · Australia' },
+            { heading: '11. Contact', body: 'For privacy-related enquiries: liamtw042@gmail.com · TradeDesk · Newcastle NSW 2300 · Australia' },
           ].map(({ heading, body }) => (
             <div key={heading}>
               <h2 className="text-lg font-semibold text-white mb-3">{heading}</h2>

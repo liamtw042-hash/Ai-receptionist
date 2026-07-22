@@ -1148,7 +1148,7 @@ export function LandingPage() {
               </div>
               <p className="text-xs text-gray-600 leading-relaxed mb-3">The AI receptionist for Australian tradies.</p>
               <p className="text-xs text-gray-700">Made in Newcastle, NSW 🇦🇺</p>
-              <a href="mailto:hello@tradedesk.com.au" className="text-xs text-gray-600 hover:text-orange-400 transition-colors mt-2 block">hello@tradedesk.com.au</a>
+              <a href="mailto:liamtw042@gmail.com" className="text-xs text-gray-600 hover:text-orange-400 transition-colors mt-2 block">liamtw042@gmail.com</a>
             </div>
             <div>
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Product</p>

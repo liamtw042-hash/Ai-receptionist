@@ -7,7 +7,7 @@ const ENTRIES = [
     version: '2.4.0',
     date: 'June 20, 2026',
     badge: 'Major',
-    badgeColor: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+    badgeColor: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
     changes: [
       { type: 'new', text: 'Particle canvas animation on hero — dot network effect' },
       { type: 'new', text: 'Typewriter headline effect on landing page' },
@@ -66,7 +66,7 @@ const ENTRIES = [
 
 const TYPE_STYLES: Record<string, string> = {
   new: 'text-green-400 bg-green-500/10 border-green-500/20',
-  improved: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
+  improved: 'text-orange-400 bg-orange-500/10 border-orange-500/20',
   fixed: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20',
 };
 
@@ -75,12 +75,12 @@ export function ChangelogPage() {
   return (
     <div className="min-h-screen bg-black text-white">
       <nav className="border-b border-white/8 px-4 h-16 flex items-center max-w-7xl mx-auto justify-between">
-        <Link to="/" className="flex items-center gap-2"><div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center"><Zap size={14} className="text-white" /></div><span className="font-bold">TradeDesk</span></Link>
-        <Link to="/signup" className="bg-blue-500 hover:bg-blue-400 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">Get started</Link>
+        <Link to="/" className="flex items-center gap-2"><div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center"><Zap size={14} className="text-white" /></div><span className="font-bold">TradeDesk</span></Link>
+        <Link to="/signup" className="bg-orange-500 hover:bg-orange-400 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">Get started</Link>
       </nav>
       <div className="max-w-2xl mx-auto px-4 py-16 sm:py-24">
         <div className="text-center mb-12">
-          <p className="text-blue-400 text-xs font-semibold uppercase tracking-widest mb-3">Changelog</p>
+          <p className="text-orange-400 text-xs font-semibold uppercase tracking-widest mb-3">Changelog</p>
           <h1 className="text-4xl font-black mb-3">What's new</h1>
           <p className="text-gray-400">Every improvement, fix, and new feature — in plain English.</p>
         </div>
