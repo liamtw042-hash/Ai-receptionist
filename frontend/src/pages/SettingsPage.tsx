@@ -390,7 +390,9 @@ function GoogleIntegrationsCard() {
 
 // ── Billing Card (Stripe) ───────────────────────────────────────────────────
 interface BillingStatus {
-  status: 'none' | 'trialing' | 'active' | 'past_due' | 'canceled' | 'incomplete' | 'unpaid';
+  // `paused` = the no-card trial ended without a payment method; the sub is
+  // paused and resumes the moment a card is added in the billing portal.
+  status: 'none' | 'trialing' | 'active' | 'past_due' | 'canceled' | 'incomplete' | 'unpaid' | 'paused';
   currentPeriodEnd?: string;
   cancelAtPeriodEnd?: boolean;
 }
@@ -469,8 +471,38 @@ function BillingCard() {
                 </span>
               </div>
             </div>
+            {billing?.status === 'trialing' && (
+              <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+                No card on file yet — the trial's genuinely card-free. Add a payment method before it ends
+                and your AI keeps answering without a break; leave it and the plan just pauses until you do.
+              </p>
+            )}
             {error && <p className="text-xs text-red-400 mb-3">{error}</p>}
-            <Button variant="secondary" size="sm" type="button" onClick={handleManage} loading={managing}>Manage billing</Button>
+            <Button variant="secondary" size="sm" type="button" onClick={handleManage} loading={managing}>
+              {billing?.status === 'trialing' ? 'Add payment method' : 'Manage billing'}
+            </Button>
+          </>
+        ) : billing?.status === 'paused' ? (
+          <>
+            {/* Trial ended with no card → subscription paused. Adding a card in
+                the portal resumes it automatically, so send them there rather
+                than opening a second checkout/subscription. */}
+            <div className="relative overflow-hidden rounded-2xl p-5 mb-4 border border-amber-500/30"
+              style={{ background: 'linear-gradient(135deg,rgba(38,28,8,0.5) 0%,rgba(15,17,20,0.85) 100%)' }}>
+              <div className="flex items-center gap-2">
+                <AlertCircle size={15} className="text-amber-400" />
+                <p className="font-black text-white text-lg tracking-tight leading-none">Trial ended — plan paused</p>
+              </div>
+              <p className="text-sm text-gray-400 mt-2.5 leading-relaxed">
+                Your 7-day trial's up and there's no card on file, so your AI has paused. Add a payment method
+                to switch it straight back on — $199/month AUD, and you pick up right where you left off.
+              </p>
+              <p className="text-[11px] text-gray-700 mt-2">Stripe test mode</p>
+            </div>
+            {error && <p className="text-xs text-red-400 mb-3">{error}</p>}
+            <Button type="button" onClick={handleManage} loading={managing}>
+              <CreditCard size={15} /> Add payment method
+            </Button>
           </>
         ) : (
           <>

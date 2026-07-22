@@ -29,7 +29,7 @@ function ValuePanel() {
             <p className="text-[13px] text-gray-300 leading-relaxed">
               <span className="text-white font-semibold">New lead:</span> Sharon, Merewether. Burst pipe —
               water off at mains. Quoted <span className="text-orange-300 font-semibold">$890</span> from
-              your call-out rate. Wants you today. 0412 087 336
+              your call-out rate. Wants you today. 0493 267 362
             </p>
           </div>
           <p className="text-[10px] text-gray-600 mt-2.5 font-mono">Delivered 40 seconds after the call</p>

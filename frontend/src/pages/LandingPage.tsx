@@ -98,7 +98,7 @@ function DashboardCallCard() {
               Burst pipe under the kitchen sink, water shut off at the mains on my instruction.
               Quoted <span className="text-white font-semibold">$890</span> from your emergency call-out rate.
               Wants you there <span className="text-white font-semibold">today</span> — callback{' '}
-              <span className="font-mono text-white">0412 087 336</span>.
+              <span className="font-mono text-white">0493 267 362</span>.
             </p>
           </div>
 

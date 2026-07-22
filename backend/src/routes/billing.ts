@@ -9,7 +9,11 @@ const router = Router();
 interface BillingRecord {
   stripeCustomerId?: string;
   subscriptionId?: string;
-  status: 'none' | 'trialing' | 'active' | 'past_due' | 'canceled' | 'incomplete' | 'unpaid';
+  // `paused` is reachable only via a no-card trial: when the 7-day trial ends
+  // and the customer never added a payment method, Stripe pauses the sub
+  // (no invoices generated) rather than failing a charge. It auto-resumes the
+  // moment they add a card in the billing portal.
+  status: 'none' | 'trialing' | 'active' | 'past_due' | 'canceled' | 'incomplete' | 'unpaid' | 'paused';
   priceId?: string;
   currentPeriodEnd?: string;
   cancelAtPeriodEnd?: boolean;
@@ -175,9 +179,23 @@ router.post('/create-checkout-session', async (req: AuthRequest, res: Response) 
       customer: customerId,
       client_reference_id: userId,
       line_items: [{ price: STRIPE_PRICE_ID, quantity: 1 }],
+      // The marketing/signup copy promises a genuinely no-credit-card trial, so
+      // don't force a card at checkout. `if_required` means Stripe only asks for
+      // a card when the amount due today is > $0 — and with a 7-day trial the
+      // first payment is $0, so the customer starts the trial card-free.
+      payment_method_collection: 'if_required',
       subscription_data: {
         trial_period_days: 7,
         metadata: { userId },
+        // What happens when the trial ends and no card was ever added: pause the
+        // subscription (no failed charges, no dunning emails, no service billed)
+        // instead of the default of trying — and failing — to invoice. The sub
+        // sits in `paused` and auto-resumes as soon as they add a card in the
+        // billing portal. This is the graceful "add payment to switch back on"
+        // path the Settings UI surfaces.
+        trial_settings: {
+          end_behavior: { missing_payment_method: 'pause' },
+        },
       },
       // Lets the marketing/signup pages advertise real promo codes (e.g.
       // FIRSTMONTH) — Stripe's hosted checkout shows a code field and applies
