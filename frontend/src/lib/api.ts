@@ -70,3 +70,12 @@ export async function publicPost<T>(path: string, body: unknown): Promise<T> {
   }
   return data as T;
 }
+
+// Unauthenticated GET for public marketing-page reads (e.g. the waitlist
+// counter). No Firebase token attached, so it works for logged-out visitors.
+export async function publicGet<T>(path: string): Promise<T> {
+  const res = await fetch(`${BASE_URL}${path}`);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data && (data as any).error) || `HTTP ${res.status}`);
+  return data as T;
+}

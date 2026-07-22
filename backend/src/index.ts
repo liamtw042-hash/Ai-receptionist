@@ -18,6 +18,7 @@ import { jobsRouter } from './routes/jobs';
 import { newsletterRouter } from './routes/newsletter';
 import { contactFormRouter } from './routes/contactForm';
 import { chatRouter } from './routes/chat';
+import { waitlistRouter } from './routes/waitlist';
 import { adminRouter } from './routes/admin';
 import { firebaseStatusMessage } from './lib/firebase';
 import { twilioStatusMessage } from './lib/twilio';
@@ -147,6 +148,7 @@ app.use('/api/jobs', jobsRouter);
 app.use('/api/newsletter', newsletterRouter);
 app.use('/api/contact-form', contactFormRouter);
 app.use('/api/chat', chatRouter);
+app.use('/api/waitlist', waitlistRouter);
 app.use('/api/admin', adminRouter);
 
 // ── Error handler ────────────────────────────────────────────────────────────

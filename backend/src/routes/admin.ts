@@ -347,4 +347,29 @@ router.get('/activity', async (_req: AuthRequest, res: Response) => {
   }
 });
 
+// ── GET /api/admin/waitlist ───────────────────────────────────────────────────
+// Every landing-page waitlist signup, newest first, plus a total. Read directly
+// (not via the customer aggregate/cache) since the waitlist is its own thing.
+router.get('/waitlist', async (_req: AuthRequest, res: Response) => {
+  try {
+    const snap = await db.collection('waitlist').get();
+    const entries = snap.docs
+      .map(d => {
+        const data = d.data();
+        return {
+          name: (data.name as string) || '',
+          businessName: (data.businessName as string) || '',
+          tradeType: (data.tradeType as string) || '',
+          email: (data.email as string) || '',
+          phone: (data.phone as string) || '',
+          createdAt: toIso(data.createdAt),
+        };
+      })
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    res.json({ total: entries.length, entries });
+  } catch (err) {
+    sendServerError(res, 'waitlist', err);
+  }
+});
+
 export { router as adminRouter };

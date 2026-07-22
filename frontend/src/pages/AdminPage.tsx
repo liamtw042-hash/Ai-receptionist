@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Zap, ArrowLeft, Users, Phone, Calendar, DollarSign, Activity,
   Search, ChevronDown, ChevronUp, X, CheckCircle2, XCircle, UserPlus,
-  PhoneIncoming, Briefcase, TrendingUp,
+  PhoneIncoming, Briefcase, TrendingUp, Download,
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { formatDistanceToNow, format } from 'date-fns';
@@ -64,6 +64,27 @@ interface Growth {
 }
 
 interface ActivityItem { type: 'signup' | 'call' | 'job'; at: string; who: string; detail: string }
+
+interface WaitlistEntry { name: string; businessName: string; tradeType: string; email: string; phone: string; createdAt: string }
+interface WaitlistResponse { total: number; entries: WaitlistEntry[] }
+
+/** Build a CSV from waitlist rows and trigger a download. Fields are quoted and
+ *  internal quotes doubled per RFC 4180, so commas/quotes in a business name
+ *  can't break the columns. */
+function exportWaitlistCsv(entries: WaitlistEntry[]) {
+  const esc = (v: string) => `"${(v || '').replace(/"/g, '""')}"`;
+  const header = ['Name', 'Business', 'Trade', 'Email', 'Phone', 'Joined'];
+  const rows = entries.map(e => [e.name, e.businessName, e.tradeType, e.email, e.phone, fmt(e.createdAt, 'yyyy-MM-dd HH:mm')].map(esc).join(','));
+  const csv = [header.map(esc).join(','), ...rows].join('\r\n');
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `tradedesk-waitlist-${fmt(new Date().toISOString(), 'yyyy-MM-dd')}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
 
 const STATUS_META: Record<CustomerRow['subStatus'], { label: string; cls: string }> = {
   paying:    { label: 'Paying',    cls: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/25' },
@@ -286,6 +307,8 @@ export function AdminPage() {
   const [customers, setCustomers] = useState<CustomerRow[] | null>(null);
   const [growth, setGrowth] = useState<Growth | null>(null);
   const [activity, setActivity] = useState<ActivityItem[] | null>(null);
+  const [waitlist, setWaitlist] = useState<WaitlistResponse | null>(null);
+  const [waitlistSearch, setWaitlistSearch] = useState('');
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('signupDate');
@@ -301,7 +324,18 @@ export function AdminPage() {
     ]).then(([o, c, g, a]) => {
       setOverview(o); setCustomers(c); setGrowth(g); setActivity(a);
     }).catch(e => setError(e.message || 'Failed to load admin data'));
+    // Waitlist loads independently — a waitlist error shouldn't blank the rest.
+    api.get<WaitlistResponse>('/admin/waitlist').then(setWaitlist).catch(() => {});
   }, []);
+
+  const waitlistFiltered = useMemo(() => {
+    if (!waitlist) return [];
+    const q = waitlistSearch.trim().toLowerCase();
+    if (!q) return waitlist.entries;
+    return waitlist.entries.filter(e =>
+      e.name.toLowerCase().includes(q) || e.businessName.toLowerCase().includes(q) ||
+      e.email.toLowerCase().includes(q) || e.tradeType.toLowerCase().includes(q));
+  }, [waitlist, waitlistSearch]);
 
   const sorted = useMemo(() => {
     if (!customers) return [];
@@ -393,6 +427,81 @@ export function AdminPage() {
                 </div>
               ))}
             </div>
+          )}
+        </section>
+
+        {/* ── Waitlist (pre-launch) ── */}
+        <section aria-label="Waitlist">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-3">
+            <h2 className="text-sm font-bold text-white flex-shrink-0">
+              Waitlist {waitlist && <span className="text-gray-600 font-medium">· {waitlist.total.toLocaleString()}</span>}
+            </h2>
+            <div className="relative sm:ml-auto sm:w-64">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
+              <input value={waitlistSearch} onChange={e => setWaitlistSearch(e.target.value)}
+                placeholder="Search waitlist…"
+                className="w-full bg-white/4 border border-white/8 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/40 transition-colors min-h-[38px]" />
+            </div>
+            <button onClick={() => waitlist && exportWaitlistCsv(waitlist.entries)}
+              disabled={!waitlist || waitlist.total === 0}
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/4 hover:bg-white/8 disabled:opacity-40 disabled:cursor-not-allowed px-3.5 py-2 text-xs font-medium text-gray-300 transition-colors min-h-[38px] flex-shrink-0">
+              <Download size={13} /> Export CSV
+            </button>
+          </div>
+
+          {!waitlist ? (
+            <div className="space-y-2">{[...Array(3)].map((_, i) => <div key={i} className="h-12 skeleton rounded-xl" />)}</div>
+          ) : waitlist.total === 0 ? (
+            <div className="rounded-2xl border border-dashed border-white/10 py-12 text-center">
+              <UserPlus size={22} className="text-gray-700 mx-auto mb-2" />
+              <p className="text-sm text-gray-500">No waitlist signups yet — they'll appear here as tradies join.</p>
+            </div>
+          ) : (
+            <>
+              {/* Desktop table */}
+              <div className="hidden md:block rounded-2xl border border-white/8 bg-ink-900 overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="border-b border-white/8 text-left">
+                    <tr>
+                      <th className="py-2.5 px-3 pl-4 font-semibold text-gray-500">Name</th>
+                      <th className="py-2.5 px-3 font-semibold text-gray-500">Business</th>
+                      <th className="py-2.5 px-3 font-semibold text-gray-500">Trade</th>
+                      <th className="py-2.5 px-3 font-semibold text-gray-500">Email</th>
+                      <th className="py-2.5 px-3 font-semibold text-gray-500">Phone</th>
+                      <th className="py-2.5 px-3 font-semibold text-gray-500 whitespace-nowrap">Joined</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {waitlistFiltered.map((e, i) => (
+                      <tr key={`${e.email}-${i}`} className="border-b border-white/5 last:border-0">
+                        <td className="py-3 px-3 pl-4 font-semibold text-white whitespace-nowrap">{e.name || '—'}</td>
+                        <td className="py-3 px-3 text-gray-300">{e.businessName || '—'}</td>
+                        <td className="py-3 px-3 text-gray-400 capitalize">{e.tradeType || '—'}</td>
+                        <td className="py-3 px-3 text-gray-400">{e.email}</td>
+                        <td className="py-3 px-3 text-gray-400 whitespace-nowrap font-mono">{e.phone || '—'}</td>
+                        <td className="py-3 px-3 text-gray-500 whitespace-nowrap">{fmt(e.createdAt, 'd MMM yy')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {waitlistFiltered.length === 0 && <p className="text-center text-xs text-gray-600 py-8">No signups match "{waitlistSearch}".</p>}
+              </div>
+
+              {/* Mobile cards */}
+              <div className="md:hidden space-y-2">
+                {waitlistFiltered.map((e, i) => (
+                  <div key={`${e.email}-${i}`} className="rounded-xl border border-white/8 bg-ink-900 p-4">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <p className="text-sm font-semibold text-white truncate">{e.name || e.email}</p>
+                      <span className="text-[10px] text-gray-600 flex-shrink-0 whitespace-nowrap">{fmt(e.createdAt, 'd MMM')}</span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 truncate">{e.businessName || 'No business'} · <span className="capitalize">{e.tradeType}</span></p>
+                    <p className="text-[11px] text-gray-600 truncate mt-0.5">{e.email}{e.phone ? ` · ${e.phone}` : ''}</p>
+                  </div>
+                ))}
+                {waitlistFiltered.length === 0 && <p className="text-center text-xs text-gray-600 py-8">No signups match "{waitlistSearch}".</p>}
+              </div>
+            </>
           )}
         </section>
 

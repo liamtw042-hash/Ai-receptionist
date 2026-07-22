@@ -4,8 +4,9 @@ import {
   Phone, MessageSquare, Clock, Zap, CheckCircle, XCircle, ArrowRight,
   Menu, X, ChevronDown, ArrowUp, Send, MessageCircle, Sparkles,
   PhoneIncoming, PhoneForwarded, CalendarCheck, FileText, MapPin,
+  Users, User, Briefcase, Mail, Loader2,
 } from 'lucide-react';
-import { publicPost } from '../lib/api';
+import { publicPost, publicGet } from '../lib/api';
 
 /* ═══════════════════════════════════════════════════════════════════════════
    TRADEDESK LANDING — 2026 rebuild.
@@ -342,11 +343,11 @@ function RevenueCalculator() {
         <p className="text-[11px] text-gray-600 leading-relaxed max-w-[260px]">
           Assumes one in four missed callers would've booked — conservative for most trades.
         </p>
-        <Link to="/signup"
+        <a href="#waitlist"
           className="btn-shimmer inline-flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-400 text-black font-bold px-6 py-3.5 rounded-xl transition-all text-sm min-h-[50px] w-full sm:w-auto relative overflow-hidden flex-shrink-0"
           style={{ boxShadow: '0 0 24px rgba(255,107,53,0.3)' }}>
-          Stop the leak — start free <ArrowRight size={15} />
-        </Link>
+          Stop the leak — join the waitlist <ArrowRight size={15} />
+        </a>
       </div>
     </div>
   );
@@ -572,6 +573,141 @@ function SupportChatWidget() {
 /* ══════════════════════════════════════════════════════════════════════════
    MAIN PAGE
    ══════════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════════════
+   WAITLIST — the pre-launch primary CTA. Short form (name, business, email,
+   phone optional, trade), wired to POST /api/waitlist which stores to
+   Firestore + sends a confirmation email. Success state replaces the form.
+   ══════════════════════════════════════════════════════════════════════ */
+const WAITLIST_TRADES = [
+  { value: 'plumber', label: 'Plumber' },
+  { value: 'electrician', label: 'Electrician' },
+  { value: 'builder', label: 'Builder' },
+  { value: 'hvac', label: 'HVAC' },
+  { value: 'locksmith', label: 'Locksmith' },
+  { value: 'other', label: 'Other trade' },
+];
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+function WaitlistForm() {
+  const [form, setForm] = useState({ name: '', businessName: '', email: '', phone: '', tradeType: '' });
+  const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'already' | 'error'>('idle');
+  const [error, setError] = useState('');
+  const set = (k: keyof typeof form, v: string) => { setForm(f => ({ ...f, [k]: v })); if (error) setError(''); };
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (status === 'loading') return;
+    if (!form.name.trim()) { setError('Pop your name in.'); return; }
+    if (!form.businessName.trim()) { setError('What\'s the business called?'); return; }
+    if (!EMAIL_RE.test(form.email.trim())) { setError('That email doesn\'t look right.'); return; }
+    if (!form.tradeType) { setError('Pick your trade.'); return; }
+    setStatus('loading');
+    try {
+      const res = await publicPost<{ status: string }>('/waitlist', {
+        name: form.name.trim(),
+        businessName: form.businessName.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        tradeType: form.tradeType,
+      });
+      setStatus(res.status === 'already-on-list' ? 'already' : 'done');
+    } catch (err) {
+      setStatus('error');
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+    }
+  };
+
+  if (status === 'done' || status === 'already') {
+    return (
+      <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/[0.05] p-6 sm:p-8 text-center" role="status">
+        <div className="w-12 h-12 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center mx-auto mb-4">
+          <CheckCircle size={24} className="text-emerald-400" />
+        </div>
+        <h3 className="text-xl font-bold text-white mb-2">
+          {status === 'already' ? "You're already on the list" : "You're on the list!"}
+        </h3>
+        <p className="text-sm text-gray-400 leading-relaxed max-w-sm mx-auto">
+          {status === 'already'
+            ? "No need to sign up twice — we've got you. Liam will email you the moment your early-access spot is ready."
+            : "Nice one. Check your inbox for a quick note from Liam — we'll email you the moment TradeDesk is ready for you, with founding-member pricing and a free trial."}
+        </p>
+      </div>
+    );
+  }
+
+  const inputCls = 'w-full rounded-xl bg-white/[0.04] border border-white/10 pl-10 pr-3 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 focus:bg-white/[0.06] transition-all min-h-[48px]';
+
+  return (
+    <form onSubmit={submit} className="space-y-3" noValidate>
+      <div className="grid sm:grid-cols-2 gap-3">
+        <div className="relative">
+          <User size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
+          <input value={form.name} onChange={e => set('name', e.target.value)} placeholder="Your name"
+            aria-label="Your name" autoComplete="name" className={inputCls} />
+        </div>
+        <div className="relative">
+          <Briefcase size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
+          <input value={form.businessName} onChange={e => set('businessName', e.target.value)} placeholder="Business name"
+            aria-label="Business name" className={inputCls} />
+        </div>
+      </div>
+      <div className="relative">
+        <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
+        <input type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="you@email.com"
+          aria-label="Email address" autoComplete="email" className={inputCls} />
+      </div>
+      <div className="grid sm:grid-cols-2 gap-3">
+        <div className="relative">
+          <Phone size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
+          <input type="tel" value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="Phone (optional)"
+            aria-label="Phone number (optional)" autoComplete="tel" className={inputCls} />
+        </div>
+        <div className="relative">
+          <Zap size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none z-10" />
+          <select value={form.tradeType} onChange={e => set('tradeType', e.target.value)}
+            aria-label="Your trade"
+            className={`${inputCls} appearance-none pr-9 cursor-pointer ${form.tradeType ? 'text-white' : 'text-gray-600'}`}>
+            <option value="" disabled className="bg-ink-900 text-gray-500">Your trade</option>
+            {WAITLIST_TRADES.map(t => <option key={t.value} value={t.value} className="bg-ink-900 text-white">{t.label}</option>)}
+          </select>
+          <ChevronDown size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
+        </div>
+      </div>
+
+      {error && <p className="text-xs text-red-400 flex items-center gap-1.5"><XCircle size={12} className="flex-shrink-0" /> {error}</p>}
+
+      <button type="submit" disabled={status === 'loading'}
+        className="btn-shimmer w-full flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-400 disabled:opacity-60 text-black font-bold py-4 rounded-xl transition-all min-h-[54px] relative overflow-hidden"
+        style={{ boxShadow: '0 0 24px rgba(255,107,53,0.3)' }}>
+        {status === 'loading'
+          ? <Loader2 size={17} className="animate-spin" />
+          : <>Join the waitlist <ArrowRight size={17} /></>}
+      </button>
+      <p className="text-center text-xs text-gray-600">Free to join · no card · we'll only email you about TradeDesk.</p>
+    </form>
+  );
+}
+
+// Honest social proof: shows "N tradies on the waitlist" ONLY when the server
+// says the number has cleared its threshold. Renders nothing otherwise — never
+// a fabricated or trivially-small number.
+function WaitlistCount() {
+  const [count, setCount] = useState<number | null>(null);
+  useEffect(() => {
+    publicGet<{ showPublicly: boolean; count: number | null }>('/waitlist/count')
+      .then(r => { if (r.showPublicly && typeof r.count === 'number') setCount(r.count); })
+      .catch(() => {});
+  }, []);
+  if (count === null) return null;
+  return (
+    <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3.5 py-1.5">
+      <Users size={13} className="text-orange-400" />
+      <span className="text-xs text-gray-300"><span className="font-bold text-white tabular-nums">{count.toLocaleString()}</span> tradies on the waitlist</span>
+    </div>
+  );
+}
+
 export function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -630,11 +766,11 @@ export function LandingPage() {
           </div>
           <div className="hidden md:flex items-center gap-4">
             <Link to="/login" className="text-sm text-gray-500 hover:text-white transition-colors">Log in</Link>
-            <Link to="/signup"
+            <a href="#waitlist"
               className="text-sm font-bold bg-orange-500 hover:bg-orange-400 text-black px-4 py-2 rounded-lg transition-all"
               style={{ boxShadow: '0 0 16px rgba(255,107,53,0.3)' }}>
-              Start free trial
-            </Link>
+              Join the waitlist
+            </a>
           </div>
           <button className="md:hidden text-gray-400 hover:text-white p-2 -mr-1 min-h-[44px] min-w-[44px] flex items-center justify-center"
             onClick={() => setMenuOpen(o => !o)} aria-label={menuOpen ? 'Close menu' : 'Open menu'} aria-expanded={menuOpen}>
@@ -648,7 +784,7 @@ export function LandingPage() {
             ))}
             <div className="flex gap-3 pt-3">
               <Link to="/login" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm rounded-lg py-3 text-gray-300 border border-white/10 min-h-[44px] flex items-center justify-center">Log in</Link>
-              <Link to="/signup" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm bg-orange-500 text-black rounded-lg font-bold min-h-[44px] flex items-center justify-center">Start free trial</Link>
+              <a href="#waitlist" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm bg-orange-500 text-black rounded-lg font-bold min-h-[44px] flex items-center justify-center">Join the waitlist</a>
             </div>
           </div>
         </div>
@@ -666,39 +802,80 @@ export function LandingPage() {
           <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6">
             <div className="grid lg:grid-cols-12 gap-12 lg:gap-8 items-center">
               <div className="lg:col-span-6">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-orange-400/90 mb-5">
-                  AI receptionist for Australian tradies
-                </p>
+                <div className="flex flex-wrap items-center gap-3 mb-5">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-orange-500/30 bg-orange-500/[0.06] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-orange-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" /> Launching soon
+                  </span>
+                  <WaitlistCount />
+                </div>
                 {/* 23 characters. */}
                 <h1 className="text-5xl sm:text-6xl lg:text-[4.6rem] font-black tracking-tight leading-[0.98]">
                   Never miss<br />another job.
                 </h1>
                 <p className="mt-6 text-lg sm:text-xl text-gray-400 leading-relaxed max-w-lg">
-                  TradeDesk answers the calls you can't — as your business, with your prices —
-                  and texts you the lead before the caller's back in the car.
+                  TradeDesk is the AI receptionist for Australian tradies — it answers the calls
+                  you can't, works out what the customer needs, and texts you the details.
+                  It's nearly ready. Get on the waitlist for first access.
                 </p>
 
                 <div className="mt-9 flex flex-col sm:flex-row gap-5 sm:items-center">
-                  <Link to="/signup"
+                  <a href="#waitlist"
                     className="btn-shimmer inline-flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-400 text-black font-bold px-7 py-4 rounded-xl text-base transition-all min-h-[56px] relative overflow-hidden"
                     style={{ boxShadow: '0 0 28px rgba(255,107,53,0.35)' }}>
-                    Put it on my line — free <ArrowRight size={18} />
-                  </Link>
+                    Join the waitlist <ArrowRight size={18} />
+                  </a>
                   <a href="#bento" className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-white transition-colors min-h-[44px]">
-                    Read a live call <ArrowRight size={14} className="text-orange-400" />
+                    See how it works <ArrowRight size={14} className="text-orange-400" />
                   </a>
                 </div>
 
                 <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-gray-600">
-                  <span className="flex items-center gap-1.5"><CheckCircle size={13} className="text-emerald-400" /> No credit card</span>
-                  <span className="flex items-center gap-1.5"><CheckCircle size={13} className="text-emerald-400" /> 7 days free</span>
-                  <span className="flex items-center gap-1.5"><CheckCircle size={13} className="text-emerald-400" /> Live in 10 minutes</span>
+                  <span className="flex items-center gap-1.5"><CheckCircle size={13} className="text-emerald-400" /> First access</span>
+                  <span className="flex items-center gap-1.5"><CheckCircle size={13} className="text-emerald-400" /> Founding-member pricing</span>
+                  <span className="flex items-center gap-1.5"><CheckCircle size={13} className="text-emerald-400" /> Free trial at launch</span>
                 </div>
               </div>
 
               <div className="lg:col-span-6 lg:-mt-6">
                 <DashboardCallCard />
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── WAITLIST — the primary pre-launch CTA. Prominent, its own band. ── */}
+        <section id="waitlist" className="scroll-mt-20 py-16 sm:py-24 px-4 sm:px-6 border-y border-white/6 relative overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_50%_0%,rgba(255,107,53,0.08),transparent_70%)] pointer-events-none" />
+          <div className="relative max-w-5xl mx-auto grid lg:grid-cols-2 gap-10 lg:gap-14 items-center">
+            <div data-reveal>
+              <p className="text-orange-400 text-xs font-semibold uppercase tracking-[0.2em] mb-3">Early access</p>
+              <h2 className="text-3xl sm:text-4xl font-bold tracking-tight leading-[1.08]">
+                Get on the list before we open the doors.
+              </h2>
+              <p className="text-gray-400 mt-4 leading-relaxed">
+                TradeDesk isn't live yet — we're putting the finishing touches on it. Join the
+                waitlist and you're first in line when it opens.
+              </p>
+              <ul className="mt-6 space-y-3">
+                {[
+                  ['First access', 'Skip the queue — waitlisters get in before anyone else.'],
+                  ['Founding-member pricing', "Lock in a better rate than we'll ever offer again."],
+                  ['Free trial at launch', 'Try it on your real calls before you pay a cent.'],
+                ].map(([title, desc]) => (
+                  <li key={title} className="flex items-start gap-3">
+                    <CheckCircle size={17} className="text-emerald-400 flex-shrink-0 mt-0.5" />
+                    <span className="text-sm text-gray-300"><span className="font-semibold text-white">{title}.</span> <span className="text-gray-400">{desc}</span></span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="rounded-2xl border border-orange-500/25 bg-ink-900 p-5 sm:p-7 shadow-2xl shadow-black/40" data-reveal data-reveal-delay="100">
+              <div className="mb-5">
+                <h3 className="text-lg font-bold text-white">Join the waitlist</h3>
+                <p className="text-sm text-gray-500 mt-0.5">Takes 20 seconds. We'll email you the moment it's ready.</p>
+              </div>
+              <WaitlistForm />
             </div>
           </div>
         </section>
@@ -876,6 +1053,7 @@ export function LandingPage() {
             <div className="text-center mb-10" data-reveal>
               <p className="text-orange-400 text-xs font-semibold uppercase tracking-[0.2em] mb-3">Pricing</p>
               <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">One plan. No maths.</h2>
+              <p className="text-sm text-gray-500 mt-3">This is the planned price at launch — waitlisters lock in founding-member rates.</p>
             </div>
 
             <div className="rounded-2xl border border-orange-500/25 bg-ink-900 p-6 sm:p-8 pricing-card-glow" data-reveal>
@@ -903,17 +1081,17 @@ export function LandingPage() {
                 ))}
               </ul>
 
-              <Link to="/signup"
+              <a href="#waitlist"
                 className="btn-shimmer flex items-center justify-center gap-2 w-full bg-orange-500 hover:bg-orange-400 text-black font-bold py-4 rounded-xl transition-all min-h-[54px] relative overflow-hidden"
                 style={{ boxShadow: '0 0 22px rgba(255,107,53,0.35)' }}>
-                Start 7 days free <ArrowRight size={16} />
-              </Link>
-              <p className="text-center text-xs text-gray-600 mt-3">No credit card required · cancel any time</p>
+                Join the waitlist <ArrowRight size={16} />
+              </a>
+              <p className="text-center text-xs text-gray-600 mt-3">Free to join · founding-member pricing when it launches</p>
             </div>
 
             <p className="mt-5 text-sm text-gray-500 leading-relaxed text-center" data-reveal>
-              Then a 30-day money-back guarantee. If it doesn't pay for itself,
-              every cent back — no questions.
+              Waitlisters get a free trial at launch and a 30-day money-back guarantee.
+              If it doesn't pay for itself, every cent back — no questions.
             </p>
           </div>
         </section>
@@ -935,17 +1113,18 @@ export function LandingPage() {
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_60%_at_50%_100%,rgba(255,107,53,0.09),transparent_70%)] pointer-events-none" />
           <div className="max-w-3xl mx-auto text-center relative" data-reveal>
             <h2 className="text-4xl sm:text-5xl font-black tracking-tight mb-6 leading-[1.02]">
-              Next time it rings and you can't pick up — <span className="text-orange-400">it's handled.</span>
+              Be first in line when <span className="text-orange-400">TradeDesk opens.</span>
             </h2>
             <p className="text-gray-500 text-base sm:text-lg mb-10 max-w-xl mx-auto">
-              Forward your calls this arvo, and TradeDesk is answering by tonight.
+              We're nearly there. Join the waitlist and we'll email you the moment it's ready —
+              with founding-member pricing and a free trial.
             </p>
-            <Link to="/signup"
+            <a href="#waitlist"
               className="btn-shimmer inline-flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-400 text-black font-bold px-8 py-4 rounded-xl text-base transition-all min-h-[54px] relative overflow-hidden"
               style={{ boxShadow: '0 0 26px rgba(255,107,53,0.4)' }}>
-              Put TradeDesk on my line <ArrowRight size={18} />
-            </Link>
-            <p className="text-sm text-gray-600 mt-4">Free for 7 days · no card · cancel any time</p>
+              Join the waitlist <ArrowRight size={18} />
+            </a>
+            <p className="text-sm text-gray-600 mt-4">Free to join · no card · first access at launch</p>
           </div>
         </section>
       </main>
@@ -1005,7 +1184,7 @@ export function LandingPage() {
             <p className="text-xs text-gray-700">© 2026 TradeDesk · Newcastle NSW</p>
             <div className="flex gap-4">
               <Link to="/login" className="text-xs text-gray-700 hover:text-white transition-colors">Log in</Link>
-              <Link to="/signup" className="text-xs text-orange-400/90 hover:text-orange-300 transition-colors font-medium">Start free trial →</Link>
+              <a href="#waitlist" className="text-xs text-orange-400/90 hover:text-orange-300 transition-colors font-medium">Join the waitlist →</a>
             </div>
           </div>
         </div>
@@ -1015,12 +1194,12 @@ export function LandingPage() {
       <div className={`fixed bottom-0 inset-x-0 z-40 md:hidden transition-all duration-300 ${showScrollCTA ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'}`}>
         <div className="bg-ink-950/95 backdrop-blur-md border-t border-white/10 px-4 py-3 flex items-center gap-3">
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white">7 days free, no card</p>
-            <p className="text-xs text-gray-600">Live on your line in 10 minutes</p>
+            <p className="text-sm font-semibold text-white">Launching soon</p>
+            <p className="text-xs text-gray-600">Founding-member pricing · free trial</p>
           </div>
-          <Link to="/signup" className="flex-shrink-0 bg-orange-500 hover:bg-orange-400 text-black font-bold px-5 py-3 rounded-xl text-sm transition-all min-h-[44px] flex items-center">
-            Start free
-          </Link>
+          <a href="#waitlist" className="flex-shrink-0 bg-orange-500 hover:bg-orange-400 text-black font-bold px-5 py-3 rounded-xl text-sm transition-all min-h-[44px] flex items-center">
+            Join waitlist
+          </a>
         </div>
       </div>
 
