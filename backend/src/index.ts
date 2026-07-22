@@ -165,8 +165,11 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
 
   if (req.path.startsWith('/api/voice')) {
     const twiml = new twilio.twiml.VoiceResponse();
+    // Same natural neural voice the call routes use (see routes/voice.ts).
+    // Kept env-overridable here too so a voice swap stays a one-place change.
+    const voice = (process.env.TWILIO_TTS_VOICE || 'Polly.Olivia-Neural') as 'Polly.Olivia-Neural';
     twiml.say(
-      { voice: 'Polly.Nicole', language: 'en-AU' },
+      { voice, language: 'en-AU' },
       "Sorry, we're having a technical issue. Please call back shortly."
     );
     res.type('text/xml').status(200).send(twiml.toString());

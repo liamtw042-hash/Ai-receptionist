@@ -17,6 +17,51 @@ import { createJobFromCall } from '../services/jobService';
 
 const router = Router();
 const VoiceResponse = twilio.twiml.VoiceResponse;
+type Say = ReturnType<InstanceType<typeof VoiceResponse>['say']>;
+type SayTarget = InstanceType<typeof VoiceResponse> | ReturnType<InstanceType<typeof VoiceResponse>['gather']>;
+
+// ── Phone voice ───────────────────────────────────────────────────────────────
+// Amazon Polly NEURAL en-AU voice. "Olivia" is the only Australian-English
+// neural voice Polly offers, and it's dramatically more natural than the old
+// standard "Nicole" (which sounded like an automated phone menu). Twilio applies
+// a Conversational speaking style to Polly neural voices by default.
+// Verified against Twilio's TTS docs; identifier format is `Polly.<Voice>-Neural`.
+// Override from the environment (e.g. on Vercel) without a code change.
+// Derive the exact attribute types twilio expects (SayVoice / SayLanguage
+// literal unions) from the `say` signature, without reaching into the
+// declaration namespace.
+type SayAttrs = NonNullable<Parameters<InstanceType<typeof VoiceResponse>['say']>[0]>;
+// `voice` is env-overridable so it's typed as a plain string; cast to twilio's
+// SayVoice literal union (the identifier below is a valid member of it).
+const TTS_VOICE = (process.env.TWILIO_TTS_VOICE ||
+  'Polly.Olivia-Neural') as SayAttrs['voice'];
+const TTS_LANG: SayAttrs['language'] = 'en-AU';
+const SAY_OPTS = { voice: TTS_VOICE, language: TTS_LANG } as const;
+
+// Speak a plain line (dynamic AI replies, simple fallbacks). No SSML — the
+// neural voice already reads natural prose well.
+function say(target: SayTarget, text: string): void {
+  target.say(SAY_OPTS, text);
+}
+
+// A segment of a scripted line: raw text, or a short pause. We build these via
+// the TwiML SSML builder (`addText` / `break`) rather than embedding an SSML
+// string in the body, because twilio-node XML-escapes string bodies — a raw
+// "<break/>" would be read aloud literally instead of pausing.
+type Segment = string | { pause: '300ms' | '400ms' | '500ms' };
+
+// Speak a scripted line with light, deliberate pauses in natural spots. Used
+// only for the fixed lines we author (greeting, fallbacks) — never for dynamic
+// AI text. Kept sparse on purpose: one or two small breaks, not a stutter.
+function sayScripted(target: SayTarget, segments: Segment[]): void {
+  // No attributes-only `say` overload exists, so pass an empty message and
+  // append the real content via the SSML builder below.
+  const s: Say = target.say(SAY_OPTS, '');
+  for (const seg of segments) {
+    if (typeof seg === 'string') s.addText(seg);
+    else s.break({ time: seg.pause });
+  }
+}
 
 // Helper: extract structured fields from AI summary for Sheet row
 function extractCallDetails(
@@ -63,14 +108,14 @@ router.post('/', async (req: Request, res: Response) => {
   try {
     const userId = await resolveTwilioUser(Called, db);
     if (!userId) {
-      twiml.say({ voice: 'Polly.Nicole', language: 'en-AU' }, "Thanks for calling. We're not available right now, please try again later.");
+      sayScripted(twiml, ['Thanks for calling!', { pause: '300ms' }, "We can't take your call right now, but please try us again soon."]);
       res.type('text/xml').send(twiml.toString());
       return;
     }
 
     const settings = await getBusinessSettings(userId);
     if (!settings) {
-      twiml.say({ voice: 'Polly.Nicole', language: 'en-AU' }, "Thanks for calling. We're not available right now.");
+      sayScripted(twiml, ['Thanks for calling!', { pause: '300ms' }, "We can't take your call right now — please try again soon."]);
       res.type('text/xml').send(twiml.toString());
       return;
     }
@@ -82,7 +127,11 @@ router.post('/', async (req: Request, res: Response) => {
       session = createSession(CallSid, userId, From);
       await upsertContact(userId, From, { lastInteraction: new Date() });
 
-      const greeting = `Hi, thanks for calling ${settings.businessName}, I'm their AI assistant — how can I help you today?`;
+      // The greeting must keep the AI disclosure. Transcript stores the plain
+      // sentence; the spoken version adds one small breath before the disclosure.
+      const greetOpen = `Hi there, thanks for calling ${settings.businessName}.`;
+      const greetDisclosure = "I'm their AI assistant — how can I help?";
+      const greeting = `${greetOpen} ${greetDisclosure}`;
       addTurn(CallSid, 'assistant', greeting);
 
       const gather = twiml.gather({
@@ -93,7 +142,7 @@ router.post('/', async (req: Request, res: Response) => {
         language: 'en-AU',
         speechModel: 'phone_call',
       });
-      gather.say({ voice: 'Polly.Nicole', language: 'en-AU' }, greeting);
+      sayScripted(gather, [greetOpen, { pause: '400ms' }, greetDisclosure]);
 
       twiml.redirect('/api/voice/no-input');
     } else if (SpeechResult) {
@@ -104,7 +153,7 @@ router.post('/', async (req: Request, res: Response) => {
 
       let aiReply: string;
       if (isEmergency) {
-        aiReply = `That sounds urgent. I'm going to flag this as an emergency right now — ${settings.traderName} will call you back within 30 minutes. Is there anything else I need to pass on?`;
+        aiReply = `Right, that sounds urgent — I'm flagging it as an emergency now. ${settings.traderName} will call you straight back, within 30 minutes. Anything else I should pass on?`;
         session.outcome = 'emergency';
         await sendEmergencyAlertToTradie(settings.mobileNumber, From, SpeechResult);
       } else {
@@ -123,10 +172,12 @@ router.post('/', async (req: Request, res: Response) => {
         language: 'en-AU',
         speechModel: 'phone_call',
       });
-      gather.say({ voice: 'Polly.Nicole', language: 'en-AU' }, aiReply);
+      // Dynamic AI/emergency text — spoken plainly (no injected SSML so the
+      // model's own phrasing is never mangled).
+      say(gather, aiReply);
       twiml.redirect('/api/voice/no-input');
     } else {
-      twiml.say({ voice: 'Polly.Nicole', language: 'en-AU' }, "Sorry, I didn't catch that — could you say that again?");
+      sayScripted(twiml, ["Sorry, I didn't quite catch that.", { pause: '300ms' }, 'Could you say it again?']);
       const gather = twiml.gather({
         input: ['speech'],
         speechTimeout: 'auto',
@@ -134,11 +185,11 @@ router.post('/', async (req: Request, res: Response) => {
         method: 'POST',
         language: 'en-AU',
       });
-      gather.say({ voice: 'Polly.Nicole', language: 'en-AU' }, "How can I help you today?");
+      say(gather, 'So, how can I help?');
     }
   } catch (err) {
     console.error('Voice webhook error:', err);
-    twiml.say({ voice: 'Polly.Nicole', language: 'en-AU' }, "Sorry, we're having a technical issue. Please call back shortly.");
+    sayScripted(twiml, ["Sorry — we're having a bit of a technical glitch our end.", { pause: '300ms' }, 'Do us a favour and call back in a minute?']);
   }
 
   res.type('text/xml').send(twiml.toString());
@@ -147,7 +198,7 @@ router.post('/', async (req: Request, res: Response) => {
 // No input fallback
 router.post('/no-input', (req: Request, res: Response) => {
   const twiml = new VoiceResponse();
-  twiml.say({ voice: 'Polly.Nicole', language: 'en-AU' }, "I didn't hear anything — feel free to call back anytime. Cheers!");
+  sayScripted(twiml, ["Didn't hear anything there — no worries.", { pause: '300ms' }, 'Give us a call back any time. Cheers!']);
   twiml.hangup();
   res.type('text/xml').send(twiml.toString());
 });
