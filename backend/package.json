@@ -12,7 +12,8 @@
     "test:chat": "tsx src/routes/__tests__/chat.test.ts",
     "lint": "eslint src --ext .ts",
     "test:admin": "tsx src/routes/__tests__/admin.test.ts",
-    "test:waitlist": "tsx src/routes/__tests__/waitlist.test.ts"
+    "test:waitlist": "tsx src/routes/__tests__/waitlist.test.ts",
+    "test:voice-bridge": "tsx src/routes/__tests__/voiceBridge.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",

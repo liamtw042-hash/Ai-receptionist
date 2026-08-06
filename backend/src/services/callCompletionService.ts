@@ -68,6 +68,26 @@ export type CompleteCallResult =
   | 'no_settings';
 
 /**
+ * Run one post-call side effect in isolation.
+ *
+ * These steps are independent ways of telling the tradie about a lead: the SMS,
+ * the in-app Jobs entry, the contact record, the Sheet row, the Calendar event.
+ * Previously the SMS was unguarded, so a Twilio outage (or a rate limit, or one
+ * bad mobile number) threw before the job and contact writes and took out the
+ * *in-app* record too — destroying the fallback the tradie would otherwise use
+ * to find the lead. Each step now fails on its own.
+ */
+async function attempt(label: string, fn: () => Promise<unknown>): Promise<boolean> {
+  try {
+    await fn();
+    return true;
+  } catch (err) {
+    console.error(`Post-call step failed (${label}):`, err);
+    return false;
+  }
+}
+
+/**
  * Run the full post-call pipeline for a call whose session is already in the
  * in-process session store. Safe to call once per completed call.
  */
@@ -99,18 +119,24 @@ export async function completeCall(params: {
     summaryPrompt
   );
 
+  // The call log is the record of truth and runs first — if this throws there
+  // is nothing to notify anyone about, so it is deliberately NOT isolated.
   const callDoc = await finalizeSession(callSid, summary, outcome, durationSeconds);
-  await sendCallSummaryToTradie(settings.mobileNumber, from, summary, outcome.replace(/_/g, ' ').toUpperCase());
+
+  const smsSent = await attempt('sms_summary_to_tradie', () =>
+    sendCallSummaryToTradie(settings.mobileNumber, from, summary, outcome.replace(/_/g, ' ').toUpperCase()));
 
   const now = new Date();
 
   if (outcome === 'job_booked') {
-    await sendBookingConfirmationToCaller(from, settings.businessName,
-      'Your job has been logged. We\'ll confirm the exact time shortly.');
+    await attempt('sms_booking_confirmation', () =>
+      sendBookingConfirmationToCaller(from, settings.businessName,
+        'Your job has been logged. We\'ll confirm the exact time shortly.'));
 
     // Log it to the Jobs page too — independent of whether Google is
-    // connected, this is the in-app source of truth for booked work.
-    try {
+    // connected, this is the in-app source of truth for booked work, and the
+    // tradie's fallback when the SMS didn't arrive.
+    await attempt('create_job', async () => {
       const details = extractCallDetails(transcript, summary, outcome, from, now);
       await createJobFromCall(userId, {
         callId: callDoc || callSid,
@@ -121,12 +147,20 @@ export async function completeCall(params: {
         quoteGiven: details.quoteGiven,
         notes: summary,
       });
-    } catch (jobErr) {
-      console.error('Create job from call error:', jobErr);
-    }
+    });
   }
 
-  await upsertContact(userId, from, { lastInteraction: new Date(), notes: summary });
+  await attempt('upsert_contact', () =>
+    upsertContact(userId, from, { lastInteraction: new Date(), notes: summary }));
+
+  if (!smsSent) {
+    // Greppable: the tradie was not told by SMS, but the lead IS in the
+    // dashboard. Distinct from CALL_COMPLETION_LOST, where nothing was saved.
+    console.error(
+      `CALL_SMS_NOT_DELIVERED callSid=${callSid} from=${from} userId=${userId} ` +
+      `— call log and job were still written; the tradie must find this in the dashboard.`
+    );
+  }
 
   // ── Google integrations ────────────────────────────────────────────────
   const tokenDoc = await db.collection('googleTokens').doc(userId).get();

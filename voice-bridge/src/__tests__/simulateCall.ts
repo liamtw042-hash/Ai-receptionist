@@ -46,6 +46,12 @@ function startMockOpenAI(state: MockOpenAIState) {
       'bridge must send a bearer token'
     );
 
+    // Per-connection audio counter. Must NOT be shared across calls: the real
+    // API transcribes each call independently, and a global counter would stop
+    // the transcription firing on the second call, silently weakening the
+    // failure-path assertion to "the greeting survived".
+    let connAudioMs = 0;
+
     ws.on('message', raw => {
       const evt = JSON.parse(raw.toString());
       switch (evt.type) {
@@ -55,11 +61,14 @@ function startMockOpenAI(state: MockOpenAIState) {
           break;
 
         case 'input_audio_buffer.append': {
-          const before = state.appendedAudioMs;
-          state.appendedAudioMs += base64MulawDurationMs(evt.audio);
-          // Once enough caller audio has arrived, emit the ASR result the real
-          // API would produce, so the transcript path is exercised too.
-          if (before < 300 && state.appendedAudioMs >= 300) {
+          const before = connAudioMs;
+          const ms = base64MulawDurationMs(evt.audio);
+          connAudioMs += ms;
+          state.appendedAudioMs += ms;
+          // Once enough caller audio has arrived on THIS call, emit the ASR
+          // result the real API would produce, so the transcript path is
+          // exercised on every call, not just the first.
+          if (before < 300 && connAudioMs >= 300) {
             ws.send(JSON.stringify({
               type: 'conversation.item.input_audio_transcription.completed',
               transcript: "Yeah g'day, I've got a burst pipe under the kitchen sink in Merewether.",
@@ -318,8 +327,14 @@ async function main(): Promise<void> {
 
   const dropCompletion = backendState.completions.find(c => c.callSid === 'CA_drop');
   assert.ok(dropCompletion, 'a failed call must still hand its transcript back');
-  assert.ok(dropCompletion.turns.length > 0, 'partial transcript must survive the failure');
-  pass(`partial transcript preserved through failure (${dropCompletion.turns.length} turns)`);
+  // The point of this path is that the CALLER'S words survive an outage — that
+  // is what the tradie rings back about. Asserting only `length > 0` would pass
+  // on the greeting alone and prove nothing.
+  assert.ok(dropCompletion.turns.some((t: any) => t.role === 'user'),
+    'caller speech must survive a mid-call failure, not just the AI greeting');
+  assert.ok(dropCompletion.turns.some((t: any) => /burst pipe/i.test(t.content)),
+    'what the caller actually said must reach the tradie');
+  pass(`caller's words preserved through failure (${dropCompletion.turns.length} turns, incl. user speech)`);
 
   twilio2.close();
   bridgeServer.close();
