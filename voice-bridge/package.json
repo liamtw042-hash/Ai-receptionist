@@ -1,0 +1,31 @@
+{
+  "name": "tradedesk-voice-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Realtime voice bridge: Twilio Media Streams <-> OpenAI Realtime API for TradeDesk.",
+  "main": "dist/index.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test:audio": "tsx src/__tests__/audio.test.ts",
+    "test:protocol": "tsx src/__tests__/protocol.test.ts",
+    "test": "npm run test:audio && npm run test:protocol",
+    "simulate": "tsx src/__tests__/simulateCall.ts"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "twilio": "^5.2.3",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.11",
+    "@types/ws": "^8.5.12",
+    "tsx": "^4.16.2",
+    "typescript": "^5.5.3"
+  }
+}

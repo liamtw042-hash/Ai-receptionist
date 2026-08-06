@@ -12,8 +12,8 @@ import {
 } from '../services/smsService';
 import { upsertContact } from '../services/contactService';
 import { resolveTwilioUser } from '../middleware/authMiddleware';
-import { appendToSheet, createCalendarEvent } from '../lib/googleAuth';
-import { createJobFromCall } from '../services/jobService';
+import { completeCall, completeBridgedCall } from '../services/callCompletionService';
+import { CallSession } from '../services/callSessionService';
 
 const router = Router();
 const VoiceResponse = twilio.twiml.VoiceResponse;
@@ -61,43 +61,6 @@ function sayScripted(target: SayTarget, segments: Segment[]): void {
     if (typeof seg === 'string') s.addText(seg);
     else s.break({ time: seg.pause });
   }
-}
-
-// Helper: extract structured fields from AI summary for Sheet row
-function extractCallDetails(
-  transcript: string,
-  summary: string,
-  outcome: string,
-  callerNumber: string,
-  now: Date
-): Record<string, string> {
-  // Try to extract caller name from transcript
-  const nameMatch = transcript.match(/(?:my name is|this is|it'?s)\s+([A-Z][a-z]+ ?[A-Z]?[a-z]*)/i);
-  const callerName = nameMatch ? nameMatch[1].trim() : '';
-
-  // Try to extract address
-  const addrMatch = transcript.match(/(\d+\s+[A-Za-z]+ (?:St|Street|Rd|Road|Ave|Avenue|Dr|Drive|Cl|Close|Pl|Place|Cres|Crescent)[a-z,\s]*)/i);
-  const address = addrMatch ? addrMatch[1].trim() : '';
-
-  // Try to extract job type from first user turn
-  const jobMatch = transcript.match(/(?:need|want|looking for|fix|repair|install|replace)\s+([a-zA-Z\s]{3,40}?)(?:\.|,|$)/i);
-  const jobType = jobMatch ? jobMatch[1].trim() : '';
-
-  // Try to extract quote
-  const quoteMatch = transcript.match(/\$[\d,]+(?:\s*[-–]\s*\$[\d,]+)?/);
-  const quoteGiven = quoteMatch ? quoteMatch[0] : '';
-
-  return {
-    date: now.toLocaleDateString('en-AU'),
-    time: now.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' }),
-    callerName,
-    callerNumber,
-    jobType,
-    address,
-    quoteGiven,
-    outcome: outcome.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-    notes: summary.replace(/\n/g, ' ').slice(0, 500),
-  };
 }
 
 // Incoming call
@@ -231,113 +194,106 @@ router.post('/status', async (req: Request, res: Response) => {
 
   if (CallStatus === 'completed') {
     try {
-      const session = getSession(CallSid);
-      if (!session) { res.sendStatus(200); return; }
-
-      const userId = await resolveTwilioUser(Called, db);
-      if (!userId) { res.sendStatus(200); return; }
-
-      const settings = await getBusinessSettings(userId);
-      if (!settings) { res.sendStatus(200); return; }
-
+      // The whole post-call pipeline (summary → SMS → Firestore → job →
+      // Sheets/Calendar) lives in callCompletionService so the Realtime bridge
+      // can run the identical path. Behaviour here is unchanged.
       const durationSeconds = req.body.CallDuration ? parseInt(req.body.CallDuration, 10) : undefined;
-
-      const transcript = session.turns.map(t => `${t.role === 'assistant' ? 'AI' : 'Caller'}: ${t.content}`).join('\n');
-      const outcome = session.outcome === 'in_progress' ? detectOutcome(transcript) : session.outcome;
-
-      const summaryPrompt = `Summarise this call transcript in 3 bullet points for a tradie. Include: what the caller wanted, any details captured (name, address, job type), and what was agreed.\n\n${transcript}`;
-      const summary = await getAIResponse(
-        'You are a concise assistant. Summarise call transcripts for tradies in plain English.',
-        summaryPrompt
-      );
-
-      const callDoc = await finalizeSession(CallSid, summary, outcome, durationSeconds);
-      await sendCallSummaryToTradie(settings.mobileNumber, From, summary, outcome.replace(/_/g, ' ').toUpperCase());
-
-      const now = new Date();
-
-      if (outcome === 'job_booked') {
-        await sendBookingConfirmationToCaller(From, settings.businessName,
-          'Your job has been logged. We\'ll confirm the exact time shortly.');
-
-        // Log it to the Jobs page too — independent of whether Google is
-        // connected, this is the in-app source of truth for booked work.
-        try {
-          const details = extractCallDetails(transcript, summary, outcome, From, now);
-          await createJobFromCall(userId, {
-            callId: callDoc || CallSid,
-            callerName: details.callerName,
-            callerNumber: From,
-            jobType: details.jobType,
-            address: details.address,
-            quoteGiven: details.quoteGiven,
-            notes: summary,
-          });
-        } catch (jobErr) {
-          console.error('Create job from call error:', jobErr);
-        }
-      }
-
-      await upsertContact(userId, From, { lastInteraction: new Date(), notes: summary });
-
-      // ── Google integrations ────────────────────────────────────────────────
-      const tokenDoc = await db.collection('googleTokens').doc(userId).get();
-
-      if (tokenDoc.exists) {
-        const tokenData = tokenDoc.data()!;
-
-        // Append to Google Sheets if connected
-        if (tokenData.spreadsheetId) {
-          try {
-            const rowData = extractCallDetails(transcript, summary, outcome, From, now);
-            await appendToSheet(userId, rowData);
-
-            // Mark this call as logged in the DB doc if we have the id
-            if (callDoc) {
-              await db.collection('calls').doc(callDoc).update({ googleSheetLogged: true });
-            }
-          } catch (sheetErr) {
-            console.error('Google Sheets append error:', sheetErr);
-          }
-        }
-
-        // Create Calendar event if job booked
-        if (outcome === 'job_booked') {
-          try {
-            const details = extractCallDetails(transcript, summary, outcome, From, now);
-            // Schedule for next business day 9 AM by default
-            const eventStart = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-            eventStart.setHours(9, 0, 0, 0);
-            const eventEnd = new Date(eventStart.getTime() + 2 * 60 * 60 * 1000);
-
-            await createCalendarEvent(userId, {
-              title: `🔧 ${details.jobType || 'Job'} — ${details.callerName || From}`,
-              description: [
-                `Customer: ${details.callerName || 'Unknown'}`,
-                `Phone: ${From}`,
-                `Job: ${details.jobType || 'See notes'}`,
-                `Address: ${details.address || 'TBC'}`,
-                `Quote: ${details.quoteGiven || 'TBC'}`,
-                '',
-                'Notes:',
-                summary,
-              ].join('\n'),
-              startTime: eventStart.toISOString(),
-              endTime: eventEnd.toISOString(),
-              location: details.address,
-            });
-          } catch (calErr) {
-            console.error('Google Calendar event error:', calErr);
-          }
-        }
-      }
-      // ── End Google integrations ───────────────────────────────────────────
+      await completeCall({ callSid: CallSid, from: From, called: Called, durationSeconds });
     } catch (err) {
       console.error('Call status error:', err);
     }
   }
 
   res.sendStatus(200);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Realtime voice-bridge endpoints
+//
+// The bridge (see /voice-bridge) runs on a host that supports long-lived
+// websockets, which Vercel's serverless functions cannot. It needs two things
+// from this backend, and nothing else:
+//   1. the business context for the number that was dialled, so the Realtime
+//      session can be given the right persona and pricing;
+//   2. a way to hand back the finished transcript so the *existing* post-call
+//      pipeline runs unchanged.
+//
+// Both are guarded by a shared secret rather than a Firebase user token,
+// because the caller is a trusted backend service, not a signed-in user.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function bridgeAuthorised(req: Request): boolean {
+  const expected = process.env.VOICE_BRIDGE_SECRET;
+  // Fail closed: with no secret configured the endpoints stay disabled rather
+  // than silently accepting anonymous requests.
+  if (!expected) return false;
+  const provided = req.get('x-bridge-secret');
+  if (!provided || provided.length !== expected.length) return false;
+  // Constant-time-ish comparison; lengths are already known equal.
+  let diff = 0;
+  for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ provided.charCodeAt(i);
+  return diff === 0;
+}
+
+// POST /api/voice/bridge/context — business context for a dialled number.
+router.post('/bridge/context', async (req: Request, res: Response) => {
+  if (!bridgeAuthorised(req)) { res.status(401).json({ error: 'Unauthorised' }); return; }
+
+  try {
+    const called = typeof req.body?.called === 'string' ? req.body.called : '';
+    if (!called) { res.status(400).json({ error: 'called is required' }); return; }
+
+    const userId = await resolveTwilioUser(called, db);
+    if (!userId) { res.status(404).json({ error: 'No user for that number' }); return; }
+
+    const settings = await getBusinessSettings(userId);
+    if (!settings) { res.status(404).json({ error: 'No settings for that user' }); return; }
+
+    res.json({ userId, settings });
+  } catch (err) {
+    console.error('Bridge context error:', err);
+    res.status(500).json({ error: 'Failed to load business context' });
+  }
+});
+
+// POST /api/voice/bridge/complete — the bridge hands back a finished call.
+router.post('/bridge/complete', async (req: Request, res: Response) => {
+  if (!bridgeAuthorised(req)) { res.status(401).json({ error: 'Unauthorised' }); return; }
+
+  try {
+    const { callSid, from, called, turns, outcome, durationSeconds } = req.body ?? {};
+    if (!callSid || !from || !called || !Array.isArray(turns)) {
+      res.status(400).json({ error: 'callSid, from, called and turns are required' });
+      return;
+    }
+
+    const cleanTurns = (turns as unknown[])
+      .filter((t): t is { role: string; content: string } =>
+        !!t && typeof t === 'object' && typeof (t as any).content === 'string')
+      .map(t => ({
+        role: t.role === 'assistant' ? ('assistant' as const) : ('user' as const),
+        content: String(t.content).slice(0, 4000),
+      }));
+
+    const result = await completeBridgedCall({
+      callSid: String(callSid),
+      from: String(from),
+      called: String(called),
+      turns: cleanTurns,
+      outcome: outcome as CallSession['outcome'] | undefined,
+      durationSeconds: typeof durationSeconds === 'number' ? durationSeconds : undefined,
+    });
+
+    if (result !== 'ok') {
+      console.error(`Bridge complete for ${callSid} did not finish cleanly: ${result}`);
+      res.status(202).json({ status: result });
+      return;
+    }
+    res.json({ status: 'ok' });
+  } catch (err) {
+    console.error('Bridge complete error:', err);
+    res.status(500).json({ error: 'Failed to complete bridged call' });
+  }
 });
 
 export { router as voiceRouter };
